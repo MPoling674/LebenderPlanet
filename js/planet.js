@@ -205,6 +205,10 @@ const Planet = (() => {
     let land = 0;
     let ice = 0;
     let vegSum = 0;
+    const typeCounts = {};
+    VEGETATION_TYPES.forEach((t) => {
+      typeCounts[t.id] = 0;
+    });
     cells.forEach((cell) => {
       const t = currentTerrain(cell);
       if (t === "ocean") ocean += 1;
@@ -212,14 +216,23 @@ const Planet = (() => {
       else {
         land += 1;
         vegSum += cell.vegetation;
+        if (cell.vegetationType) typeCounts[cell.vegetationType] += 1;
       }
     });
     const total = cells.length;
+    // Anteil jeder Vegetationsstufe an der LANDFLAECHE (Zellanzahl, nicht
+    // Dichte-gewichtet) — beantwortet "wie viel Prozent des Landes ist Wald/
+    // Gräser/...", ergaenzend zur durchschnittlichen Gesamtdichte avgVegetation.
+    const vegetationByType = {};
+    VEGETATION_TYPES.forEach((t) => {
+      vegetationByType[t.id] = land > 0 ? (typeCounts[t.id] / land) * 100 : 0;
+    });
     return {
       oceanPercent: (ocean / total) * 100,
       landPercent: (land / total) * 100,
       icePercent: (ice / total) * 100,
       avgVegetation: land > 0 ? vegSum / land : 0,
+      vegetationByType,
     };
   }
 

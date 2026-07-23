@@ -14,6 +14,7 @@ const UI = (() => {
     el.hudSeaLevel = document.getElementById("hud-sealevel");
     el.hudIce = document.getElementById("hud-ice");
     el.hudVegetation = document.getElementById("hud-vegetation");
+    el.hudVegTypes = document.getElementById("hud-vegtypes");
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
@@ -165,6 +166,17 @@ const UI = (() => {
     });
   }
 
+  // Kompakte Aufschluesselung "Wald 12% · Gräser 30% · ..." — Anteil jeder
+  // Stufe an der Landflaeche (siehe Planet.stats().vegetationByType). Stufen
+  // ohne nennenswerten Anteil werden weggelassen, damit die Zeile nicht mit
+  // lauter "0%"-Eintraegen vollläuft.
+  function vegBreakdownText(stats) {
+    const parts = VEGETATION_TYPES.map((t) => ({ name: t.name, pct: stats.vegetationByType[t.id] }))
+      .filter((p) => p.pct >= 0.1)
+      .map((p) => `${p.name} ${p.pct.toFixed(0)}%`);
+    return parts.length ? parts.join(" · ") : "keine";
+  }
+
   function renderAll() {
     const temp = Climate.globalTemperature();
     const seaLevel = Climate.seaLevelRise();
@@ -173,6 +185,7 @@ const UI = (() => {
     el.hudSeaLevel.textContent = "+" + seaLevel.toFixed(1) + " m";
     el.hudIce.textContent = stats.icePercent.toFixed(1) + " %";
     el.hudVegetation.textContent = stats.avgVegetation.toFixed(1) + " %";
+    el.hudVegTypes.textContent = vegBreakdownText(stats);
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
