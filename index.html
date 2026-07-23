@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Der lebende Planet</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="hud">
+  <div class="hud-item"><span class="label">Zeit</span><span id="hud-year">Jahr 0</span></div>
+  <div class="hud-item"><span class="label">Ø-Temperatur</span><span id="hud-temp">0 °C</span></div>
+  <div class="hud-item"><span class="label">Meeresspiegel</span><span id="hud-sealevel">+0 m</span></div>
+  <div class="hud-item"><span class="label">Eisbedeckung</span><span id="hud-ice">0 %</span></div>
+  <div class="hud-item"><span class="label">Vegetation</span><span id="hud-vegetation">0 %</span></div>
+  <div class="hud-item"><span class="label">Sauerstoff</span><span id="hud-o2">0 %</span></div>
+</header>
+
+<main id="game">
+  <div id="map-wrap">
+    <canvas id="planet-canvas" width="900" height="450"></canvas>
+  </div>
+
+  <aside id="sidebar">
+    <section id="panel-atmosphere">
+      <h2>Atmosphäre</h2>
+      <p class="hint">Verändere die Gaszusammensetzung und beobachte die Auswirkungen auf Klima und Leben.</p>
+      <div id="gas-controls"></div>
+    </section>
+
+    <section id="panel-tools">
+      <h2>Terraforming</h2>
+      <p class="hint">Werkzeug wählen, dann auf eine Landzelle der Karte klicken.</p>
+      <div id="tool-buttons"></div>
+    </section>
+
+    <section id="panel-time">
+      <h2>Zeit</h2>
+      <div class="time-controls">
+        <input type="number" id="tick-years-input" min="1" max="1000" value="10">
+        <button id="tick-btn">Jahre vorspulen</button>
+      </div>
+    </section>
+
+    <section id="panel-log">
+      <h2>Ereignisse</h2>
+      <ul id="event-log"></ul>
+    </section>
+
+    <section id="panel-save">
+      <h2>Spielstand</h2>
+      <p id="save-status" class="hint"></p>
+      <div class="save-actions">
+        <button id="save-now-btn">Jetzt speichern</button>
+        <button id="save-export-btn">Als Datei sichern</button>
+        <button id="save-import-btn">Aus Datei laden</button>
+        <input type="file" id="save-import-input" accept="application/json" class="hidden-input">
+      </div>
+      <div class="save-actions">
+        <button id="new-game-btn" class="danger-btn">Neue Simulation</button>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/atmosphere.js"></script>
+<script src="js/climate.js"></script>
+<script src="js/planet.js"></script>
+<script src="js/map.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

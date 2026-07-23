@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lebenderplanet",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "G:\\Meine Ablage\\LebenderPlanet\\.claude\\serve.ps1", "-Port", "8794"],
+      "port": 8794
+    }
+  ]
+}

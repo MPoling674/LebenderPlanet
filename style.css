@@ -1,0 +1,105 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Verdana, sans-serif;
+  background: #0a0e17;
+  color: #e6e8ec;
+}
+
+#hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  padding: 10px 20px;
+  background: #10182a;
+  border-bottom: 2px solid #2e6f4e;
+}
+
+.hud-item { display: flex; flex-direction: column; font-size: 13px; }
+.hud-item .label { color: #93a3b8; font-size: 11px; text-transform: uppercase; }
+.hud-item span:last-child { font-size: 16px; font-weight: bold; color: #7fd6a3; }
+
+#game {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  align-items: flex-start;
+}
+
+#map-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #05070d;
+  border: 1px solid #2e6f4e;
+  border-radius: 6px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+#planet-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+#sidebar {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+}
+
+#sidebar section {
+  background: #10182a;
+  border: 1px solid #223047;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+#sidebar h2 {
+  margin: 0 0 8px;
+  color: #7fd6a3;
+  font-size: 15px;
+}
+
+.hint { font-size: 12px; color: #93a3b8; margin: 0 0 8px; }
+
+.gas-control { margin-bottom: 12px; }
+.gas-control label { display: block; font-size: 13px; margin-bottom: 4px; }
+.gas-control input[type="range"] { width: 100%; }
+.gas-value { font-size: 12px; color: #7fd6a3; float: right; }
+
+#tool-buttons { display: flex; flex-direction: column; gap: 6px; }
+
+button {
+  background: #1f3a2e;
+  color: #e6e8ec;
+  border: 1px solid #2e6f4e;
+  border-radius: 4px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+button:hover { background: #2a4d3c; }
+button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
+
+.time-controls { display: flex; gap: 8px; }
+.time-controls input { width: 70px; padding: 6px; border-radius: 4px; border: 1px solid #2e6f4e; background: #0a0e17; color: #e6e8ec; }
+
+#event-log { list-style: none; padding: 0; margin: 0; font-size: 12px; max-height: 260px; overflow-y: auto; }
+#event-log li { padding: 4px 0; border-bottom: 1px solid #223047; }
+
+.save-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.hidden-input { display: none; }
+.danger-btn { background: #6f2e2e; border-color: #a04a4a; }
+.danger-btn:hover { background: #8a3a3a; }
+#save-status { min-height: 14px; color: #7fd6a3; }
+
+@media (max-width: 900px) {
+  #game { flex-direction: column; }
+  #sidebar { flex: 1 1 auto; max-height: none; }
+}
