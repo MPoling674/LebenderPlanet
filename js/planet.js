@@ -40,6 +40,7 @@ const Planet = (() => {
 
   function init() {
     generateTerrain();
+    lastTotalVegetation = 0;
   }
 
   // Aktuelles Terrain einer Zelle — abhängig vom (fixen) Höhenwert und dem AKTUELLEN
@@ -82,8 +83,21 @@ const Planet = (() => {
     return { ok: false, reason: "Unbekannte Aktion." };
   }
 
-  // Jährlicher Tick: Vegetation wächst/stirbt je nach lokaler Eignung, die
-  // Gesamtvegetation wirkt per Photosynthese-Näherung auf CO2/O2 zurück.
+  // Summe der Vegetation aller Landzellen zum Zeitpunkt des letzten tick() —
+  // Referenzwert fuer die CO2/O2-Nettobilanz (siehe tick()).
+  let lastTotalVegetation = 0;
+
+  // Jährlicher Tick: Vegetation wächst/stirbt je nach lokaler Eignung. Auf die
+  // Atmosphäre wirkt dabei bewusst nur die AENDERUNG der Gesamtvegetation seit
+  // dem letzten Jahr, nicht ihr Bestand — genau wie ein ausgewachsener, stabiler
+  // Wald in der Realität ungefähr CO2-neutral ist (Photosynthese ≈ Atmung/
+  // Verrottung im Gleichgewicht) und nur waehrend des Wachstums netto CO2 bindet.
+  // Waechst die Vegetationsdecke, wird CO2 gebunden/O2 freigesetzt; stirbt sie ab
+  // (Klimawandel, Rodung, Ueberflutung durch Meeresspiegelanstieg), wird der
+  // gespeicherte Kohlenstoff wieder freigesetzt. Eine stabile Vegetationsdecke
+  // haelt sich damit im Gleichgewicht, statt die Atmosphaere jedes Jahr erneut
+  // um ihren vollen Bestand zu veraendern (das fuehrte vorher zu einem CO2-Wert,
+  // der nie ein Gleichgewicht erreichte, sondern unbegrenzt weiter sank).
   function tick() {
     let totalVegetation = 0;
     let landCells = 0;
@@ -105,11 +119,21 @@ const Planet = (() => {
 
     const maxPossible = landCells * 100;
     const vegetationFraction = maxPossible > 0 ? totalVegetation / maxPossible : 0;
-    const co2Absorbed = vegetationFraction * VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR;
-    const o2Released = vegetationFraction * VEG_MAX_O2_RELEASE_PERCENT_PER_YEAR;
+    const netFraction = maxPossible > 0 ? (totalVegetation - lastTotalVegetation) / maxPossible : 0;
+    const co2Absorbed = netFraction * VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR;
+    const o2Released = netFraction * VEG_MAX_O2_RELEASE_PERCENT_PER_YEAR;
     Atmosphere.adjust("co2", -co2Absorbed);
     Atmosphere.adjust("o2", o2Released);
+    lastTotalVegetation = totalVegetation;
     return { vegetationFraction, co2Absorbed, o2Released };
+  }
+
+  function sumVegetation() {
+    let sum = 0;
+    cells.forEach((cell) => {
+      if (currentTerrain(cell) === "land") sum += cell.vegetation;
+    });
+    return sum;
   }
 
   function stats() {
@@ -146,14 +170,22 @@ const Planet = (() => {
   }
 
   function serialize() {
-    return { cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation })) };
+    return {
+      cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation })),
+      lastTotalVegetation,
+    };
   }
 
   function restore(saved) {
     if (saved && Array.isArray(saved.cells) && saved.cells.length === GRID_WIDTH * GRID_HEIGHT) {
       cells = saved.cells.map((c) => ({ ...c }));
+      // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
+      // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
+      // Aenderung im naechsten tick() zu erzeugen.
+      lastTotalVegetation = typeof saved.lastTotalVegetation === "number" ? saved.lastTotalVegetation : sumVegetation();
     } else {
       generateTerrain();
+      lastTotalVegetation = 0;
     }
   }
 
