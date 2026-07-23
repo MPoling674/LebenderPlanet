@@ -87,6 +87,23 @@ const PlanetMap = (() => {
     });
   }
 
+  // Anteil der Zellbreite um die Zellgrenze herum, der tatsaechlich
+  // ueberblendet wird (0..0.5). Ausserhalb dieses Bands bleibt die Zellfarbe
+  // voll erhalten — das ergibt zusammenhaengende, klar erkennbare Land-/
+  // Meeresflaechen mit weich (aber schmal) geglaetteten Kuestenlinien statt
+  // einer Farbe, die ueber die GESAMTE Zellbreite in die Nachbarzelle
+  // hinueberblendet (das war die Ursache fuer den "nebeligen" Gesamteindruck).
+  const EDGE_BAND = 0.3;
+
+  function sharpenT(t) {
+    const lo = 0.5 - EDGE_BAND;
+    const hi = 0.5 + EDGE_BAND;
+    if (t <= lo) return 0;
+    if (t >= hi) return 1;
+    const u = (t - lo) / (hi - lo);
+    return u * u * (3 - 2 * u); // smoothstep
+  }
+
   // Bilineare Farbinterpolation zwischen den vier Zellmittelpunkten, die die
   // (fraktionale) Rasterposition (gx, gy) umgeben. Raender werden geklemmt
   // (kein Umlaufen), das reicht fuer die flache Plattkarten-Darstellung.
@@ -95,8 +112,8 @@ const PlanetMap = (() => {
     const x1 = clamp(x0 + 1, 0, GRID_WIDTH - 1);
     const y0 = clamp(Math.floor(gy), 0, GRID_HEIGHT - 1);
     const y1 = clamp(y0 + 1, 0, GRID_HEIGHT - 1);
-    const tx = gx - Math.floor(gx);
-    const ty = gy - Math.floor(gy);
+    const tx = sharpenT(gx - Math.floor(gx));
+    const ty = sharpenT(gy - Math.floor(gy));
     const top = lerpColor(colorGrid[y0][x0], colorGrid[y0][x1], tx);
     const bottom = lerpColor(colorGrid[y1][x0], colorGrid[y1][x1], tx);
     return lerpColor(top, bottom, ty);
