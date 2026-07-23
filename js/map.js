@@ -100,7 +100,7 @@ const PlanetMap = (() => {
   // Meeresflaechen mit weich (aber schmal) geglaetteten Kuestenlinien statt
   // einer Farbe, die ueber die GESAMTE Zellbreite in die Nachbarzelle
   // hinueberblendet (das war die Ursache fuer den "nebeligen" Gesamteindruck).
-  const EDGE_BAND = 0.4;
+  const EDGE_BAND = 0.12;
 
   function sharpenT(t) {
     const lo = 0.5 - EDGE_BAND;
