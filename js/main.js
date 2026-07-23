@@ -68,6 +68,19 @@ const Game = (() => {
     checkThreshold(before.seaLevel, after.seaLevel, 5, "Der Meeresspiegel ist um über 5m gestiegen — tief liegendes Land wird überflutet.", null);
   }
 
+  // Rendert Dashboard UND Karte. Die Karte wird bewusst nur hier aufgerufen (bei
+  // tatsächlichen Zustandsänderungen), nicht in einer Dauerschleife — das
+  // supersampelte Kartenrendering (siehe js/map.js) waere bei 60 Aufrufen/Sekunde
+  // unnoetig teuer, obwohl sich der Planet nur bei einem Tick/einer Aktion aendert.
+  function renderAll() {
+    UI.renderAll();
+    try {
+      PlanetMap.render();
+    } catch (e) {
+      console.error("Fehler beim Kartenrendern:", e);
+    }
+  }
+
   function tick(years) {
     for (let i = 0; i < years; i++) {
       const before = snapshot();
@@ -77,7 +90,7 @@ const Game = (() => {
       checkMilestones(before, snapshot());
     }
     UI.setYear(year);
-    UI.renderAll();
+    renderAll();
     saveGame();
   }
 
@@ -85,7 +98,7 @@ const Game = (() => {
     const before = snapshot();
     Atmosphere.set(gasId, value);
     checkMilestones(before, snapshot());
-    UI.renderAll();
+    renderAll();
     saveGame();
   }
 
@@ -104,7 +117,7 @@ const Game = (() => {
       UI.log(res.reason);
       return;
     }
-    UI.renderAll();
+    renderAll();
     saveGame();
   }
 
@@ -139,7 +152,7 @@ const Game = (() => {
     }
     saveGame();
     UI.setYear(year);
-    UI.renderAll();
+    renderAll();
     UI.setSaveStatus(`Spielstand aus Datei geladen (Jahr ${year}).`);
     UI.log("Spielstand aus Datei geladen.");
   }
@@ -152,18 +165,9 @@ const Game = (() => {
     Climate.init();
     Planet.init();
     UI.setYear(year);
-    UI.renderAll();
+    renderAll();
     UI.setSaveStatus("Neue Simulation gestartet.");
     UI.log("Eine neue Simulation beginnt.");
-  }
-
-  function renderLoop() {
-    try {
-      PlanetMap.render();
-    } catch (e) {
-      console.error("Fehler beim Kartenrendern:", e);
-    }
-    requestAnimationFrame(renderLoop);
   }
 
   // Laeuft dauerhaft im Hintergrund; ein einzelner fehlerhafter Simulationsschritt
@@ -202,8 +206,7 @@ const Game = (() => {
     UI.setYear(year);
     UI.setSpeedLabel(simSpeed);
     UI.log("Willkommen! Die Simulation beginnt.");
-    UI.renderAll();
-    renderLoop();
+    renderAll();
     scheduleAutoTick();
   }
 
