@@ -61,6 +61,28 @@ const VEG_OPTIMAL_TEMP = 17; // °C, beste Wachstumsbedingungen
 const VEG_GROWTH_RATE = 0.015; // Anteil/Jahr Richtung 100%, bei optimalen Bedingungen (~65 Jahre bis ~63%)
 const VEG_DECAY_RATE = 0.03; // Anteil/Jahr Richtung 0%, bei ungeeigneten Bedingungen
 
+// Vegetationsstufen von einfach (toleriert fast jedes Klima) bis komplex (gedeiht
+// nur in einem schmalen Band um VEG_OPTIMAL_TEMP). "tolerance" ist die zulaessige
+// Abweichung von VEG_OPTIMAL_TEMP in beide Richtungen — je komplexer die Stufe,
+// desto schmaler das Band. "grass" reproduziert bewusst die alten globalen
+// VEG_MIN_TEMP/VEG_MAX_TEMP-Grenzen (Toleranz 15 = 17±15 = 2..32). Reihenfolge im
+// Array = aufsteigende Komplexitaet (complexity-Feld dient nur der Klarheit).
+const VEGETATION_TYPES = [
+  { id: "moss", name: "Moose & Flechten", complexity: 0, tolerance: 25, color: [150, 168, 140] },
+  { id: "grass", name: "Gräser", complexity: 1, tolerance: 15, color: [168, 176, 92] },
+  { id: "shrub", name: "Büsche", complexity: 2, tolerance: 10, color: [110, 140, 76] },
+  { id: "forest", name: "Wald", complexity: 3, tolerance: 7, color: [52, 108, 66] },
+  { id: "rainforest", name: "Tropischer Regenwald", complexity: 4, tolerance: 4, color: [24, 92, 64] },
+];
+
+function getVegType(typeId) {
+  return VEGETATION_TYPES.find((t) => t.id === typeId) || null;
+}
+
+function vegTypeRange(type) {
+  return [VEG_OPTIMAL_TEMP - type.tolerance, VEG_OPTIMAL_TEMP + type.tolerance];
+}
+
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.
 const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6;

@@ -112,7 +112,7 @@ const Game = (() => {
   function handleCellClick(x, y) {
     const tool = UI.getActiveTool();
     if (!tool) return;
-    const res = Planet.terraform(x, y, tool);
+    const res = tool === "plant" ? Planet.terraform(x, y, tool, UI.getSelectedVegType()) : Planet.terraform(x, y, tool);
     if (!res.ok) {
       UI.log(res.reason);
       return;

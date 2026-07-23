@@ -6,6 +6,7 @@ const UI = (() => {
   const el = {};
   const callbacks = {};
   let activeTool = null; // "plant" | "clear" | null
+  let selectedVegType = VEGETATION_TYPES[0].id;
 
   function init() {
     el.hudYear = document.getElementById("hud-year");
@@ -14,6 +15,9 @@ const UI = (() => {
     el.hudIce = document.getElementById("hud-ice");
     el.hudVegetation = document.getElementById("hud-vegetation");
     el.hudO2 = document.getElementById("hud-o2");
+    el.hudCo2 = document.getElementById("hud-co2");
+    el.hudCh4 = document.getElementById("hud-ch4");
+    el.vegLegend = document.getElementById("veg-legend");
 
     el.gasControls = document.getElementById("gas-controls");
     el.toolButtons = document.getElementById("tool-buttons");
@@ -29,6 +33,7 @@ const UI = (() => {
 
     renderGasControls();
     renderToolButtons();
+    renderVegLegend();
 
     el.speedSlider.addEventListener("input", () => {
       const idx = parseInt(el.speedSlider.value, 10);
@@ -81,7 +86,11 @@ const UI = (() => {
   }
 
   function renderToolButtons() {
+    const options = VEGETATION_TYPES.map(
+      (t) => `<option value="${t.id}" ${t.id === selectedVegType ? "selected" : ""}>${t.name}</option>`
+    ).join("");
     el.toolButtons.innerHTML = `
+      <select id="veg-type-select">${options}</select>
       <button data-tool="plant" class="${activeTool === "plant" ? "tool-active" : ""}">🌱 Vegetation pflanzen</button>
       <button data-tool="clear" class="${activeTool === "clear" ? "tool-active" : ""}">🪓 Vegetation entfernen</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
@@ -92,10 +101,29 @@ const UI = (() => {
         renderToolButtons();
       });
     });
+    el.toolButtons.querySelector("#veg-type-select").addEventListener("change", (evt) => {
+      selectedVegType = evt.target.value;
+    });
+  }
+
+  function renderVegLegend() {
+    if (!el.vegLegend) return;
+    el.vegLegend.innerHTML = VEGETATION_TYPES.map((t) => {
+      const [min, max] = vegTypeRange(t);
+      const rgb = `rgb(${t.color[0]}, ${t.color[1]}, ${t.color[2]})`;
+      return `<div class="veg-legend-item">
+        <span class="veg-swatch" style="background:${rgb}"></span>
+        <span>${t.name} <small>(${min.toFixed(0)}–${max.toFixed(0)} °C)</small></span>
+      </div>`;
+    }).join("");
   }
 
   function getActiveTool() {
     return activeTool;
+  }
+
+  function getSelectedVegType() {
+    return selectedVegType;
   }
 
   function renderGasValues() {
@@ -116,6 +144,8 @@ const UI = (() => {
     el.hudIce.textContent = stats.icePercent.toFixed(1) + " %";
     el.hudVegetation.textContent = stats.avgVegetation.toFixed(1) + " %";
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
+    el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
+    el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
     renderGasValues();
   }
 
@@ -143,5 +173,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType };
 })();

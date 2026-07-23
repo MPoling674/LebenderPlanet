@@ -46,6 +46,27 @@ body {
   cursor: crosshair;
 }
 
+#veg-legend {
+  line-height: normal;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 8px 12px;
+  background: #05070d;
+  border-top: 1px solid #223047;
+  font-size: 11px;
+  color: #93a3b8;
+}
+.veg-legend-item { display: flex; align-items: center; gap: 6px; }
+.veg-legend-item small { color: #6b7a8f; }
+.veg-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
 #sidebar {
   flex: 0 0 340px;
   display: flex;
@@ -76,6 +97,14 @@ body {
 .gas-value { font-size: 12px; color: #7fd6a3; float: right; }
 
 #tool-buttons { display: flex; flex-direction: column; gap: 6px; }
+#tool-buttons select {
+  background: #1f3a2e;
+  color: #e6e8ec;
+  border: 1px solid #2e6f4e;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
 
 button {
   background: #1f3a2e;

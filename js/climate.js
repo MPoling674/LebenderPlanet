@@ -51,10 +51,13 @@ const Climate = (() => {
     return meltedIcePercent() * SEA_LEVEL_PER_ICE_PERCENT;
   }
 
-  function vegetationSuitability(temp) {
-    if (temp <= VEG_MIN_TEMP || temp >= VEG_MAX_TEMP) return 0;
-    if (temp <= VEG_OPTIMAL_TEMP) return (temp - VEG_MIN_TEMP) / (VEG_OPTIMAL_TEMP - VEG_MIN_TEMP);
-    return (VEG_MAX_TEMP - temp) / (VEG_MAX_TEMP - VEG_OPTIMAL_TEMP);
+  // minTemp/maxTemp erlauben die Eignung fuer eine SPEZIFISCHE Vegetationsstufe
+  // zu berechnen (siehe VEGETATION_TYPES in data.js) — Default reproduziert die
+  // urspruengliche globale Schwelle (entspricht der Stufe "Gräser").
+  function vegetationSuitability(temp, minTemp = VEG_MIN_TEMP, maxTemp = VEG_MAX_TEMP) {
+    if (temp <= minTemp || temp >= maxTemp) return 0;
+    if (temp <= VEG_OPTIMAL_TEMP) return (temp - minTemp) / (VEG_OPTIMAL_TEMP - minTemp);
+    return (maxTemp - temp) / (maxTemp - VEG_OPTIMAL_TEMP);
   }
 
   function serialize() {

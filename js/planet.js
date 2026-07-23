@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0 });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null });
       }
     }
   }
@@ -65,19 +65,36 @@ const Planet = (() => {
     return globalTemp + EQUATOR_TEMP_BONUS - cell.latitude * (EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE);
   }
 
-  function terraform(x, y, action) {
+  // Komplexeste Vegetationsstufe, deren Toleranzband die gegebene Temperatur
+  // noch einschliesst (VEGETATION_TYPES ist aufsteigend nach Komplexitaet
+  // sortiert, daher rueckwaerts durchsuchen) — oder null, wenn keine Stufe
+  // dieses Klima traegt.
+  function bestVegTypeFor(temp) {
+    for (let i = VEGETATION_TYPES.length - 1; i >= 0; i--) {
+      const type = VEGETATION_TYPES[i];
+      const [min, max] = vegTypeRange(type);
+      if (temp > min && temp < max) return type;
+    }
+    return null;
+  }
+
+  function terraform(x, y, action, typeId) {
     const cell = cellAt(x, y);
     if (!cell) return { ok: false, reason: "Ungültige Position." };
     const terrain = currentTerrain(cell);
     if (terrain !== "land") return { ok: false, reason: "Vegetation kann nur auf Landzellen angesiedelt werden." };
     if (action === "plant") {
-      const suitability = Climate.vegetationSuitability(localTemperature(cell));
-      if (suitability <= 0) return { ok: false, reason: "Das Klima an dieser Stelle ist für Vegetation ungeeignet." };
+      const type = getVegType(typeId) || VEGETATION_TYPES[0];
+      const [min, max] = vegTypeRange(type);
+      const suitability = Climate.vegetationSuitability(localTemperature(cell), min, max);
+      if (suitability <= 0) return { ok: false, reason: `Das Klima an dieser Stelle ist für "${type.name}" ungeeignet.` };
+      cell.vegetationType = type.id;
       cell.vegetation = clamp(cell.vegetation + 40, 0, 100);
       return { ok: true };
     }
     if (action === "clear") {
       cell.vegetation = 0;
+      cell.vegetationType = null;
       return { ok: true };
     }
     return { ok: false, reason: "Unbekannte Aktion." };
@@ -98,6 +115,57 @@ const Planet = (() => {
   // haelt sich damit im Gleichgewicht, statt die Atmosphaere jedes Jahr erneut
   // um ihren vollen Bestand zu veraendern (das fuehrte vorher zu einem CO2-Wert,
   // der nie ein Gleichgewicht erreichte, sondern unbegrenzt weiter sank).
+  // Vegetation je Zelle einen Jahresschritt weiterentwickeln: natuerliche
+  // Besiedlung kahler Zellen mit der best-angepassten Stufe, Wachstum/Schwund der
+  // bestehenden Stufe nach ihrer EIGENEN Eignung, und Sukzession zu einer
+  // komplexeren Stufe erst, wenn die aktuelle ausgereift ist (>=90%). Wird die
+  // aktuelle Stufe vom Klima nicht mehr getragen, schrumpft sie zurueck (nicht
+  // sofort durch die neue best-passende Stufe ersetzt) — realistischer Uebergang
+  // statt eines abrupten Arten-Wechsels.
+  function tickCellVegetation(cell, temp) {
+    const best = bestVegTypeFor(temp);
+    const currentType = cell.vegetationType ? getVegType(cell.vegetationType) : null;
+
+    if (!currentType) {
+      if (!best) {
+        cell.vegetation = 0;
+        return;
+      }
+      const [min, max] = vegTypeRange(best);
+      const suitability = Climate.vegetationSuitability(temp, min, max);
+      cell.vegetationType = best.id;
+      cell.vegetation = clamp(VEG_GROWTH_RATE * suitability * 100, 0, 100);
+      return;
+    }
+
+    if (best && best.id === currentType.id) {
+      const [min, max] = vegTypeRange(currentType);
+      const suitability = Climate.vegetationSuitability(temp, min, max);
+      cell.vegetation = clamp(cell.vegetation + VEG_GROWTH_RATE * suitability * (100 - cell.vegetation), 0, 100);
+      return;
+    }
+
+    if (best && best.complexity > currentType.complexity && cell.vegetation >= 90) {
+      // Ausgereifte einfachere Vegetation macht komplexerer Platz, sobald das
+      // Klima es zulaesst (z.B. Buesche -> Wald) — startet mit reduziertem
+      // Bestand, muss selbst erst nachwachsen.
+      cell.vegetationType = best.id;
+      cell.vegetation = 50;
+      return;
+    }
+
+    // Aktuelle Stufe wird vom Klima nicht mehr (oder nicht mehr voll) getragen —
+    // mit ihrer EIGENEN Eignung weiter entwickeln, nicht mit der von "best".
+    const [min, max] = vegTypeRange(currentType);
+    const suitability = Climate.vegetationSuitability(temp, min, max);
+    if (suitability > 0) {
+      cell.vegetation = clamp(cell.vegetation + VEG_GROWTH_RATE * suitability * (100 - cell.vegetation), 0, 100);
+    } else {
+      cell.vegetation = clamp(cell.vegetation - VEG_DECAY_RATE * cell.vegetation, 0, 100);
+      if (cell.vegetation <= 0) cell.vegetationType = null;
+    }
+  }
+
   function tick() {
     let totalVegetation = 0;
     let landCells = 0;
@@ -105,15 +173,11 @@ const Planet = (() => {
       const terrain = currentTerrain(cell);
       if (terrain !== "land") {
         cell.vegetation = 0;
+        cell.vegetationType = null;
         return;
       }
       landCells += 1;
-      const suitability = Climate.vegetationSuitability(localTemperature(cell));
-      if (suitability > 0) {
-        cell.vegetation = clamp(cell.vegetation + VEG_GROWTH_RATE * suitability * (100 - cell.vegetation), 0, 100);
-      } else {
-        cell.vegetation = clamp(cell.vegetation - VEG_DECAY_RATE * cell.vegetation, 0, 100);
-      }
+      tickCellVegetation(cell, localTemperature(cell));
       totalVegetation += cell.vegetation;
     });
 
@@ -165,20 +229,28 @@ const Planet = (() => {
       y: Math.floor(i / GRID_WIDTH),
       terrain: currentTerrain(cell),
       vegetation: cell.vegetation,
+      vegetationType: cell.vegetationType,
       elevation: cell.elevation,
     }));
   }
 
   function serialize() {
     return {
-      cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation })),
+      cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation, vegetationType: c.vegetationType })),
       lastTotalVegetation,
     };
   }
 
   function restore(saved) {
     if (saved && Array.isArray(saved.cells) && saved.cells.length === GRID_WIDTH * GRID_HEIGHT) {
-      cells = saved.cells.map((c) => ({ ...c }));
+      cells = saved.cells.map((c) => ({
+        elevation: c.elevation,
+        latitude: c.latitude,
+        vegetation: c.vegetation,
+        // Aeltere Spielstaende kennen vegetationType noch nicht — vorhandene
+        // Vegetation dann als "Gräser" annehmen, statt sie stillschweigend zu loeschen.
+        vegetationType: c.vegetationType !== undefined ? c.vegetationType : (c.vegetation > 0 ? "grass" : null),
+      }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
       // Aenderung im naechsten tick() zu erzeugen.

@@ -75,7 +75,12 @@ const PlanetMap = (() => {
   }
 
   function landColor(cell) {
-    const base = lerpColor(LAND_BARE, LAND_FOREST, cell.vegetation / 100);
+    // Farbe nach angesiedelter Vegetationsstufe (siehe VEGETATION_TYPES in
+    // data.js) — macht die unterschiedlichen Vegetationszonen auf der Karte
+    // sichtbar, statt nur "mehr/weniger Gruen" ohne Artunterschied zu zeigen.
+    const type = cell.vegetationType ? getVegType(cell.vegetationType) : null;
+    const vegColor = type ? type.color : LAND_FOREST;
+    const base = lerpColor(LAND_BARE, vegColor, cell.vegetation / 100);
     // Leichte Aufhellung in größerer Höhe — deutet Gebirge an.
     const brighten = clamp((cell.elevation - SEA_LEVEL_THRESHOLD) * 0.7, 0, 0.3);
     return base.map((c) => c + (255 - c) * brighten);

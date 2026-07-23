@@ -14,11 +14,14 @@
   <div class="hud-item"><span class="label">Eisbedeckung</span><span id="hud-ice">0 %</span></div>
   <div class="hud-item"><span class="label">Vegetation</span><span id="hud-vegetation">0 %</span></div>
   <div class="hud-item"><span class="label">Sauerstoff</span><span id="hud-o2">0 %</span></div>
+  <div class="hud-item"><span class="label">Kohlendioxid</span><span id="hud-co2">0 ppm</span></div>
+  <div class="hud-item"><span class="label">Methan</span><span id="hud-ch4">0 ppm</span></div>
 </header>
 
 <main id="game">
   <div id="map-wrap">
     <canvas id="planet-canvas" width="1200" height="600"></canvas>
+    <div id="veg-legend"></div>
   </div>
 
   <aside id="sidebar">
@@ -30,7 +33,7 @@
 
     <section id="panel-tools">
       <h2>Terraforming</h2>
-      <p class="hint">Werkzeug wählen, dann auf eine Landzelle der Karte klicken.</p>
+      <p class="hint">Vegetationsart wählen, "Pflanzen" aktivieren, dann auf eine Landzelle der Karte klicken. Komplexere Arten gedeihen nur in einem schmalen Temperaturband (siehe Legende unter der Karte).</p>
       <div id="tool-buttons"></div>
     </section>
 
