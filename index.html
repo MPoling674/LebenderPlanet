@@ -18,7 +18,7 @@
 
 <main id="game">
   <div id="map-wrap">
-    <canvas id="planet-canvas" width="900" height="450"></canvas>
+    <canvas id="planet-canvas" width="1200" height="600"></canvas>
   </div>
 
   <aside id="sidebar">
@@ -36,9 +36,10 @@
 
     <section id="panel-time">
       <h2>Zeit</h2>
+      <p class="hint">Geschwindigkeit einstellen — die Simulation läuft dann automatisch weiter.</p>
       <div class="time-controls">
-        <input type="number" id="tick-years-input" min="1" max="1000" value="10">
-        <button id="tick-btn">Jahre vorspulen</button>
+        <input type="range" id="speed-slider" min="0" max="5" step="1" value="0">
+        <span id="speed-label">Pausiert</span>
       </div>
     </section>
 

@@ -18,8 +18,8 @@ const UI = (() => {
     el.gasControls = document.getElementById("gas-controls");
     el.toolButtons = document.getElementById("tool-buttons");
     el.eventLog = document.getElementById("event-log");
-    el.tickYearsInput = document.getElementById("tick-years-input");
-    el.tickBtn = document.getElementById("tick-btn");
+    el.speedSlider = document.getElementById("speed-slider");
+    el.speedLabel = document.getElementById("speed-label");
     el.saveNowBtn = document.getElementById("save-now-btn");
     el.saveExportBtn = document.getElementById("save-export-btn");
     el.saveImportBtn = document.getElementById("save-import-btn");
@@ -30,9 +30,9 @@ const UI = (() => {
     renderGasControls();
     renderToolButtons();
 
-    el.tickBtn.addEventListener("click", () => {
-      const years = Math.max(1, parseInt(el.tickYearsInput.value, 10) || 1);
-      callbacks.advanceYears && callbacks.advanceYears(years);
+    el.speedSlider.addEventListener("input", () => {
+      const idx = parseInt(el.speedSlider.value, 10);
+      callbacks.setSpeed && callbacks.setSpeed(SPEED_STEPS[idx]);
     });
     el.saveNowBtn.addEventListener("click", () => callbacks.saveNow && callbacks.saveNow());
     el.saveExportBtn.addEventListener("click", () => callbacks.exportSave && callbacks.exportSave());
@@ -118,6 +118,15 @@ const UI = (() => {
     el.hudYear.textContent = "Jahr " + year;
   }
 
+  function setSpeedLabel(yearsPerTick) {
+    if (yearsPerTick <= 0) {
+      el.speedLabel.textContent = "Pausiert";
+      return;
+    }
+    const perSecond = yearsPerTick * (1000 / TICK_INTERVAL_MS);
+    el.speedLabel.textContent = `${perSecond} Jahre/Sekunde`;
+  }
+
   function log(message) {
     const li = document.createElement("li");
     li.textContent = `Jahr ${Game.currentYear()}: ${message}`;
@@ -129,5 +138,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, log, setSaveStatus, getActiveTool };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool };
 })();

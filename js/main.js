@@ -13,6 +13,7 @@ const Game = (() => {
     return {
       year,
       atmosphere: Atmosphere.serialize(),
+      climate: Climate.serialize(),
       planet: Planet.serialize(),
     };
   }
@@ -27,6 +28,7 @@ const Game = (() => {
     }
     year = payload.year;
     Atmosphere.restore(payload.atmosphere);
+    Climate.restore(payload.climate); // faellt bei fehlendem/altem Speicherstand sauber auf init() zurueck
     Planet.restore(payload.planet);
   }
 
@@ -70,6 +72,7 @@ const Game = (() => {
     for (let i = 0; i < years; i++) {
       const before = snapshot();
       year += 1;
+      Climate.tick();
       Planet.tick();
       checkMilestones(before, snapshot());
     }
@@ -86,8 +89,11 @@ const Game = (() => {
     saveGame();
   }
 
-  function handleAdvanceYears(years) {
-    tick(years);
+  let simSpeed = 0; // Jahre pro Simulationsschritt; 0 = pausiert
+
+  function handleSetSpeed(yearsPerTick) {
+    simSpeed = yearsPerTick;
+    UI.setSpeedLabel(simSpeed);
   }
 
   function handleCellClick(x, y) {
@@ -143,6 +149,7 @@ const Game = (() => {
     localStorage.removeItem(SAVE_KEY);
     year = 0;
     Atmosphere.init();
+    Climate.init();
     Planet.init();
     UI.setYear(year);
     UI.renderAll();
@@ -159,8 +166,24 @@ const Game = (() => {
     requestAnimationFrame(renderLoop);
   }
 
+  // Laeuft dauerhaft im Hintergrund; ein einzelner fehlerhafter Simulationsschritt
+  // soll die automatische Zeit nicht dauerhaft anhalten (Resilienz-Muster wie in
+  // HanseSpiel).
+  function scheduleAutoTick() {
+    setInterval(() => {
+      if (simSpeed <= 0) return;
+      try {
+        tick(simSpeed);
+      } catch (e) {
+        console.error("Fehler im Simulations-Tick:", e);
+        UI.log("Ein unerwarteter Fehler ist aufgetreten — die Simulation läuft weiter.");
+      }
+    }, TICK_INTERVAL_MS);
+  }
+
   function init() {
     Atmosphere.init();
+    Climate.init();
     Planet.init();
     year = 0;
     loadGame();
@@ -170,16 +193,18 @@ const Game = (() => {
 
     PlanetMap.onCellClick(handleCellClick);
     UI.on("setGas", handleSetGas);
-    UI.on("advanceYears", handleAdvanceYears);
+    UI.on("setSpeed", handleSetSpeed);
     UI.on("saveNow", handleSaveNow);
     UI.on("exportSave", handleExportSave);
     UI.on("importSave", handleImportSave);
     UI.on("newGame", handleNewGame);
 
     UI.setYear(year);
+    UI.setSpeedLabel(simSpeed);
     UI.log("Willkommen! Die Simulation beginnt.");
     UI.renderAll();
     renderLoop();
+    scheduleAutoTick();
   }
 
   return { init, currentYear };

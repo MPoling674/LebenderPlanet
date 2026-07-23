@@ -141,6 +141,7 @@ const Planet = (() => {
       y: Math.floor(i / GRID_WIDTH),
       terrain: currentTerrain(cell),
       vegetation: cell.vegetation,
+      elevation: cell.elevation,
     }));
   }
 
