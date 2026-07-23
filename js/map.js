@@ -13,6 +13,7 @@ const PlanetMap = (() => {
   let offscreen = null;
   let offCtx = null;
   let onCellClickCallback = null;
+  let onCellHoverCallback = null;
   let colorGrid = null; // colorGrid[y][x] = [r,g,b], neu befuellt bei jedem render()
 
   function init(canvasEl) {
@@ -30,10 +31,28 @@ const PlanetMap = (() => {
     offCtx = offscreen.getContext("2d");
 
     canvas.addEventListener("click", handleClick);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
   }
 
   function onCellClick(cb) {
     onCellClickCallback = cb;
+  }
+
+  // cb(x, y, clientX, clientY) — x/y sind null, wenn die Maus ausserhalb des
+  // Rasters steht oder den Canvas verlassen hat.
+  function onCellHover(cb) {
+    onCellHoverCallback = cb;
+  }
+
+  function handleMouseMove(evt) {
+    if (!onCellHoverCallback) return;
+    const cell = cellAtEvent(evt);
+    onCellHoverCallback(cell ? cell.x : null, cell ? cell.y : null, evt.clientX, evt.clientY);
+  }
+
+  function handleMouseLeave() {
+    if (onCellHoverCallback) onCellHoverCallback(null, null, 0, 0);
   }
 
   function cellAtEvent(evt) {
@@ -160,5 +179,5 @@ const PlanetMap = (() => {
     ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
   }
 
-  return { init, onCellClick, render };
+  return { init, onCellClick, onCellHover, render };
 })();

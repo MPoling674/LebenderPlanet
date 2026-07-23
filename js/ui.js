@@ -18,6 +18,7 @@ const UI = (() => {
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
     el.vegLegend = document.getElementById("veg-legend");
+    el.mapTooltip = document.getElementById("map-tooltip");
 
     el.gasControls = document.getElementById("gas-controls");
     el.toolButtons = document.getElementById("tool-buttons");
@@ -122,6 +123,35 @@ const UI = (() => {
     return activeTool;
   }
 
+  function terrainLabel(terrain) {
+    if (terrain === "ocean") return "Ozean";
+    if (terrain === "ice") return "Eis";
+    return "Land";
+  }
+
+  // info kommt aus Planet.cellInfoAt(x,y). Zeigt aktuell Terrain/Temperatur und
+  // (auf Land) die angesiedelte Vegetationsstufe. Sobald es ein Tier-/Fauna-
+  // Modell gibt, kann hier einfach eine weitere Zeile ergaenzt werden — info
+  // liefert bereits die rohen Zelldaten dafuer.
+  function showTooltip(info, clientX, clientY) {
+    if (!el.mapTooltip) return;
+    let html = `<strong>${terrainLabel(info.terrain)}</strong><br>Temperatur: ${info.temperature.toFixed(1)} °C`;
+    if (info.terrain === "land") {
+      const type = info.vegetationType ? getVegType(info.vegetationType) : null;
+      html += type
+        ? `<br>${type.name}: ${info.vegetation.toFixed(0)} %`
+        : `<br>Keine Vegetation`;
+    }
+    el.mapTooltip.innerHTML = html;
+    el.mapTooltip.style.left = clientX + 14 + "px";
+    el.mapTooltip.style.top = clientY + 14 + "px";
+    el.mapTooltip.classList.remove("hidden");
+  }
+
+  function hideTooltip() {
+    if (el.mapTooltip) el.mapTooltip.classList.add("hidden");
+  }
+
   function getSelectedVegType() {
     return selectedVegType;
   }
@@ -173,5 +203,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, showTooltip, hideTooltip };
 })();

@@ -223,6 +223,22 @@ const Planet = (() => {
     };
   }
 
+  // Leichtgewichtiger Einzelzellen-Lookup fuer den Maus-Hover-Tooltip — baut
+  // (anders als allCells()) NICHT das gesamte 1800-Zellen-Array bei jedem
+  // Mousemove-Event neu auf.
+  function cellInfoAt(x, y) {
+    const cell = cellAt(x, y);
+    if (!cell) return null;
+    return {
+      x,
+      y,
+      terrain: currentTerrain(cell),
+      vegetation: cell.vegetation,
+      vegetationType: cell.vegetationType,
+      temperature: localTemperature(cell),
+    };
+  }
+
   function allCells() {
     return cells.map((cell, i) => ({
       x: i % GRID_WIDTH,
@@ -261,5 +277,5 @@ const Planet = (() => {
     }
   }
 
-  return { init, terraform, tick, stats, allCells, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

@@ -121,6 +121,19 @@ const Game = (() => {
     saveGame();
   }
 
+  function handleCellHover(x, y, clientX, clientY) {
+    if (x === null) {
+      UI.hideTooltip();
+      return;
+    }
+    const info = Planet.cellInfoAt(x, y);
+    if (!info) {
+      UI.hideTooltip();
+      return;
+    }
+    UI.showTooltip(info, clientX, clientY);
+  }
+
   function handleSaveNow() {
     saveGame();
     UI.setSaveStatus(`Gespeichert (Jahr ${year}).`);
@@ -196,6 +209,7 @@ const Game = (() => {
     UI.init();
 
     PlanetMap.onCellClick(handleCellClick);
+    PlanetMap.onCellHover(handleCellHover);
     UI.on("setGas", handleSetGas);
     UI.on("setSpeed", handleSetSpeed);
     UI.on("saveNow", handleSaveNow);
