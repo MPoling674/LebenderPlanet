@@ -18,8 +18,11 @@ const PlanetMap = (() => {
   function init(canvasEl) {
     canvas = canvasEl;
     ctx = canvas.getContext("2d");
+    // "high" wuerde hier zusaetzlich zu unserer eigenen Kantenglaettung
+    // (sharpenT) noch ein staerker schaerfendes Resampling beim Hochskalieren
+    // anwenden — das kann an Farbgrenzen einen leichten "Halo"/Ueberschwinger
+    // erzeugen, was zum gemeldeten unruhigen, augenanstrengenden Bild beitraegt.
     ctx.imageSmoothingEnabled = true;
-    if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
 
     offscreen = document.createElement("canvas");
     offscreen.width = GRID_WIDTH * SUPERSAMPLE;
@@ -56,11 +59,15 @@ const PlanetMap = (() => {
     return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
   }
 
-  const OCEAN_SHALLOW = [58, 128, 150];
-  const OCEAN_DEEP = [8, 28, 58];
-  const LAND_BARE = [176, 148, 106];
-  const LAND_FOREST = [40, 110, 58];
-  const ICE_COLOR = [225, 238, 246];
+  // Kontrast bewusst gedaempft (dunkelster/hellster Wert liegen naeher an
+  // einem mittleren Grauton) — der vorherige Sprung von fast Schwarz (Ozean)
+  // zu fast Weiss (Eis) an Polargrenzen war ein Teil des gemeldeten "harten,
+  // augenanstrengenden" Bildeindrucks.
+  const OCEAN_SHALLOW = [64, 124, 142];
+  const OCEAN_DEEP = [26, 52, 82];
+  const LAND_BARE = [168, 144, 108];
+  const LAND_FOREST = [52, 108, 66];
+  const ICE_COLOR = [206, 218, 226];
 
   function oceanColor(cell) {
     const depthFraction = (SEA_LEVEL_THRESHOLD - cell.elevation) / SEA_LEVEL_THRESHOLD;
@@ -93,7 +100,7 @@ const PlanetMap = (() => {
   // Meeresflaechen mit weich (aber schmal) geglaetteten Kuestenlinien statt
   // einer Farbe, die ueber die GESAMTE Zellbreite in die Nachbarzelle
   // hinueberblendet (das war die Ursache fuer den "nebeligen" Gesamteindruck).
-  const EDGE_BAND = 0.3;
+  const EDGE_BAND = 0.4;
 
   function sharpenT(t) {
     const lo = 0.5 - EDGE_BAND;

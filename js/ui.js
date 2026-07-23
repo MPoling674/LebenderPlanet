@@ -72,6 +72,11 @@ const UI = (() => {
         const value = parseFloat(input.value);
         callbacks.setGas && callbacks.setGas(input.dataset.gas, value);
       });
+      // "change" feuert erst beim Loslassen — danach Fokus abgeben, sonst haelt
+      // der Browser den Regler dauerhaft fokussiert und renderGasValues()
+      // wuerde seine Position (wegen des activeElement-Schutzes beim Ziehen)
+      // nie wieder mit dem tatsaechlichen Gaswert nachziehen.
+      input.addEventListener("change", () => input.blur());
     });
   }
 
