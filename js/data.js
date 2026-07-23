@@ -42,7 +42,17 @@ const EQUATOR_TEMP_BONUS = 13;
 const POLE_TEMP_RANGE = 40;
 
 const SEA_LEVEL_THRESHOLD = 0.58; // Hoehen-Schwelle (0..1): darunter Ozean, darueber Land
-const MAX_ELEVATION_METERS = 4000; // Normierung, um Meeresspiegelanstieg (m) auf die 0..1-Hoehenskala zu beziehen
+
+// Normierung, um Meeresspiegelanstieg (m) auf die 0..1-Hoehenskala zu beziehen.
+// Bewusst NICHT die reale Hoehe des hoechsten Berges (das waere hier irrelevant,
+// "elevation" hat sonst nirgends eine reale Meter-Bedeutung) - sondern so gewaehlt,
+// dass die im Modell ueberhaupt erreichbare Meeresspiegeleerhoehung (max. ~4.8m,
+// bei vollstaendigem Abschmelzen von BASE_ICE_COVERAGE) tatsaechlich einen sichtbaren
+// Teil der Kuestenzellen von Land zu Ozean umklappt. Der alte Wert (4000, an realen
+// Gebirgshoehen orientiert) verschob die Kuestenschwelle selbst im Extremfall nur um
+// 0.0012 - viel zu wenig, um je eine Zelle umzuklappen (gemeldet: "Meeresspiegelanstieg
+// wird nicht dargestellt").
+const MAX_ELEVATION_METERS = 80;
 const POLAR_LATITUDE_THRESHOLD = 0.82; // Breite (0=Aequator,1=Pol), ab der bei Basisklima Eis beginnt
 
 const VEG_MIN_TEMP = 2; // °C, unterhalb stirbt Vegetation ab (Dauerfrost)
