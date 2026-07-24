@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0 });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0 });
       }
     }
   }
@@ -251,6 +251,10 @@ const Planet = (() => {
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
     Fauna.tickSpawns(cellAt, currentTerrain, localTemperature);
+    // Tech-Level ebenfalls NACH der Sukzession, damit ein diesjaehriger
+    // Artwechsel (z.B. Sukzession zu einer nicht-zivilisationsfaehigen Stufe)
+    // den Zivilisationsfortschritt schon in diesem Jahr beeinflusst.
+    Civilization.tick(cellAt);
 
     const maxPossible = landCells * 100;
     const vegetationFraction = maxPossible > 0 ? totalVegetation / maxPossible : 0;
@@ -278,6 +282,7 @@ const Planet = (() => {
     let vegSum = 0;
     let salinitySum = 0;
     let faunaSum = 0;
+    let cityCount = 0;
     const typeCounts = {};
     VEGETATION_TYPES.forEach((t) => {
       typeCounts[t.id] = 0;
@@ -300,6 +305,7 @@ const Planet = (() => {
       if (t !== "ice") {
         faunaSum += cell.fauna;
         if (cell.faunaType) faunaTypeCounts[cell.faunaType] += 1;
+        if (Civilization.hasCity(cell)) cityCount += 1;
       }
     });
     const total = cells.length;
@@ -327,6 +333,7 @@ const Planet = (() => {
       avgSalinity: ocean > 0 ? salinitySum / ocean : 0,
       avgFauna: habitatCells > 0 ? faunaSum / habitatCells : 0,
       faunaByType,
+      cityCount,
     };
   }
 
@@ -347,6 +354,9 @@ const Planet = (() => {
       fauna: cell.fauna,
       faunaType: cell.faunaType,
       currentDirection: Currents.currentDirectionFor(cell.latitude),
+      techLevel: cell.techLevel,
+      hasCity: Civilization.hasCity(cell),
+      isHighTech: Civilization.isHighTech(cell),
     };
   }
 
@@ -361,6 +371,7 @@ const Planet = (() => {
       salinity: cell.salinity,
       fauna: cell.fauna,
       faunaType: cell.faunaType,
+      techLevel: cell.techLevel,
     }));
   }
 
@@ -375,6 +386,7 @@ const Planet = (() => {
         fauna: c.fauna,
         faunaType: c.faunaType,
         tempAnomaly: c.tempAnomaly,
+        techLevel: c.techLevel,
       })),
       lastTotalVegetation,
     };
@@ -400,6 +412,8 @@ const Planet = (() => {
         faunaType: getFaunaType(c.faunaType) ? c.faunaType : null,
         // Aeltere Spielstaende kennen Stroemungen noch nicht — dann keine Anomalie annehmen.
         tempAnomaly: typeof c.tempAnomaly === "number" ? c.tempAnomaly : 0,
+        // Aeltere Spielstaende kennen Zivilisation noch nicht — dann bei 0 starten.
+        techLevel: typeof c.techLevel === "number" ? c.techLevel : 0,
       }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-

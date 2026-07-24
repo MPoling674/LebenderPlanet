@@ -188,6 +188,17 @@ const LIFE_GATE_MATURE_FRACTION = 0.1;
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
 const CROSS_HABITAT_SPAWN_CHANCE = 0.1;
 
+// Zivilisation: Zellen mit reifem (>=90%) zivilisationsfaehigem Taxon bauen pro
+// Jahr Tech-Level auf (0..100), sonst faellt er zurueck — Kollaps schneller als
+// Aufstieg (COLLAPSE_RATE > GROWTH_RATE), reale Analogie: eine Zivilisation
+// zerfaellt schneller, als sie entsteht. Ab CITY_TECH_THRESHOLD gilt eine Zelle
+// als "Stadt", ab HIGH_TECH_THRESHOLD als "Hochtechnologie" (Voraussetzung fuer
+// die Atombombe, siehe civilization.js).
+const CIVILIZATION_GROWTH_RATE = 0.4;
+const CIVILIZATION_DECAY_RATE = 0.8;
+const CITY_TECH_THRESHOLD = 30;
+const HIGH_TECH_THRESHOLD = 80;
+
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.
 const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6;

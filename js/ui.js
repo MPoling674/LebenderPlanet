@@ -19,6 +19,7 @@ const UI = (() => {
     el.hudSalinity = document.getElementById("hud-salinity");
     el.hudFauna = document.getElementById("hud-fauna");
     el.hudFaunaTypes = document.getElementById("hud-faunatypes");
+    el.hudCities = document.getElementById("hud-cities");
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
@@ -168,6 +169,9 @@ const UI = (() => {
       const faunaType = getFaunaType(info.faunaType);
       html += `<br>${faunaType.name}: ${info.fauna.toFixed(0)} %`;
     }
+    if (info.hasCity) {
+      html += `<br>🏙 Stadt (Tech-Level ${info.techLevel.toFixed(0)}${info.isHighTech ? ", Hochtechnologie" : ""})`;
+    }
     el.mapTooltip.innerHTML = html;
     el.mapTooltip.style.left = clientX + 14 + "px";
     el.mapTooltip.style.top = clientY + 14 + "px";
@@ -227,6 +231,7 @@ const UI = (() => {
     el.hudSalinity.textContent = stats.avgSalinity.toFixed(1) + " ‰";
     el.hudFauna.textContent = stats.avgFauna.toFixed(1) + " %";
     el.hudFaunaTypes.textContent = faunaBreakdownText(stats);
+    el.hudCities.textContent = stats.cityCount;
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
