@@ -294,6 +294,32 @@ const PlanetMap = (() => {
     ctx.fillRect(0, pixelYSouth, canvas.width, canvas.height - pixelYSouth);
   }
 
+  // Zwei duenne Overlays direkt auf dem Haupt-Canvas, kein Vektor-Clip noetig
+  // (anders als Land/Eis brauchen sie keine scharfe Kontur): ein dezenter
+  // gelbgruenlicher Tint auf verstrahlten Zellen (Staerke ~ radiation/100) und ein
+  // heller Punkt auf Staedten (groesser/kraeftiger bei Hochtechnologie).
+  function drawOverlays() {
+    const cellW = canvas.width / GRID_WIDTH;
+    const cellH = canvas.height / GRID_HEIGHT;
+    Planet.allCells().forEach((cell) => {
+      if (cell.radiation > 0) {
+        const alpha = (cell.radiation / 100) * 0.45;
+        ctx.fillStyle = `rgba(190, 210, 60, ${alpha})`;
+        ctx.fillRect(cell.x * cellW, cell.y * cellH, cellW, cellH);
+      }
+      if (cell.techLevel >= CITY_TECH_THRESHOLD) {
+        const highTech = cell.techLevel >= HIGH_TECH_THRESHOLD;
+        const px = (cell.x + 0.5) * cellW;
+        const py = (cell.y + 0.5) * cellH;
+        const radius = Math.max(1.5, Math.min(cellW, cellH) * (highTech ? 0.28 : 0.18));
+        ctx.fillStyle = highTech ? "rgba(255, 225, 140, 0.95)" : "rgba(255, 255, 255, 0.85)";
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+
   // Wird nur aufgerufen, wenn sich der Planetenzustand tatsächlich ändert (Tick,
   // Terraforming, Gas-Regler) — nicht in einer Dauerschleife, da die supersampelte
   // Neuberechnung sonst unnötig Rechenzeit kosten würde.
@@ -315,6 +341,8 @@ const PlanetMap = (() => {
 
     // Ebene 3: Eiskappen, geclippt an der (fraktionalen) Breiten-Grenze.
     drawIceLayer();
+
+    drawOverlays();
   }
 
   return { init, onCellClick, onCellHover, render };
