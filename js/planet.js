@@ -85,6 +85,7 @@ const Planet = (() => {
   function bestVegTypeFor(temp) {
     for (let i = VEGETATION_TYPES.length - 1; i >= 0; i--) {
       const type = VEGETATION_TYPES[i];
+      if (type.radiationOnly) continue;
       const [min, max] = vegTypeRange(type);
       if (temp > min && temp < max) return type;
     }
@@ -242,7 +243,15 @@ const Planet = (() => {
       const temp = localTemperature(cell);
       if (terrain === "land") {
         landCells += 1;
-        tickCellVegetation(cell, temp);
+        // Verstrahlte Zellen mutieren mit kleiner Jahreswahrscheinlichkeit zu
+        // Mutantenpflanzen, statt normal weiterzuwachsen (siehe VEGETATION_TYPES-
+        // Kommentar zu "mutant" in data.js).
+        if (cell.radiation > 0 && Math.random() < MUTANT_PLANT_SPAWN_CHANCE) {
+          cell.vegetationType = "mutant";
+          cell.vegetation = 40;
+        } else {
+          tickCellVegetation(cell, temp);
+        }
         totalVegetation += cell.vegetation;
       } else {
         cell.vegetation = 0;

@@ -98,6 +98,10 @@ const VEGETATION_TYPES = [
   { id: "shrub", name: "Büsche", complexity: 2, tolerance: 10, color: [110, 140, 76] },
   { id: "forest", name: "Wald", complexity: 3, tolerance: 7, color: [52, 108, 66] },
   { id: "rainforest", name: "Tropischer Regenwald", complexity: 4, tolerance: 4, color: [24, 92, 64] },
+  // Sonderform: entsteht ausschliesslich zufaellig auf verstrahlten Zellen (siehe
+  // MUTANT_PLANT_SPAWN_CHANCE, Planet.tick()) — radiationOnly schliesst sie aus
+  // normaler Sukzession/manueller Aussaat aus (bestVegTypeFor ueberspringt sie).
+  { id: "mutant", name: "Mutantenpflanzen", complexity: 0, tolerance: 30, radiationOnly: true, color: [150, 70, 176] },
 ];
 
 function getVegType(typeId) {
@@ -206,6 +210,10 @@ const HIGH_TECH_THRESHOLD = 80;
 // FAUNA_TYPES).
 const RADIATION_DECAY_RATE = 1;
 const NANOBOT_START_POPULATION = 40;
+
+// Jahreswahrscheinlichkeit, mit der eine verstrahlte Landzelle (radiation>0)
+// spontan zu Mutantenpflanzen mutiert statt normal weiterzuwachsen.
+const MUTANT_PLANT_SPAWN_CHANCE = 0.05;
 
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.
