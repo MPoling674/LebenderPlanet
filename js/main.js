@@ -116,6 +116,8 @@ const Game = (() => {
     if (tool === "plant") res = Planet.terraform(x, y, tool, UI.getSelectedVegType());
     else if (tool === "salt_add") res = Planet.adjustSalinity(x, y, SALINITY_ADJUST_STEP);
     else if (tool === "salt_remove") res = Planet.adjustSalinity(x, y, -SALINITY_ADJUST_STEP);
+    else if (tool === "release_fauna") res = Planet.terraformFauna(x, y, "release", UI.getSelectedFaunaType());
+    else if (tool === "remove_fauna") res = Planet.terraformFauna(x, y, "remove");
     else res = Planet.terraform(x, y, tool);
     if (!res.ok) {
       UI.log(res.reason);

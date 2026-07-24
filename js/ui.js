@@ -5,8 +5,9 @@
 const UI = (() => {
   const el = {};
   const callbacks = {};
-  let activeTool = null; // "plant" | "clear" | null
+  let activeTool = null; // "plant" | "clear" | "salt_add" | "salt_remove" | "release_fauna" | "remove_fauna" | null
   let selectedVegType = VEGETATION_TYPES[0].id;
+  let selectedFaunaType = FAUNA_TYPES[0].id;
 
   function init() {
     el.hudYear = document.getElementById("hud-year");
@@ -16,6 +17,8 @@ const UI = (() => {
     el.hudVegetation = document.getElementById("hud-vegetation");
     el.hudVegTypes = document.getElementById("hud-vegtypes");
     el.hudSalinity = document.getElementById("hud-salinity");
+    el.hudFauna = document.getElementById("hud-fauna");
+    el.hudFaunaTypes = document.getElementById("hud-faunatypes");
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
@@ -89,13 +92,19 @@ const UI = (() => {
   }
 
   function renderToolButtons() {
-    const options = VEGETATION_TYPES.map(
+    const vegOptions = VEGETATION_TYPES.map(
       (t) => `<option value="${t.id}" ${t.id === selectedVegType ? "selected" : ""}>${t.name}</option>`
     ).join("");
+    const faunaOptions = FAUNA_TYPES.map(
+      (t) => `<option value="${t.id}" ${t.id === selectedFaunaType ? "selected" : ""}>${t.name} (${t.habitat === "land" ? "Land" : "Ozean"})</option>`
+    ).join("");
     el.toolButtons.innerHTML = `
-      <select id="veg-type-select">${options}</select>
+      <select id="veg-type-select">${vegOptions}</select>
       <button data-tool="plant" class="${activeTool === "plant" ? "tool-active" : ""}">🌱 Vegetation pflanzen</button>
       <button data-tool="clear" class="${activeTool === "clear" ? "tool-active" : ""}">🪓 Vegetation entfernen</button>
+      <select id="fauna-type-select">${faunaOptions}</select>
+      <button data-tool="release_fauna" class="${activeTool === "release_fauna" ? "tool-active" : ""}">🐾 Tier aussetzen</button>
+      <button data-tool="remove_fauna" class="${activeTool === "remove_fauna" ? "tool-active" : ""}">🪤 Tier entfernen</button>
       <button data-tool="salt_add" class="${activeTool === "salt_add" ? "tool-active" : ""}">🧂 Salz zuführen</button>
       <button data-tool="salt_remove" class="${activeTool === "salt_remove" ? "tool-active" : ""}">🧂 Salz entnehmen</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
@@ -108,6 +117,9 @@ const UI = (() => {
     });
     el.toolButtons.querySelector("#veg-type-select").addEventListener("change", (evt) => {
       selectedVegType = evt.target.value;
+    });
+    el.toolButtons.querySelector("#fauna-type-select").addEventListener("change", (evt) => {
+      selectedFaunaType = evt.target.value;
     });
   }
 
@@ -149,6 +161,10 @@ const UI = (() => {
     if (info.terrain === "ocean") {
       html += `<br>Salzgehalt: ${info.salinity.toFixed(1)} ‰`;
     }
+    if (info.faunaType) {
+      const faunaType = getFaunaType(info.faunaType);
+      html += `<br>${faunaType.name}: ${info.fauna.toFixed(0)} %`;
+    }
     el.mapTooltip.innerHTML = html;
     el.mapTooltip.style.left = clientX + 14 + "px";
     el.mapTooltip.style.top = clientY + 14 + "px";
@@ -161,6 +177,10 @@ const UI = (() => {
 
   function getSelectedVegType() {
     return selectedVegType;
+  }
+
+  function getSelectedFaunaType() {
+    return selectedFaunaType;
   }
 
   function renderGasValues() {
@@ -183,6 +203,15 @@ const UI = (() => {
     return parts.length ? parts.join(" · ") : "keine";
   }
 
+  // Analog zu vegBreakdownText, aber ueber Land- UND Meeresarten hinweg
+  // (stats.faunaByType, siehe Planet.stats()).
+  function faunaBreakdownText(stats) {
+    const parts = FAUNA_TYPES.map((t) => ({ name: t.name, pct: stats.faunaByType[t.id] }))
+      .filter((p) => p.pct >= 0.1)
+      .map((p) => `${p.name} ${p.pct.toFixed(0)}%`);
+    return parts.length ? parts.join(" · ") : "keine";
+  }
+
   function renderAll() {
     const temp = Climate.globalTemperature();
     const seaLevel = Climate.seaLevelRise();
@@ -193,6 +222,8 @@ const UI = (() => {
     el.hudVegetation.textContent = stats.avgVegetation.toFixed(1) + " %";
     el.hudVegTypes.textContent = vegBreakdownText(stats);
     el.hudSalinity.textContent = stats.avgSalinity.toFixed(1) + " ‰";
+    el.hudFauna.textContent = stats.avgFauna.toFixed(1) + " %";
+    el.hudFaunaTypes.textContent = faunaBreakdownText(stats);
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
@@ -223,5 +254,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, showTooltip, hideTooltip };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip };
 })();

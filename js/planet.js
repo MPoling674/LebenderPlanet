@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude) });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null });
       }
     }
   }
@@ -123,6 +123,31 @@ const Planet = (() => {
     return { ok: true };
   }
 
+  function terraformFauna(x, y, action, typeId) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    const terrain = currentTerrain(cell);
+    if (terrain !== "land" && terrain !== "ocean") return { ok: false, reason: "Tiere können nur auf Land- oder Ozeanzellen angesiedelt werden." };
+    if (action === "release") {
+      const type = getFaunaType(typeId);
+      if (!type) return { ok: false, reason: "Unbekannte Tierart." };
+      if (type.habitat !== terrain) {
+        return { ok: false, reason: `"${type.name}" lebt nicht ${terrain === "land" ? "an Land" : "im Ozean"}.` };
+      }
+      const suitability = Fauna.suitability(cell, terrain, localTemperature(cell), type);
+      if (suitability <= 0) return { ok: false, reason: `Die Bedingungen an dieser Stelle sind für "${type.name}" ungeeignet.` };
+      cell.faunaType = type.id;
+      cell.fauna = clamp(cell.fauna + 40, 0, 100);
+      return { ok: true };
+    }
+    if (action === "remove") {
+      cell.fauna = 0;
+      cell.faunaType = null;
+      return { ok: true };
+    }
+    return { ok: false, reason: "Unbekannte Aktion." };
+  }
+
   // Summe der Vegetation aller Landzellen zum Zeitpunkt des letzten tick() —
   // Referenzwert fuer die CO2/O2-Nettobilanz (siehe tick()).
   let lastTotalVegetation = 0;
@@ -194,14 +219,23 @@ const Planet = (() => {
     let landCells = 0;
     cells.forEach((cell) => {
       const terrain = currentTerrain(cell);
-      if (terrain !== "land") {
+      const temp = localTemperature(cell);
+      if (terrain === "land") {
+        landCells += 1;
+        tickCellVegetation(cell, temp);
+        totalVegetation += cell.vegetation;
+      } else {
         cell.vegetation = 0;
         cell.vegetationType = null;
-        return;
       }
-      landCells += 1;
-      tickCellVegetation(cell, localTemperature(cell));
-      totalVegetation += cell.vegetation;
+      // Fauna lebt auf Land UND im Ozean, aber nicht auf Eis (Habitat-Pruefung
+      // selbst uebernimmt Fauna.tickCell/-suitability anhand von terrain).
+      if (terrain === "ice") {
+        cell.fauna = 0;
+        cell.faunaType = null;
+      } else {
+        Fauna.tickCell(cell, terrain, temp);
+      }
     });
 
     const maxPossible = landCells * 100;
@@ -229,9 +263,14 @@ const Planet = (() => {
     let ice = 0;
     let vegSum = 0;
     let salinitySum = 0;
+    let faunaSum = 0;
     const typeCounts = {};
     VEGETATION_TYPES.forEach((t) => {
       typeCounts[t.id] = 0;
+    });
+    const faunaTypeCounts = {};
+    FAUNA_TYPES.forEach((t) => {
+      faunaTypeCounts[t.id] = 0;
     });
     cells.forEach((cell) => {
       const t = currentTerrain(cell);
@@ -244,6 +283,10 @@ const Planet = (() => {
         vegSum += cell.vegetation;
         if (cell.vegetationType) typeCounts[cell.vegetationType] += 1;
       }
+      if (t !== "ice") {
+        faunaSum += cell.fauna;
+        if (cell.faunaType) faunaTypeCounts[cell.faunaType] += 1;
+      }
     });
     const total = cells.length;
     // Anteil jeder Vegetationsstufe an der LANDFLAECHE (Zellanzahl, nicht
@@ -253,6 +296,14 @@ const Planet = (() => {
     VEGETATION_TYPES.forEach((t) => {
       vegetationByType[t.id] = land > 0 ? (typeCounts[t.id] / land) * 100 : 0;
     });
+    // Fauna-Anteil je Art bezogen auf ihr eigenes Habitat-Zellenkontingent
+    // (Land- bzw. Ozeanzellen), gleiches Prinzip wie vegetationByType.
+    const faunaByType = {};
+    FAUNA_TYPES.forEach((t) => {
+      const pool = t.habitat === "land" ? land : ocean;
+      faunaByType[t.id] = pool > 0 ? (faunaTypeCounts[t.id] / pool) * 100 : 0;
+    });
+    const habitatCells = land + ocean;
     return {
       oceanPercent: (ocean / total) * 100,
       landPercent: (land / total) * 100,
@@ -260,6 +311,8 @@ const Planet = (() => {
       avgVegetation: land > 0 ? vegSum / land : 0,
       vegetationByType,
       avgSalinity: ocean > 0 ? salinitySum / ocean : 0,
+      avgFauna: habitatCells > 0 ? faunaSum / habitatCells : 0,
+      faunaByType,
     };
   }
 
@@ -277,6 +330,8 @@ const Planet = (() => {
       vegetationType: cell.vegetationType,
       temperature: localTemperature(cell),
       salinity: cell.salinity,
+      fauna: cell.fauna,
+      faunaType: cell.faunaType,
     };
   }
 
@@ -289,12 +344,22 @@ const Planet = (() => {
       vegetationType: cell.vegetationType,
       elevation: cell.elevation,
       salinity: cell.salinity,
+      fauna: cell.fauna,
+      faunaType: cell.faunaType,
     }));
   }
 
   function serialize() {
     return {
-      cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation, vegetationType: c.vegetationType, salinity: c.salinity })),
+      cells: cells.map((c) => ({
+        elevation: c.elevation,
+        latitude: c.latitude,
+        vegetation: c.vegetation,
+        vegetationType: c.vegetationType,
+        salinity: c.salinity,
+        fauna: c.fauna,
+        faunaType: c.faunaType,
+      })),
       lastTotalVegetation,
     };
   }
@@ -311,6 +376,9 @@ const Planet = (() => {
         // Aeltere Spielstaende kennen salinity noch nicht — dann den breitenabhaengigen
         // Ausgangswert annehmen statt eines global einheitlichen Werts.
         salinity: typeof c.salinity === "number" ? c.salinity : salinityForLatitude(c.latitude),
+        // Aeltere Spielstaende kennen Fauna noch nicht — dann als unbesiedelt annehmen.
+        fauna: typeof c.fauna === "number" ? c.fauna : 0,
+        faunaType: c.faunaType !== undefined ? c.faunaType : null,
       }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
@@ -322,5 +390,5 @@ const Planet = (() => {
     }
   }
 
-  return { init, terraform, adjustSalinity, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, terraformFauna, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

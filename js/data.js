@@ -96,6 +96,39 @@ function vegTypeRange(type) {
   return [VEG_OPTIMAL_TEMP - type.tolerance, VEG_OPTIMAL_TEMP + type.tolerance];
 }
 
+// Fauna-Stufen: "habitat" bindet eine Art an Land- oder Ozeanzellen. Landarten
+// brauchen zusaetzlich eine Mindest-Vegetationsdeckung als Nahrungsgrundlage
+// (minVegetation); Meeresarten haben statt dessen ein Salzgehalt-Toleranzband
+// (salinityTolerance, analog "tolerance" aber um OCEAN_SALINITY_BASE statt
+// VEG_OPTIMAL_TEMP). Reihenfolge je Habitat aufsteigend nach Komplexitaet,
+// wie bei VEGETATION_TYPES.
+const FAUNA_TYPES = [
+  { id: "insects", name: "Insekten", habitat: "land", complexity: 0, tolerance: 22, minVegetation: 5, color: [176, 158, 64] },
+  { id: "rodents", name: "Nager", habitat: "land", complexity: 1, tolerance: 16, minVegetation: 15, color: [150, 116, 80] },
+  { id: "herd", name: "Herdentiere", habitat: "land", complexity: 2, tolerance: 11, minVegetation: 30, color: [196, 158, 92] },
+  { id: "predators", name: "Raubtiere", habitat: "land", complexity: 3, tolerance: 9, minVegetation: 30, color: [140, 70, 56] },
+  { id: "plankton", name: "Plankton", habitat: "ocean", complexity: 0, tolerance: 22, salinityTolerance: 20, color: [110, 168, 120] },
+  { id: "fish", name: "Fischschwärme", habitat: "ocean", complexity: 1, tolerance: 14, salinityTolerance: 12, color: [90, 140, 168] },
+  { id: "marine_mammals", name: "Meeressäuger", habitat: "ocean", complexity: 2, tolerance: 10, salinityTolerance: 8, color: [70, 96, 140] },
+];
+
+function getFaunaType(typeId) {
+  return FAUNA_TYPES.find((t) => t.id === typeId) || null;
+}
+
+function faunaTempRange(type) {
+  return [VEG_OPTIMAL_TEMP - type.tolerance, VEG_OPTIMAL_TEMP + type.tolerance];
+}
+
+function faunaSalinityRange(type) {
+  return [OCEAN_SALINITY_BASE - type.salinityTolerance, OCEAN_SALINITY_BASE + type.salinityTolerance];
+}
+
+// Langsamer als Vegetation, da sich Tierbestaende in der Realitaet traeger
+// aendern als Pflanzendecken (Fortpflanzungszyklen statt Ausbreitung/Wachstum).
+const FAUNA_GROWTH_RATE = 0.01;
+const FAUNA_DECAY_RATE = 0.025;
+
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.
 const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6;
