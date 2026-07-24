@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0 });
       }
     }
   }
@@ -75,7 +75,7 @@ const Planet = (() => {
   // Durchschnitt) — grobe, aber realitätsnahe Näherung.
   function localTemperature(cell) {
     const globalTemp = Climate.globalTemperature();
-    return globalTemp + EQUATOR_TEMP_BONUS - cell.latitude * (EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE);
+    return globalTemp + EQUATOR_TEMP_BONUS - cell.latitude * (EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE) + cell.tempAnomaly;
   }
 
   // Komplexeste Vegetationsstufe, deren Toleranzband die gegebene Temperatur
@@ -215,6 +215,10 @@ const Planet = (() => {
   }
 
   function tick() {
+    // Stroemungen zuerst: verteilen Waerme/Salzgehalt um, bevor Vegetation/Fauna
+    // im selben Jahr auf die (nun aktuelle) lokale Temperatur reagieren.
+    Currents.tick(cellAt, (cell) => currentTerrain(cell) === "ocean");
+
     let totalVegetation = 0;
     let landCells = 0;
     cells.forEach((cell) => {
@@ -332,6 +336,7 @@ const Planet = (() => {
       salinity: cell.salinity,
       fauna: cell.fauna,
       faunaType: cell.faunaType,
+      currentDirection: Currents.currentDirectionFor(cell.latitude),
     };
   }
 
@@ -359,6 +364,7 @@ const Planet = (() => {
         salinity: c.salinity,
         fauna: c.fauna,
         faunaType: c.faunaType,
+        tempAnomaly: c.tempAnomaly,
       })),
       lastTotalVegetation,
     };
@@ -379,6 +385,8 @@ const Planet = (() => {
         // Aeltere Spielstaende kennen Fauna noch nicht — dann als unbesiedelt annehmen.
         fauna: typeof c.fauna === "number" ? c.fauna : 0,
         faunaType: c.faunaType !== undefined ? c.faunaType : null,
+        // Aeltere Spielstaende kennen Stroemungen noch nicht — dann keine Anomalie annehmen.
+        tempAnomaly: typeof c.tempAnomaly === "number" ? c.tempAnomaly : 0,
       }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-

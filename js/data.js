@@ -56,6 +56,18 @@ const SALINITY_SUBTROPICAL_LATITUDE = 0.35; // Breite (0=Aequator..1=Pol) des Sa
 const SALINITY_LATITUDE_AMPLITUDE = 5; // PSU Abweichung vom Mittel am Maximum/Minimum
 const SALINITY_ADJUST_STEP = 2; // PSU je Klick mit dem Regel-Werkzeug
 
+// Breitengrad-gebundene Oberflaechenstroemungs-Baender (0=Aequator..1=Pol),
+// nach dem realen Muster: Passatwind-getriebene tropische Stroemung nach Westen,
+// Westwinddrift in mittleren Breiten nach Osten, polare Ostwinde wieder nach
+// Westen. direction: -1 = Richtung Westen (kleineres x), +1 = Richtung Osten.
+const CURRENT_BANDS = [
+  { maxLatitude: 0.33, direction: -1 },
+  { maxLatitude: 0.67, direction: 1 },
+  { maxLatitude: 1.0, direction: -1 },
+];
+const CURRENT_ADVECTION_RATE = 0.03; // Anteil/Jahr, der von der stromaufwaerts liegenden Zelle uebernommen wird
+const CURRENT_RELAXATION_RATE = 0.05; // Anteil/Jahr, um den sich die Temperatur-Anomalie Richtung 0 (Atmosphaerenausgleich) bewegt
+
 // Normierung, um Meeresspiegelanstieg (m) auf die 0..1-Hoehenskala zu beziehen.
 // Bewusst NICHT die reale Hoehe des hoechsten Berges (das waere hier irrelevant,
 // "elevation" hat sonst nirgends eine reale Meter-Bedeutung) - sondern so gewaehlt,

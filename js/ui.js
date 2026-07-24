@@ -160,6 +160,7 @@ const UI = (() => {
     }
     if (info.terrain === "ocean") {
       html += `<br>Salzgehalt: ${info.salinity.toFixed(1)} ‰`;
+      html += `<br>Strömung: Richtung ${info.currentDirection > 0 ? "Osten" : "Westen"}`;
     }
     if (info.faunaType) {
       const faunaType = getFaunaType(info.faunaType);
