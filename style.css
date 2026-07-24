@@ -146,6 +146,10 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
 #event-log { list-style: none; padding: 0; margin: 0; font-size: 12px; max-height: 260px; overflow-y: auto; }
 #event-log li { padding: 4px 0; border-bottom: 1px solid #223047; }
 
+#species-list { list-style: none; padding: 0; margin: 0; font-size: 12px; max-height: 260px; overflow-y: auto; }
+#species-list li { padding: 5px 0; border-bottom: 1px solid #223047; line-height: 1.45; }
+#species-list li strong { color: #7fd6a3; }
+
 .save-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 .hidden-input { display: none; }
 .danger-btn { background: #6f2e2e; border-color: #a04a4a; }

@@ -24,6 +24,7 @@ const UI = (() => {
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
     el.vegLegend = document.getElementById("veg-legend");
+    el.speciesList = document.getElementById("species-list");
     el.mapTooltip = document.getElementById("map-tooltip");
 
     el.gasControls = document.getElementById("gas-controls");
@@ -41,6 +42,7 @@ const UI = (() => {
     renderGasControls();
     renderToolButtons();
     renderVegLegend();
+    renderSpeciesList();
 
     el.speedSlider.addEventListener("input", () => {
       const idx = parseInt(el.speedSlider.value, 10);
@@ -148,6 +150,52 @@ const UI = (() => {
         <span>${t.name} <small>(${range})</small></span>
       </div>`;
     }).join("");
+  }
+
+  // Kompakte Entstehungsbedingung fuer eine Vegetationsstufe — statisch (haengt nur
+  // von Konstanten ab), daher nur einmal bei init() gerendert.
+  function describeVegType(type) {
+    if (type.radiationOnly) {
+      return `<strong>${type.name}</strong>: entstehen nur zufällig auf verstrahlten Zellen (nach einer Atombombe), nicht durch Aussaat.`;
+    }
+    const [min, max] = vegTypeRange(type);
+    return `<strong>${type.name}</strong>: ${min.toFixed(0)}–${max.toFixed(0)} °C. Voraussetzung: etablierte Eukaryoten (siehe Sauerstoffgehalt im HUD).`;
+  }
+
+  // Kompakte Entstehungsbedingung fuer ein Fauna-Taxon: Temperatur/Salzgehalt bzw.
+  // Vegetationsbedarf, Praerequisiten-Gate und woraus es sich entwickelt (aus den
+  // successors-Listen der ANDEREN Taxa rueckwaerts ermittelt, da FAUNA_TYPES nur
+  // Nachfolger, keine Vorgaenger speichert).
+  function describeFaunaType(type) {
+    if (type.id === "nanobots") {
+      return `<strong>${type.name}</strong>: entstehen nur, wenn eine Hochtechnologie-Stadt durch eine Atombombe zerstört wird.`;
+    }
+    const [tMin, tMax] = faunaTempRange(type);
+    const habitatLabel = type.habitat === "land" ? "Land" : "Ozean";
+    let need;
+    if (type.habitat === "land") {
+      need = `Vegetation ≥ ${type.minVegetation}%`;
+    } else {
+      const [sMin, sMax] = faunaSalinityRange(type);
+      need = `Salzgehalt ${sMin.toFixed(0)}–${sMax.toFixed(0)}‰`;
+    }
+    let prereq = "";
+    if (type.id === "eukaryotes") {
+      prereq = ` Voraussetzung: O₂ ≥ ${EUKARYOTE_O2_THRESHOLD}%, globale Temperatur ${EUKARYOTE_MIN_GLOBAL_TEMP}–${EUKARYOTE_MAX_GLOBAL_TEMP} °C (Sauerstoffgenerator beschleunigt dies).`;
+    } else if (type.id !== "prokaryotes") {
+      prereq = " Voraussetzung: etablierte Eukaryoten + Vegetation.";
+    }
+    const predecessors = FAUNA_TYPES.filter((t) => t.successors.some((s) => s.id === type.id)).map((t) => t.name);
+    const evolvesFrom = predecessors.length ? ` Entwickelt sich aus: ${predecessors.join(", ")}.` : "";
+    const extra = type.id === "prokaryotes" ? " Reichert die Atmosphäre langsam mit O₂ an." : "";
+    return `<strong>${type.name}</strong> (${habitatLabel}): ${tMin.toFixed(0)}–${tMax.toFixed(0)} °C, ${need}.${prereq}${evolvesFrom}${extra}`;
+  }
+
+  function renderSpeciesList() {
+    if (!el.speciesList) return;
+    const vegEntries = VEGETATION_TYPES.map((t) => `<li>${describeVegType(t)}</li>`);
+    const faunaEntries = FAUNA_TYPES.map((t) => `<li>${describeFaunaType(t)}</li>`);
+    el.speciesList.innerHTML = vegEntries.join("") + faunaEntries.join("");
   }
 
   function getActiveTool() {
