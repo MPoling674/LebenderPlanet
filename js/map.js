@@ -88,9 +88,18 @@ const PlanetMap = (() => {
   const LAND_FOREST = [52, 108, 66];
   const ICE_COLOR = [206, 218, 226];
 
+  // Salzgehalt-Tint: niedriger Salzgehalt (Suesswassereinfluss, z.B. durch das
+  // Salz-Werkzeug entnommen) faerbt leicht gruenlich, hoher Salzgehalt leicht
+  // ins Tuerkise — dezent, damit die Tiefenfaerbung dominant bleibt.
+  const SALINITY_LOW_TINT = [58, 128, 108];
+  const SALINITY_HIGH_TINT = [58, 118, 148];
+
   function oceanColor(cell) {
     const depthFraction = (SEA_LEVEL_THRESHOLD - cell.elevation) / SEA_LEVEL_THRESHOLD;
-    return lerpColor(OCEAN_SHALLOW, OCEAN_DEEP, depthFraction);
+    const base = lerpColor(OCEAN_SHALLOW, OCEAN_DEEP, depthFraction);
+    const salinityFraction = clamp((cell.salinity - OCEAN_SALINITY_MIN) / (OCEAN_SALINITY_MAX - OCEAN_SALINITY_MIN), 0, 1);
+    const tint = lerpColor(SALINITY_LOW_TINT, SALINITY_HIGH_TINT, salinityFraction);
+    return lerpColor(base, tint, 0.15);
   }
 
   function landColor(cell) {

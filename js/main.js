@@ -112,7 +112,11 @@ const Game = (() => {
   function handleCellClick(x, y) {
     const tool = UI.getActiveTool();
     if (!tool) return;
-    const res = tool === "plant" ? Planet.terraform(x, y, tool, UI.getSelectedVegType()) : Planet.terraform(x, y, tool);
+    let res;
+    if (tool === "plant") res = Planet.terraform(x, y, tool, UI.getSelectedVegType());
+    else if (tool === "salt_add") res = Planet.adjustSalinity(x, y, SALINITY_ADJUST_STEP);
+    else if (tool === "salt_remove") res = Planet.adjustSalinity(x, y, -SALINITY_ADJUST_STEP);
+    else res = Planet.terraform(x, y, tool);
     if (!res.ok) {
       UI.log(res.reason);
       return;

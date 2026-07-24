@@ -43,6 +43,19 @@ const POLE_TEMP_RANGE = 40;
 
 const SEA_LEVEL_THRESHOLD = 0.58; // Hoehen-Schwelle (0..1): darunter Ozean, darueber Land
 
+// Salzgehalt des Ozeans in PSU (Practical Salinity Units, ~g/kg) — realer globaler
+// Mittelwert 35. Reale Verteilung ist NICHT linear mit der Breite: in den Subtropen
+// (~starke Verdunstung, wenig Niederschlag) liegt der Salzgehalt ueber dem Mittel,
+// am Aequator (viel Niederschlag) und an den Polen (Suesswasser aus Eisschmelze,
+// wenig Verdunstung) darunter — daher eine eigene Kurvenform statt der linearen
+// Breiten-Rampe wie bei der Temperatur.
+const OCEAN_SALINITY_BASE = 35;
+const OCEAN_SALINITY_MIN = 0;
+const OCEAN_SALINITY_MAX = 45;
+const SALINITY_SUBTROPICAL_LATITUDE = 0.35; // Breite (0=Aequator..1=Pol) des Salzgehalt-Maximums
+const SALINITY_LATITUDE_AMPLITUDE = 5; // PSU Abweichung vom Mittel am Maximum/Minimum
+const SALINITY_ADJUST_STEP = 2; // PSU je Klick mit dem Regel-Werkzeug
+
 // Normierung, um Meeresspiegelanstieg (m) auf die 0..1-Hoehenskala zu beziehen.
 // Bewusst NICHT die reale Hoehe des hoechsten Berges (das waere hier irrelevant,
 // "elevation" hat sonst nirgends eine reale Meter-Bedeutung) - sondern so gewaehlt,

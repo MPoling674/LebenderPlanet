@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude) });
       }
     }
   }
@@ -41,6 +41,19 @@ const Planet = (() => {
   function init() {
     generateTerrain();
     lastTotalVegetation = 0;
+  }
+
+  // Breitenabhaengiger Ausgangs-Salzgehalt: Maximum in den Subtropen (Verdunstung
+  // > Niederschlag), Minimum am Aequator (Niederschlag) und am Pol (Schmelzwasser) —
+  // zwei Halbwellen zwischen Aequator/Maximum und Maximum/Pol statt einer linearen Rampe.
+  function salinityForLatitude(latitude) {
+    let t;
+    if (latitude <= SALINITY_SUBTROPICAL_LATITUDE) {
+      t = latitude / SALINITY_SUBTROPICAL_LATITUDE;
+    } else {
+      t = 1 - (latitude - SALINITY_SUBTROPICAL_LATITUDE) / (1 - SALINITY_SUBTROPICAL_LATITUDE);
+    }
+    return OCEAN_SALINITY_BASE - SALINITY_LATITUDE_AMPLITUDE + SALINITY_LATITUDE_AMPLITUDE * 2 * t;
   }
 
   // Aktuelles Terrain einer Zelle — abhängig vom (fixen) Höhenwert und dem AKTUELLEN
@@ -98,6 +111,16 @@ const Planet = (() => {
       return { ok: true };
     }
     return { ok: false, reason: "Unbekannte Aktion." };
+  }
+
+  // Regionale Salzgehalt-Regelung: nur auf Ozean-Zellen wirksam (Land/Eis haben
+  // keinen sinnvollen Salzgehalt-Wert), klemmt auf den realistischen Wertebereich.
+  function adjustSalinity(x, y, delta) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    if (currentTerrain(cell) !== "ocean") return { ok: false, reason: "Salzgehalt kann nur auf Ozeanzellen verändert werden." };
+    cell.salinity = clamp(cell.salinity + delta, OCEAN_SALINITY_MIN, OCEAN_SALINITY_MAX);
+    return { ok: true };
   }
 
   // Summe der Vegetation aller Landzellen zum Zeitpunkt des letzten tick() —
@@ -205,14 +228,17 @@ const Planet = (() => {
     let land = 0;
     let ice = 0;
     let vegSum = 0;
+    let salinitySum = 0;
     const typeCounts = {};
     VEGETATION_TYPES.forEach((t) => {
       typeCounts[t.id] = 0;
     });
     cells.forEach((cell) => {
       const t = currentTerrain(cell);
-      if (t === "ocean") ocean += 1;
-      else if (t === "ice") ice += 1;
+      if (t === "ocean") {
+        ocean += 1;
+        salinitySum += cell.salinity;
+      } else if (t === "ice") ice += 1;
       else {
         land += 1;
         vegSum += cell.vegetation;
@@ -233,6 +259,7 @@ const Planet = (() => {
       icePercent: (ice / total) * 100,
       avgVegetation: land > 0 ? vegSum / land : 0,
       vegetationByType,
+      avgSalinity: ocean > 0 ? salinitySum / ocean : 0,
     };
   }
 
@@ -249,6 +276,7 @@ const Planet = (() => {
       vegetation: cell.vegetation,
       vegetationType: cell.vegetationType,
       temperature: localTemperature(cell),
+      salinity: cell.salinity,
     };
   }
 
@@ -260,12 +288,13 @@ const Planet = (() => {
       vegetation: cell.vegetation,
       vegetationType: cell.vegetationType,
       elevation: cell.elevation,
+      salinity: cell.salinity,
     }));
   }
 
   function serialize() {
     return {
-      cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation, vegetationType: c.vegetationType })),
+      cells: cells.map((c) => ({ elevation: c.elevation, latitude: c.latitude, vegetation: c.vegetation, vegetationType: c.vegetationType, salinity: c.salinity })),
       lastTotalVegetation,
     };
   }
@@ -279,6 +308,9 @@ const Planet = (() => {
         // Aeltere Spielstaende kennen vegetationType noch nicht — vorhandene
         // Vegetation dann als "Gräser" annehmen, statt sie stillschweigend zu loeschen.
         vegetationType: c.vegetationType !== undefined ? c.vegetationType : (c.vegetation > 0 ? "grass" : null),
+        // Aeltere Spielstaende kennen salinity noch nicht — dann den breitenabhaengigen
+        // Ausgangswert annehmen statt eines global einheitlichen Werts.
+        salinity: typeof c.salinity === "number" ? c.salinity : salinityForLatitude(c.latitude),
       }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
@@ -290,5 +322,5 @@ const Planet = (() => {
     }
   }
 
-  return { init, terraform, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

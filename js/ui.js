@@ -15,6 +15,7 @@ const UI = (() => {
     el.hudIce = document.getElementById("hud-ice");
     el.hudVegetation = document.getElementById("hud-vegetation");
     el.hudVegTypes = document.getElementById("hud-vegtypes");
+    el.hudSalinity = document.getElementById("hud-salinity");
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
@@ -95,6 +96,8 @@ const UI = (() => {
       <select id="veg-type-select">${options}</select>
       <button data-tool="plant" class="${activeTool === "plant" ? "tool-active" : ""}">🌱 Vegetation pflanzen</button>
       <button data-tool="clear" class="${activeTool === "clear" ? "tool-active" : ""}">🪓 Vegetation entfernen</button>
+      <button data-tool="salt_add" class="${activeTool === "salt_add" ? "tool-active" : ""}">🧂 Salz zuführen</button>
+      <button data-tool="salt_remove" class="${activeTool === "salt_remove" ? "tool-active" : ""}">🧂 Salz entnehmen</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
     `;
     el.toolButtons.querySelectorAll("button").forEach((btn) => {
@@ -143,6 +146,9 @@ const UI = (() => {
         ? `<br>${type.name}: ${info.vegetation.toFixed(0)} %`
         : `<br>Keine Vegetation`;
     }
+    if (info.terrain === "ocean") {
+      html += `<br>Salzgehalt: ${info.salinity.toFixed(1)} ‰`;
+    }
     el.mapTooltip.innerHTML = html;
     el.mapTooltip.style.left = clientX + 14 + "px";
     el.mapTooltip.style.top = clientY + 14 + "px";
@@ -186,6 +192,7 @@ const UI = (() => {
     el.hudIce.textContent = stats.icePercent.toFixed(1) + " %";
     el.hudVegetation.textContent = stats.avgVegetation.toFixed(1) + " %";
     el.hudVegTypes.textContent = vegBreakdownText(stats);
+    el.hudSalinity.textContent = stats.avgSalinity.toFixed(1) + " ‰";
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
