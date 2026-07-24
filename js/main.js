@@ -86,8 +86,9 @@ const Game = (() => {
       const before = snapshot();
       year += 1;
       Climate.tick();
-      Planet.tick();
+      const result = Planet.tick();
       checkMilestones(before, snapshot());
+      result.events.forEach((message) => UI.log(message));
     }
     UI.setYear(year);
     renderAll();

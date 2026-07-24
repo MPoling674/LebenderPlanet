@@ -41,6 +41,61 @@ const Planet = (() => {
   function init() {
     generateTerrain();
     lastTotalVegetation = 0;
+    rebuildDiscoveries();
+  }
+
+  // Welche Vegetations-/Fauna-Taxa bereits irgendwo existieren bzw. ob schon eine
+  // Stadt/Hochtechnologie-Stadt entstanden ist — Grundlage fuer die einmaligen
+  // Entstehungs-Hinweise im Ereignis-Log (siehe scanForDiscoveries()). Wird NICHT
+  // separat serialisiert, sondern nach init()/restore() immer frisch aus dem
+  // aktuellen Zellzustand abgeleitet: so loest das Laden eines Spielstands keine
+  // Flut nachtraeglicher "X ist entstanden"-Meldungen fuer laengst vorhandene
+  // Arten aus, waehrend echte NEUE Entstehungen waehrend des Spielens weiter
+  // erkannt werden.
+  let discoveredVeg = new Set();
+  let discoveredFauna = new Set();
+  let cityFounded = false;
+  let highTechReached = false;
+
+  function rebuildDiscoveries() {
+    discoveredVeg = new Set();
+    discoveredFauna = new Set();
+    cityFounded = false;
+    highTechReached = false;
+    cells.forEach((cell) => {
+      if (cell.vegetationType) discoveredVeg.add(cell.vegetationType);
+      if (cell.faunaType) discoveredFauna.add(cell.faunaType);
+      if (Civilization.hasCity(cell)) cityFounded = true;
+      if (Civilization.isHighTech(cell)) highTechReached = true;
+    });
+  }
+
+  // Scannt nach jedem tick() auf neu hinzugekommene Taxa/Zivilisationsmeilensteine
+  // und liefert die zugehoerigen Ereignis-Log-Meldungen — jede Meldung erscheint
+  // ueber die Laufzeit eines Spielstands nur EIN einziges Mal.
+  function scanForDiscoveries() {
+    const events = [];
+    cells.forEach((cell) => {
+      if (cell.vegetationType && !discoveredVeg.has(cell.vegetationType)) {
+        discoveredVeg.add(cell.vegetationType);
+        const type = getVegType(cell.vegetationType);
+        events.push(type.radiationOnly ? `${type.name} sind durch Strahlung mutiert.` : `${type.name} sind entstanden.`);
+      }
+      if (cell.faunaType && !discoveredFauna.has(cell.faunaType)) {
+        discoveredFauna.add(cell.faunaType);
+        const type = getFaunaType(cell.faunaType);
+        events.push(type.id === "nanobots" ? `${type.name} sind aus den Trümmern entstanden.` : `${type.name} sind entstanden.`);
+      }
+    });
+    if (!cityFounded && cells.some((c) => Civilization.hasCity(c))) {
+      cityFounded = true;
+      events.push("Die erste Stadt ist entstanden.");
+    }
+    if (!highTechReached && cells.some((c) => Civilization.isHighTech(c))) {
+      highTechReached = true;
+      events.push("Eine Stadt hat Hochtechnologie erreicht.");
+    }
+    return events;
   }
 
   // Breitenabhaengiger Ausgangs-Salzgehalt: Maximum in den Subtropen (Verdunstung
@@ -318,7 +373,7 @@ const Planet = (() => {
     Atmosphere.adjust("co2", -co2Absorbed);
     Atmosphere.adjust("o2", o2Released);
     lastTotalVegetation = totalVegetation;
-    return { vegetationFraction, co2Absorbed, o2Released };
+    return { vegetationFraction, co2Absorbed, o2Released, events: scanForDiscoveries() };
   }
 
   function sumVegetation() {
@@ -487,6 +542,7 @@ const Planet = (() => {
       generateTerrain();
       lastTotalVegetation = 0;
     }
+    rebuildDiscoveries();
   }
 
   return { init, terraform, adjustSalinity, toggleOxygenGenerator, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
