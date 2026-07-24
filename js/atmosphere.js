@@ -7,7 +7,9 @@ const Atmosphere = (() => {
   function init() {
     gases = {};
     GASES.forEach((g) => {
-      gases[g.id] = g.start;
+      const variation = g.startVariation || 0;
+      const randomized = g.start + (Math.random() * 2 - 1) * variation;
+      gases[g.id] = clamp(randomized, g.min, g.max);
     });
   }
 

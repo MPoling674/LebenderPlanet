@@ -263,7 +263,10 @@ const Planet = (() => {
     const currentType = cell.vegetationType ? getVegType(cell.vegetationType) : null;
 
     if (!currentType) {
-      if (!best) {
+      // Nicht sofort besiedeln, sobald geeignet — sonst "blueht" die gesamte
+      // Landflaeche im selben Jahr gleichzeitig auf (siehe NATURAL_COLONIZATION_
+      // CHANCE-Kommentar in data.js).
+      if (!best || Math.random() >= NATURAL_COLONIZATION_CHANCE) {
         cell.vegetation = 0;
         return;
       }

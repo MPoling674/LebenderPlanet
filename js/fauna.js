@@ -97,8 +97,11 @@ const Fauna = (() => {
     const currentType = cell.faunaType ? getFaunaType(cell.faunaType) : null;
 
     if (!currentType) {
+      // Nicht sofort besiedeln, sobald geeignet — sonst "erscheint" eine Art auf
+      // der gesamten passenden Flaeche gleichzeitig (siehe NATURAL_COLONIZATION_
+      // CHANCE-Kommentar in data.js).
       const best = bestTypeFor(cell, terrain, temp);
-      if (!best) {
+      if (!best || Math.random() >= NATURAL_COLONIZATION_CHANCE) {
         cell.fauna = 0;
         return;
       }

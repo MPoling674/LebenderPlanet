@@ -8,10 +8,14 @@ const GRID_HEIGHT = 30;
 
 // Gase, die der Spieler direkt regeln kann. potency = Treibhauswirkung relativ zu CO2
 // pro Volumeneinheit (CH4 ≈ 25x CO2 über 100 Jahre, realer IPCC-Näherungswert/GWP100).
+// startVariation: bei jedem Neustart (Atmosphere.init()) wird "start" um einen
+// zufälligen Betrag in [-startVariation, +startVariation] verschoben, geklemmt auf
+// min/max — jeder Planet beginnt dadurch mit einem spürbar anderen Klima/Zeitverlauf
+// statt immer exakt demselben Ausgangspunkt.
 const GASES = [
-  { id: "co2", name: "Kohlendioxid", symbol: "CO₂", unit: "ppm", min: 150, max: 2000, start: 400, potency: 1 },
-  { id: "ch4", name: "Methan", symbol: "CH₄", unit: "ppm", min: 0, max: 50, start: 1.8, potency: 25 },
-  { id: "o2", name: "Sauerstoff", symbol: "O₂", unit: "%", min: 0, max: 35, start: 21, potency: 0 },
+  { id: "co2", name: "Kohlendioxid", symbol: "CO₂", unit: "ppm", min: 150, max: 2000, start: 400, startVariation: 120, potency: 1 },
+  { id: "ch4", name: "Methan", symbol: "CH₄", unit: "ppm", min: 0, max: 50, start: 1.8, startVariation: 1.2, potency: 25 },
+  { id: "o2", name: "Sauerstoff", symbol: "O₂", unit: "%", min: 0, max: 35, start: 21, startVariation: 2, potency: 0 },
 ];
 
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
@@ -83,8 +87,11 @@ const POLAR_LATITUDE_THRESHOLD = 0.82; // Breite (0=Aequator,1=Pol), ab der bei 
 const VEG_MIN_TEMP = 2; // °C, unterhalb stirbt Vegetation ab (Dauerfrost)
 const VEG_MAX_TEMP = 32; // °C, oberhalb stirbt Vegetation ab (Hitzestress)
 const VEG_OPTIMAL_TEMP = 17; // °C, beste Wachstumsbedingungen
-const VEG_GROWTH_RATE = 0.015; // Anteil/Jahr Richtung 100%, bei optimalen Bedingungen (~65 Jahre bis ~63%)
-const VEG_DECAY_RATE = 0.03; // Anteil/Jahr Richtung 0%, bei ungeeigneten Bedingungen
+// Bewusst langsam (~4x langsamer als eine fruehere Version) — Evolution soll sich
+// ueber Jahrtausende statt Jahrhunderte entfalten, nicht in wenigen hundert Jahren
+// bis zur Hochtechnologie durchlaufen.
+const VEG_GROWTH_RATE = 0.004; // Anteil/Jahr Richtung 100%, bei optimalen Bedingungen (~230 Jahre bis ~63%)
+const VEG_DECAY_RATE = 0.008; // Anteil/Jahr Richtung 0%, bei ungeeigneten Bedingungen
 
 // Vegetationsstufen von einfach (toleriert fast jedes Klima) bis komplex (gedeiht
 // nur in einem schmalen Band um VEG_OPTIMAL_TEMP). "tolerance" ist die zulaessige
@@ -174,8 +181,9 @@ function faunaSalinityRange(type) {
 
 // Langsamer als Vegetation, da sich Tierbestaende in der Realitaet traeger
 // aendern als Pflanzendecken (Fortpflanzungszyklen statt Ausbreitung/Wachstum).
-const FAUNA_GROWTH_RATE = 0.01;
-const FAUNA_DECAY_RATE = 0.025;
+// Ebenfalls ~4x gegenueber einer fruehen Version verlangsamt (siehe VEG_GROWTH_RATE).
+const FAUNA_GROWTH_RATE = 0.0025;
+const FAUNA_DECAY_RATE = 0.006;
 
 // Praerequisiten-Gate fuer Eukaryoten (siehe Fauna.suitability()): erst wenn der
 // O2-Gehalt der Atmosphaere diese Schwelle erreicht UND die globale Temperatur in
@@ -207,14 +215,24 @@ const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = 0.15;
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
 const CROSS_HABITAT_SPAWN_CHANCE = 0.1;
 
+// Jahreswahrscheinlichkeit, mit der eine geeignete, noch unbesiedelte Zelle
+// spontan von der best-passenden Wurzelart (Vegetation ODER Fauna) kolonisiert
+// wird — NICHT sofort im selben Jahr, sobald sie geeignet ist. Ohne dieses
+// Element wuerden nach dem Oeffnen eines Gates (z.B. Eukaryoten-Gate) praktisch
+// ALLE geeigneten Zellen der Welt im exakt selben Jahr gleichzeitig "aufbluehen"
+// (deterministisch, kein Zufall) — das wirkte wie ein einziger globaler Sprung
+// statt einer organisch ueber die Karte wandernden Besiedlung, und machte den
+// Spielverlauf bei gleichem Vorgehen praktisch identisch reproduzierbar.
+const NATURAL_COLONIZATION_CHANCE = 0.15;
+
 // Zivilisation: Zellen mit reifem (>=90%) zivilisationsfaehigem Taxon bauen pro
 // Jahr Tech-Level auf (0..100), sonst faellt er zurueck — Kollaps schneller als
 // Aufstieg (COLLAPSE_RATE > GROWTH_RATE), reale Analogie: eine Zivilisation
 // zerfaellt schneller, als sie entsteht. Ab CITY_TECH_THRESHOLD gilt eine Zelle
 // als "Stadt", ab HIGH_TECH_THRESHOLD als "Hochtechnologie" (Voraussetzung fuer
 // die Atombombe, siehe civilization.js).
-const CIVILIZATION_GROWTH_RATE = 0.4;
-const CIVILIZATION_DECAY_RATE = 0.8;
+const CIVILIZATION_GROWTH_RATE = 0.1;
+const CIVILIZATION_DECAY_RATE = 0.2;
 const CITY_TECH_THRESHOLD = 30;
 const HIGH_TECH_THRESHOLD = 80;
 
