@@ -97,6 +97,9 @@ const Planet = (() => {
     const terrain = currentTerrain(cell);
     if (terrain !== "land") return { ok: false, reason: "Vegetation kann nur auf Landzellen angesiedelt werden." };
     if (action === "plant") {
+      if (!Fauna.eukaryotesEstablished()) {
+        return { ok: false, reason: "Es müssen sich erst Eukaryoten im Ozean etabliert haben, bevor Pflanzen wachsen können." };
+      }
       const type = getVegType(typeId) || VEGETATION_TYPES[0];
       const [min, max] = vegTypeRange(type);
       const suitability = Climate.vegetationSuitability(localTemperature(cell), min, max);
@@ -171,7 +174,7 @@ const Planet = (() => {
   // sofort durch die neue best-passende Stufe ersetzt) — realistischer Uebergang
   // statt eines abrupten Arten-Wechsels.
   function tickCellVegetation(cell, temp) {
-    const best = bestVegTypeFor(temp);
+    const best = Fauna.eukaryotesEstablished() ? bestVegTypeFor(temp) : null;
     const currentType = cell.vegetationType ? getVegType(cell.vegetationType) : null;
 
     if (!currentType) {
@@ -218,6 +221,9 @@ const Planet = (() => {
     // Stroemungen zuerst: verteilen Waerme/Salzgehalt um, bevor Vegetation/Fauna
     // im selben Jahr auf die (nun aktuelle) lokale Temperatur reagieren.
     Currents.tick(cellAt, (cell) => currentTerrain(cell) === "ocean");
+    // Praerequisiten-Gate einmal pro Jahr neu berechnen (siehe FAUNA_TYPES-Kommentar
+    // in data.js) — bevor die Zellschleife suitability()/tickCellVegetation() nutzt.
+    Fauna.computeGate(cellAt, currentTerrain);
 
     let totalVegetation = 0;
     let landCells = 0;
@@ -241,6 +247,10 @@ const Planet = (() => {
         Fauna.tickCell(cell, terrain, temp);
       }
     });
+
+    // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
+    // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
+    Fauna.tickSpawns(cellAt, currentTerrain, localTemperature);
 
     const maxPossible = landCells * 100;
     const vegetationFraction = maxPossible > 0 ? totalVegetation / maxPossible : 0;
@@ -382,9 +392,12 @@ const Planet = (() => {
         // Aeltere Spielstaende kennen salinity noch nicht — dann den breitenabhaengigen
         // Ausgangswert annehmen statt eines global einheitlichen Werts.
         salinity: typeof c.salinity === "number" ? c.salinity : salinityForLatitude(c.latitude),
-        // Aeltere Spielstaende kennen Fauna noch nicht — dann als unbesiedelt annehmen.
-        fauna: typeof c.fauna === "number" ? c.fauna : 0,
-        faunaType: c.faunaType !== undefined ? c.faunaType : null,
+        // Aeltere Spielstaende kennen Fauna noch nicht, oder referenzieren ein
+        // inzwischen aus FAUNA_TYPES entferntes/umbenanntes Taxon (z.B. nach einer
+        // Erweiterung der Taxonomie-Tabelle) — in beiden Faellen als unbesiedelt
+        // annehmen, statt mit einer ungueltigen ID weiterzuarbeiten.
+        fauna: typeof c.fauna === "number" && getFaunaType(c.faunaType) ? c.fauna : 0,
+        faunaType: getFaunaType(c.faunaType) ? c.faunaType : null,
         // Aeltere Spielstaende kennen Stroemungen noch nicht — dann keine Anomalie annehmen.
         tempAnomaly: typeof c.tempAnomaly === "number" ? c.tempAnomaly : 0,
       }));

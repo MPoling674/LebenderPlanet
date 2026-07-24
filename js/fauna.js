@@ -1,14 +1,61 @@
 // Fauna: Wachstum/Sterben von Tierbestaenden je Zelle, analog zur Vegetationslogik
 // in planet.js, aber als eigenes Modul, da Fauna eine eigene Systemgrenze ist
-// (zwei Habitate, eigenes Terraforming-Werkzeug, eigene Eignungsformel). Arbeitet
-// rein auf uebergebenen Zellobjekten/Kontext (terrain, temp) — Planet.tick() ruft
-// tickCell() pro Zelle auf, keine Rueckrufe von hier zu Planet noetig.
+// (mehrere Habitate, verzweigter Evolutionsbaum, eigenes Terraforming-Werkzeug).
+// Arbeitet rein auf uebergebenen Zellobjekten/Zugriffsfunktionen — Planet.tick()
+// ruft computeGate()/tickCell()/tickSpawns() auf, keine Rueckrufe von hier zu
+// Planet noetig.
 
 const Fauna = (() => {
+  // Vom letzten computeGate()-Aufruf zwischengespeicherte Praerequisiten-Gates
+  // (siehe FAUNA_TYPES-Kommentar in data.js): einmal pro Jahr per Grid-Scan
+  // berechnet, nicht bei jeder einzelnen Zellen-Pruefung neu — sonst muesste
+  // suitability() bei jedem Aufruf selbst das ganze Gitter durchsuchen.
+  let cachedProkaryotesEstablished = false;
+  let cachedEukaryotesEstablished = false;
+  let cachedLifeEstablished = false;
+
+  // getCell(x,y) liefert die lebende Zellreferenz aus Planet, isOcean(cell)/isLand(cell)
+  // das aktuelle Terrain — gleiches Zugriffsmuster wie Currents.tick().
+  function computeGate(getCell, currentTerrainFn) {
+    let matureProk = 0, oceanCells = 0, matureEuk = 0, hasVegetation = false;
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+      for (let x = 0; x < GRID_WIDTH; x++) {
+        const cell = getCell(x, y);
+        const terrain = currentTerrainFn(cell);
+        if (terrain === "ocean") {
+          oceanCells += 1;
+          if (cell.faunaType === "prokaryotes" && cell.fauna >= 90) matureProk += 1;
+          if (cell.faunaType === "eukaryotes" && cell.fauna >= 90) matureEuk += 1;
+        } else if (terrain === "land" && cell.vegetation > 0) {
+          hasVegetation = true;
+        }
+      }
+    }
+    const prokFraction = oceanCells > 0 ? matureProk / oceanCells : 0;
+    const eukFraction = oceanCells > 0 ? matureEuk / oceanCells : 0;
+    cachedProkaryotesEstablished = prokFraction >= LIFE_GATE_MATURE_FRACTION;
+    cachedEukaryotesEstablished = eukFraction >= LIFE_GATE_MATURE_FRACTION;
+    cachedLifeEstablished = cachedEukaryotesEstablished && hasVegetation;
+  }
+
+  function prokaryotesEstablished() {
+    return cachedProkaryotesEstablished;
+  }
+
+  // Gate fuer die bestehende Vegetation (Pflanzen-Stufe): Prokaryoten -> Eukaryoten
+  // -> erst dann duerfen Pflanzen wachsen/gepflanzt werden (siehe planet.js).
+  function eukaryotesEstablished() {
+    return cachedEukaryotesEstablished;
+  }
+
   // Eignung 0..1: Land braucht zusaetzlich zur Temperatur eine Mindest-
   // Vegetationsdeckung (Nahrungsgrundlage), Meer kombiniert Temperatur- und
-  // Salzgehalt-Eignung (jeweils schlechtester Wert zaehlt).
+  // Salzgehalt-Eignung (jeweils schlechtester Wert zaehlt). Praerequisiten-Gates
+  // (siehe FAUNA_TYPES-Kommentar in data.js) werden zuerst geprueft.
   function suitability(cell, terrain, temp, type) {
+    if (type.id === "nanobots") return 1; // kuenstliches Leben ist klimaunabhaengig
+    if (type.id === "eukaryotes" && !cachedProkaryotesEstablished) return 0;
+    if (type.id !== "prokaryotes" && type.id !== "eukaryotes" && !cachedLifeEstablished) return 0;
     if (type.habitat !== terrain) return 0;
     const [tMin, tMax] = faunaTempRange(type);
     const tempSuit = Climate.vegetationSuitability(temp, tMin, tMax);
@@ -21,26 +68,31 @@ const Fauna = (() => {
     return Math.min(tempSuit, salinitySuit);
   }
 
-  // Komplexeste Art des passenden Habitats, deren Eignung > 0 ist — analog zu
-  // Planet.bestVegTypeFor, aber je Habitat gefiltert (Land-/Meeresketten sind
-  // unabhaengig voneinander).
+  // Fuer eine LEERE Zelle: nur "Wurzel"-Taxa (successorOnly:false) koennen spontan
+  // besiedeln — alles andere ist ausschliesslich ueber Sukzession/Spawn erreichbar
+  // (siehe FAUNA_TYPES-Kommentar in data.js). Array-Reihenfolge dient als
+  // Prioritaet, falls mehrere Wurzeln gleichzeitig geeignet sind (letzter Eintrag
+  // gewinnt) — gleiches Muster wie Planet.bestVegTypeFor.
   function bestTypeFor(cell, terrain, temp) {
     for (let i = FAUNA_TYPES.length - 1; i >= 0; i--) {
       const type = FAUNA_TYPES[i];
+      if (type.successorOnly) continue;
       if (type.habitat !== terrain) continue;
       if (suitability(cell, terrain, temp, type) > 0) return type;
     }
     return null;
   }
 
-  // Ein Jahresschritt fuer den Faunabestand einer Zelle — Struktur bewusst
-  // parallel zu Planet.tickCellVegetation (natuerliche Besiedlung, Wachstum/
-  // Schwund nach eigener Eignung, Sukzession erst bei ausgereiftem Bestand).
+  // Ein Jahresschritt fuer den Faunabestand einer Zelle. Anders als bei der
+  // linearen Vegetations-Sukzession (eine "komplexeste passende Stufe") prueft
+  // eine reife Zelle hier die successors-Liste ihres AKTUELLEN Taxons der Reihe
+  // nach; das erste geeignete (nicht crossHabitat) gewinnt. crossHabitat-
+  // Uebergaenge werden NICHT hier, sondern in tickSpawns() behandelt.
   function tickCell(cell, terrain, temp) {
-    const best = bestTypeFor(cell, terrain, temp);
     const currentType = cell.faunaType ? getFaunaType(cell.faunaType) : null;
 
     if (!currentType) {
+      const best = bestTypeFor(cell, terrain, temp);
       if (!best) {
         cell.fauna = 0;
         return;
@@ -51,16 +103,18 @@ const Fauna = (() => {
       return;
     }
 
-    if (best && best.id === currentType.id) {
-      const s = suitability(cell, terrain, temp, currentType);
-      cell.fauna = clamp(cell.fauna + FAUNA_GROWTH_RATE * s * (100 - cell.fauna), 0, 100);
-      return;
-    }
-
-    if (best && best.complexity > currentType.complexity && cell.fauna >= 90) {
-      cell.faunaType = best.id;
-      cell.fauna = 50;
-      return;
+    if (cell.fauna >= 90 && currentType.successors.length > 0) {
+      for (const succ of currentType.successors) {
+        if (succ.crossHabitat) continue;
+        const succType = getFaunaType(succ.id);
+        if (!succType) continue;
+        const s = suitability(cell, terrain, temp, succType);
+        if (s > 0) {
+          cell.faunaType = succType.id;
+          cell.fauna = 50;
+          return;
+        }
+      }
     }
 
     const s = suitability(cell, terrain, temp, currentType);
@@ -72,5 +126,57 @@ const Fauna = (() => {
     }
   }
 
-  return { suitability, tickCell };
+  // Zweiter Grid-Durchlauf NACH der Haupt-Sukzession: behandelt crossHabitat-
+  // Nachfolger (z.B. Fische -> Amphibien), die NICHT die eigene Zelle ersetzen,
+  // sondern mit kleiner Jahreswahrscheinlichkeit eine benachbarte Zelle passenden
+  // Habitats neu besiedeln — die Ursprungspopulation bleibt bestehen. Zielzelle
+  // darf leer sein ODER von einer noch UNREIFEN Wurzelart (successorOnly:false,
+  // fauna<50) besetzt sein: eine schnell wachsende Wurzelart wie Arthropoden
+  // wuerde eine leere Landzelle sonst praktisch immer als Erstes (deterministisch,
+  // gleicher Tick) besiedeln, noch bevor die nur mit 10%/Jahr wuerfelnde
+  // evolutionaere Neubesiedlung ueberhaupt eine Chance haette — der Uebergang
+  // waere de facto nie erreichbar. Ausgereifte (>=50) oder bereits ueber
+  // Sukzession/Spawn entstandene Populationen bleiben geschuetzt. Sammelt erst
+  // alle Spawns aus dem unveraenderten Ausgangszustand und wendet sie danach an
+  // (gleiches Zweiphasen-Muster wie Currents.tick), damit ein Spawn im selben Jahr
+  // nicht die Nachbarpruefung einer anderen Zelle verfaelscht.
+  function tickSpawns(getCell, currentTerrainFn, localTemperatureFn) {
+    const spawns = [];
+    const deltas = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+      for (let x = 0; x < GRID_WIDTH; x++) {
+        const cell = getCell(x, y);
+        if (!cell.faunaType || cell.fauna < 90) continue;
+        const type = getFaunaType(cell.faunaType);
+        const crossSuccessors = type.successors.filter((s) => s.crossHabitat);
+        if (crossSuccessors.length === 0) continue;
+        deltas.forEach(([dx, dy]) => {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || nx >= GRID_WIDTH || ny < 0 || ny >= GRID_HEIGHT) return;
+          const neighbor = getCell(nx, ny);
+          if (neighbor.faunaType) {
+            const occupant = getFaunaType(neighbor.faunaType);
+            if (!occupant || occupant.successorOnly || neighbor.fauna >= 50) return;
+          }
+          const neighborTerrain = currentTerrainFn(neighbor);
+          for (const succ of crossSuccessors) {
+            const succType = getFaunaType(succ.id);
+            if (!succType || succType.habitat !== neighborTerrain) continue;
+            const temp = localTemperatureFn(neighbor);
+            if (suitability(neighbor, neighborTerrain, temp, succType) > 0 && Math.random() < CROSS_HABITAT_SPAWN_CHANCE) {
+              spawns.push({ x: nx, y: ny, typeId: succType.id });
+            }
+            break;
+          }
+        });
+      }
+    }
+    spawns.forEach(({ x, y, typeId }) => {
+      const cell = getCell(x, y);
+      cell.faunaType = typeId;
+      cell.fauna = 20;
+    });
+  }
+
+  return { computeGate, prokaryotesEstablished, eukaryotesEstablished, suitability, tickCell, tickSpawns };
 })();

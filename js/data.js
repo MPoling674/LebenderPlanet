@@ -108,20 +108,52 @@ function vegTypeRange(type) {
   return [VEG_OPTIMAL_TEMP - type.tolerance, VEG_OPTIMAL_TEMP + type.tolerance];
 }
 
-// Fauna-Stufen: "habitat" bindet eine Art an Land- oder Ozeanzellen. Landarten
-// brauchen zusaetzlich eine Mindest-Vegetationsdeckung als Nahrungsgrundlage
-// (minVegetation); Meeresarten haben statt dessen ein Salzgehalt-Toleranzband
-// (salinityTolerance, analog "tolerance" aber um OCEAN_SALINITY_BASE statt
-// VEG_OPTIMAL_TEMP). Reihenfolge je Habitat aufsteigend nach Komplexitaet,
-// wie bei VEGETATION_TYPES.
+// Taxonomie-Baum (SimEarth-inspiriert): "habitat" bindet eine Art an Land- oder
+// Ozeanzellen. Landarten brauchen zusaetzlich eine Mindest-Vegetationsdeckung als
+// Nahrungsgrundlage (minVegetation); Meeresarten haben statt dessen ein
+// Salzgehalt-Toleranzband (salinityTolerance, analog "tolerance" aber um
+// OCEAN_SALINITY_BASE statt VEG_OPTIMAL_TEMP). "successorOnly" markiert Taxa, die
+// NIE spontan eine leere Zelle besiedeln, sondern ausschliesslich ueber Sukzession
+// (successors-Liste eines Vorgaengers) oder einen Sonder-Trigger (Nanotech-Roboter
+// ueber Planet.detonate()) erreichbar sind — noetig, weil der Baum verzweigt und es
+// daher (anders als bei der linearen Vegetations-Kette) keine eindeutige "naechst-
+// komplexere Stufe" fuer eine leere Zelle mehr gibt. "successors" listet moegliche
+// Nachfolge-Taxa; "crossHabitat: true" bedeutet, der Uebergang passiert NICHT in der
+// gleichen Zelle, sondern als Neubesiedlung einer benachbarten Zelle passenden
+// Habitats (siehe Fauna.tickSpawns) — z.B. Fische (Ozean) -> Amphibien (Land).
 const FAUNA_TYPES = [
-  { id: "insects", name: "Insekten", habitat: "land", complexity: 0, tolerance: 22, minVegetation: 5, color: [176, 158, 64] },
-  { id: "rodents", name: "Nager", habitat: "land", complexity: 1, tolerance: 16, minVegetation: 15, color: [150, 116, 80] },
-  { id: "herd", name: "Herdentiere", habitat: "land", complexity: 2, tolerance: 11, minVegetation: 30, color: [196, 158, 92] },
-  { id: "predators", name: "Raubtiere", habitat: "land", complexity: 3, tolerance: 9, minVegetation: 30, color: [140, 70, 56] },
-  { id: "plankton", name: "Plankton", habitat: "ocean", complexity: 0, tolerance: 22, salinityTolerance: 20, color: [110, 168, 120] },
-  { id: "fish", name: "Fischschwärme", habitat: "ocean", complexity: 1, tolerance: 14, salinityTolerance: 12, color: [90, 140, 168] },
-  { id: "marine_mammals", name: "Meeressäuger", habitat: "ocean", complexity: 2, tolerance: 10, salinityTolerance: 8, color: [70, 96, 140] },
+  // Mikroorganismen — civilizationCapable: nein, muessen sich global etablieren,
+  // bevor jegliche Fauna ab Radiata ueberhaupt entstehen kann (siehe Fauna.computeGate).
+  { id: "prokaryotes", name: "Prokaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 30, salinityTolerance: 25, color: [120, 168, 120], successors: [] },
+  { id: "eukaryotes", name: "Eukaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 25, salinityTolerance: 20, color: [96, 156, 132], successors: [] },
+
+  // Wasserbewohner (Wurzeln, unabhaengig voneinander) — alle civilizationCapable.
+  { id: "radiata", name: "Radiata", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 20, salinityTolerance: 15, color: [150, 110, 168], successors: [] },
+  { id: "mollusks", name: "Mollusken", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 18, salinityTolerance: 14, color: [176, 132, 104], successors: [] },
+  { id: "trichordates", name: "Trichordaten", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 16, salinityTolerance: 12, color: [120, 132, 176], successors: [] },
+  { id: "fish", name: "Fische", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 14, salinityTolerance: 12, color: [90, 140, 168], successors: [{ id: "amphibians", crossHabitat: true }] },
+
+  // Land-/Luftbewohner.
+  { id: "arthropods", name: "Arthropoden", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 24, minVegetation: 5, color: [176, 158, 64], successors: [] },
+  { id: "amphibians", name: "Amphibien", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 14, minVegetation: 15, color: [110, 150, 110], successors: [{ id: "reptiles" }, { id: "therapsids" }] },
+  { id: "reptiles", name: "Reptilien", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 12, minVegetation: 10, color: [120, 140, 84], successors: [{ id: "dinosaurs" }, { id: "avians" }] },
+  { id: "dinosaurs", name: "Dinosphen", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 8, minVegetation: 5, color: [150, 100, 76], successors: [{ id: "avians" }] },
+  { id: "avians", name: "Avialae", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 16, minVegetation: 10, color: [190, 168, 90], successors: [] },
+
+  // Saeugetiere.
+  { id: "therapsids", name: "Therapsiden", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 13, minVegetation: 20, color: [140, 108, 84], successors: [{ id: "marsupials" }, { id: "placentals" }] },
+  { id: "marsupials", name: "Marsupilier", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 11, minVegetation: 25, color: [168, 132, 108], successors: [] },
+  { id: "placentals", name: "Plazentatiere", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 10, minVegetation: 30, color: [150, 116, 80], successors: [{ id: "ceti" }, { id: "primates" }] },
+  { id: "ceti", name: "Ceti", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 9, minVegetation: 20, color: [100, 120, 132], successors: [{ id: "cetaceans", crossHabitat: true }] },
+  { id: "cetaceans", name: "Cetaceen", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 12, salinityTolerance: 10, color: [70, 96, 140], successors: [] },
+  { id: "primates", name: "Primaten", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 8, minVegetation: 35, color: [140, 70, 56], successors: [] },
+
+  // Sonderform: entsteht ausschliesslich ueber Planet.detonate() (Atombombe auf eine
+  // Hochtechnologie-Stadt), nie spontan oder ueber normale Sukzession — daher
+  // successorOnly UND manualPlacement:false. habitat ist bewusst offen (das
+  // Zielgelaende kann Land oder Ozean sein); Fauna.suitability() behandelt Roboter
+  // klimaunabhaengig als Sonderfall.
+  { id: "nanobots", name: "Nanotech-Roboter", habitat: null, civilizationCapable: true, manualPlacement: false, successorOnly: true, tolerance: 0, color: [120, 200, 210], successors: [] },
 ];
 
 function getFaunaType(typeId) {
@@ -140,6 +172,21 @@ function faunaSalinityRange(type) {
 // aendern als Pflanzendecken (Fortpflanzungszyklen statt Ausbreitung/Wachstum).
 const FAUNA_GROWTH_RATE = 0.01;
 const FAUNA_DECAY_RATE = 0.025;
+
+// Globales Praerequisiten-Gate: erst wenn auf mindestens diesem ANTEIL der
+// Ozeanzellen ausgereifte (>=90%) Prokaryoten bzw. Eukaryoten leben (zusaetzlich
+// fuer Eukaryoten: irgendwo existiert bereits Vegetation), koennen alle anderen
+// Taxa (Radiata aufwaerts) ueberhaupt entstehen — siehe Fauna.computeGate(). Ein
+// ANTEIL statt eines Durchschnittsbestands ueber ALLE Ozeanzellen, weil Prokaryoten
+// und Eukaryoten sich (Ein-Population-je-Zelle-Modell) sonst um denselben Ozean
+// konkurrieren wuerden: ein Bestands-Ø von je 50 fuer BEIDE gleichzeitig waere nur
+// bei exakt hälftiger Aufteilung UND null Zerfall erreichbar, also faktisch nie
+// stabil haltbar.
+const LIFE_GATE_MATURE_FRACTION = 0.1;
+
+// Jahreswahrscheinlichkeit, mit der ein reifes Taxon mit crossHabitat-Nachfolger
+// (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
+const CROSS_HABITAT_SPAWN_CHANCE = 0.1;
 
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.

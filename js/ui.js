@@ -95,7 +95,9 @@ const UI = (() => {
     const vegOptions = VEGETATION_TYPES.map(
       (t) => `<option value="${t.id}" ${t.id === selectedVegType ? "selected" : ""}>${t.name}</option>`
     ).join("");
-    const faunaOptions = FAUNA_TYPES.map(
+    // manualPlacement:false (z.B. Nanotech-Roboter) sind nie direkt aussetzbar —
+    // sie entstehen ausschliesslich ueber Sondermechaniken.
+    const faunaOptions = FAUNA_TYPES.filter((t) => t.manualPlacement !== false).map(
       (t) => `<option value="${t.id}" ${t.id === selectedFaunaType ? "selected" : ""}>${t.name} (${t.habitat === "land" ? "Land" : "Ozean"})</option>`
     ).join("");
     el.toolButtons.innerHTML = `
