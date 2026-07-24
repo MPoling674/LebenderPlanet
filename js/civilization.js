@@ -25,9 +25,27 @@ const Civilization = (() => {
         } else {
           cell.techLevel = clamp(cell.techLevel - CIVILIZATION_DECAY_RATE, 0, 100);
         }
+        if (cell.radiation > 0) cell.radiation = clamp(cell.radiation - RADIATION_DECAY_RATE, 0, 100);
       }
     }
   }
 
-  return { hasCity, isHighTech, tick };
+  // Zerstoert eine Hochtechnologie-Stadt: Ziel- und Nachbarzellen verlieren ihre
+  // Fauna/Vegetation und werden verstrahlt; an der Zielzelle entsteht Nanotech-
+  // Roboter-Leben aus den Truemmern. Aufrufer (Planet.detonate) validiert bereits
+  // isHighTech(cell) und stellt die Nachbarzellen zusammen.
+  function detonate(cell, neighborCells) {
+    [cell, ...neighborCells].forEach((c) => {
+      c.fauna = 0;
+      c.faunaType = null;
+      c.vegetation = 0;
+      c.vegetationType = null;
+      c.techLevel = 0;
+      c.radiation = 100;
+    });
+    cell.faunaType = "nanobots";
+    cell.fauna = NANOBOT_START_POPULATION;
+  }
+
+  return { hasCity, isHighTech, tick, detonate };
 })();

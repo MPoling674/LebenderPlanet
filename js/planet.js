@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0 });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0 });
       }
     }
   }
@@ -149,6 +149,16 @@ const Planet = (() => {
       return { ok: true };
     }
     return { ok: false, reason: "Unbekannte Aktion." };
+  }
+
+  // Zerstoert eine Hochtechnologie-Stadt per Atombombe (siehe Civilization.detonate).
+  function detonate(x, y) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    if (!Civilization.isHighTech(cell)) return { ok: false, reason: "Hier gibt es keine Hochtechnologie-Stadt zum Zerstören." };
+    const neighbors = [cellAt(x - 1, y), cellAt(x + 1, y), cellAt(x, y - 1), cellAt(x, y + 1)].filter(Boolean);
+    Civilization.detonate(cell, neighbors);
+    return { ok: true };
   }
 
   // Summe der Vegetation aller Landzellen zum Zeitpunkt des letzten tick() —
@@ -357,6 +367,7 @@ const Planet = (() => {
       techLevel: cell.techLevel,
       hasCity: Civilization.hasCity(cell),
       isHighTech: Civilization.isHighTech(cell),
+      radiation: cell.radiation,
     };
   }
 
@@ -372,6 +383,7 @@ const Planet = (() => {
       fauna: cell.fauna,
       faunaType: cell.faunaType,
       techLevel: cell.techLevel,
+      radiation: cell.radiation,
     }));
   }
 
@@ -387,6 +399,7 @@ const Planet = (() => {
         faunaType: c.faunaType,
         tempAnomaly: c.tempAnomaly,
         techLevel: c.techLevel,
+        radiation: c.radiation,
       })),
       lastTotalVegetation,
     };
@@ -414,6 +427,8 @@ const Planet = (() => {
         tempAnomaly: typeof c.tempAnomaly === "number" ? c.tempAnomaly : 0,
         // Aeltere Spielstaende kennen Zivilisation noch nicht — dann bei 0 starten.
         techLevel: typeof c.techLevel === "number" ? c.techLevel : 0,
+        // Aeltere Spielstaende kennen Strahlung noch nicht — dann unverstrahlt annehmen.
+        radiation: typeof c.radiation === "number" ? c.radiation : 0,
       }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
@@ -425,5 +440,5 @@ const Planet = (() => {
     }
   }
 
-  return { init, terraform, adjustSalinity, terraformFauna, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

@@ -199,6 +199,14 @@ const CIVILIZATION_DECAY_RATE = 0.8;
 const CITY_TECH_THRESHOLD = 30;
 const HIGH_TECH_THRESHOLD = 80;
 
+// Atombombe: zerstoert eine Hochtechnologie-Stadt (siehe Planet.detonate()).
+// Betroffene Zellen werden verstrahlt (radiation 0..100, klingt langsam ab —
+// ~100 Jahre bis zur vollstaendigen Erholung) und die Zielzelle wird mit
+// Nanotech-Robotern neu besiedelt (siehe civilizationCapable-Sonderform in
+// FAUNA_TYPES).
+const RADIATION_DECAY_RATE = 1;
+const NANOBOT_START_POPULATION = 40;
+
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.
 const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6;

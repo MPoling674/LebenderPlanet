@@ -118,11 +118,13 @@ const Game = (() => {
     else if (tool === "salt_remove") res = Planet.adjustSalinity(x, y, -SALINITY_ADJUST_STEP);
     else if (tool === "release_fauna") res = Planet.terraformFauna(x, y, "release", UI.getSelectedFaunaType());
     else if (tool === "remove_fauna") res = Planet.terraformFauna(x, y, "remove");
+    else if (tool === "detonate") res = Planet.detonate(x, y);
     else res = Planet.terraform(x, y, tool);
     if (!res.ok) {
       UI.log(res.reason);
       return;
     }
+    if (tool === "detonate") UI.log("Eine Atombombe hat eine Hochtechnologie-Stadt zerstört — Nanotech-Roboter entstehen aus den Trümmern.");
     renderAll();
     saveGame();
   }

@@ -110,6 +110,7 @@ const UI = (() => {
       <button data-tool="remove_fauna" class="${activeTool === "remove_fauna" ? "tool-active" : ""}">🪤 Tier entfernen</button>
       <button data-tool="salt_add" class="${activeTool === "salt_add" ? "tool-active" : ""}">🧂 Salz zuführen</button>
       <button data-tool="salt_remove" class="${activeTool === "salt_remove" ? "tool-active" : ""}">🧂 Salz entnehmen</button>
+      <button data-tool="detonate" class="${activeTool === "detonate" ? "tool-active" : ""}">💣 Atombombe</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
     `;
     el.toolButtons.querySelectorAll("button").forEach((btn) => {
@@ -171,6 +172,9 @@ const UI = (() => {
     }
     if (info.hasCity) {
       html += `<br>🏙 Stadt (Tech-Level ${info.techLevel.toFixed(0)}${info.isHighTech ? ", Hochtechnologie" : ""})`;
+    }
+    if (info.radiation > 0) {
+      html += `<br>☢ Verstrahlt (${info.radiation.toFixed(0)})`;
     }
     el.mapTooltip.innerHTML = html;
     el.mapTooltip.style.left = clientX + 14 + "px";
