@@ -102,6 +102,7 @@ const Planet = (() => {
         return { ok: false, reason: "Es müssen sich erst Eukaryoten im Ozean etabliert haben, bevor Pflanzen wachsen können." };
       }
       const type = getVegType(typeId) || VEGETATION_TYPES[0];
+      if (type.radiationOnly) return { ok: false, reason: `"${type.name}" entsteht nur zufällig auf verstrahlten Zellen, nicht durch Aussaat.` };
       const [min, max] = vegTypeRange(type);
       const suitability = Climate.vegetationSuitability(localTemperature(cell), min, max);
       if (suitability <= 0) return { ok: false, reason: `Das Klima an dieser Stelle ist für "${type.name}" ungeeignet.` };

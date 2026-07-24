@@ -93,7 +93,9 @@ const UI = (() => {
   }
 
   function renderToolButtons() {
-    const vegOptions = VEGETATION_TYPES.map(
+    // radiationOnly (Mutantenpflanzen) sind nie direkt aussaebar — sie entstehen
+    // ausschliesslich zufaellig auf verstrahlten Zellen.
+    const vegOptions = VEGETATION_TYPES.filter((t) => !t.radiationOnly).map(
       (t) => `<option value="${t.id}" ${t.id === selectedVegType ? "selected" : ""}>${t.name}</option>`
     ).join("");
     // manualPlacement:false (z.B. Nanotech-Roboter) sind nie direkt aussetzbar —
@@ -130,11 +132,18 @@ const UI = (() => {
   function renderVegLegend() {
     if (!el.vegLegend) return;
     el.vegLegend.innerHTML = VEGETATION_TYPES.map((t) => {
-      const [min, max] = vegTypeRange(t);
       const rgb = `rgb(${t.color[0]}, ${t.color[1]}, ${t.color[2]})`;
+      // radiationOnly-Arten sind nicht temperaturgesteuert (siehe FAUNA_TYPES-
+      // Pendant bestVegTypeFor) — ein Temperaturband waere hier irrefuehrend.
+      const range = t.radiationOnly
+        ? "nur bei Strahlung"
+        : (() => {
+            const [min, max] = vegTypeRange(t);
+            return `${min.toFixed(0)}–${max.toFixed(0)} °C`;
+          })();
       return `<div class="veg-legend-item">
         <span class="veg-swatch" style="background:${rgb}"></span>
-        <span>${t.name} <small>(${min.toFixed(0)}–${max.toFixed(0)} °C)</small></span>
+        <span>${t.name} <small>(${range})</small></span>
       </div>`;
     }).join("");
   }
