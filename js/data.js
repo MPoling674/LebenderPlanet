@@ -16,6 +16,11 @@ const GASES = [
   { id: "co2", name: "Kohlendioxid", symbol: "CO₂", unit: "ppm", min: 150, max: 2000, start: 400, startVariation: 120, potency: 1 },
   { id: "ch4", name: "Methan", symbol: "CH₄", unit: "ppm", min: 0, max: 50, start: 1.8, startVariation: 1.2, potency: 25 },
   { id: "o2", name: "Sauerstoff", symbol: "O₂", unit: "%", min: 0, max: 35, start: 21, startVariation: 2, potency: 0 },
+  // Haeufigstes Gas der realen Erdatmosphaere (~78%), aber weitgehend inert: kein
+  // Treibhausgas (potency 0) und wird von Biologie in diesem Modell nicht
+  // umgesetzt — dient der Vollstaendigkeit/Realitaetsnaehe der Atmosphaeren-
+  // Zusammensetzung, nicht als weiterer Wirkhebel.
+  { id: "n2", name: "Stickstoff", symbol: "N₂", unit: "%", min: 0, max: 95, start: 78, startVariation: 4, potency: 0 },
 ];
 
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
@@ -205,6 +210,17 @@ const EUKARYOTE_MAX_GLOBAL_TEMP = 26; // °C, darueber kochende/lebensfeindliche
 // Photosynthese-Prokaryoten (Cyanobakterien) reicherten die fruehe Erdatmosphaere
 // tatsaechlich ueber geologische Zeitraeume langsam mit Sauerstoff an.
 const PROKARYOTE_O2_RELEASE_PER_YEAR = 0.02;
+
+// Atmung: jede Fauna AUSSER Prokaryoten (die stattdessen Photosynthese betreiben,
+// siehe oben) verbraucht O2 und setzt CO2 frei — proportional zum AKTUELLEN
+// Gesamtbestand (nicht zur Aenderung wie bei Vegetation, siehe VEG_MAX_CO2_UPTAKE_
+// PPM_PER_YEAR-Kommentar): echte Atmung findet kontinuierlich statt, auch bei
+// stabilem Bestand, anders als der Netto-Kohlenstoff-Umsatz eines ausgewachsenen
+// Waldes. Das schliesst den Kreislauf zur einseitigen O2-Produktion (Prokaryoten/
+// Vegetation/Sauerstoffgenerator) — ohne Gegenspieler stieg O2 sonst unbegrenzt
+// bis zum Anschlag (35%).
+const FAUNA_MAX_O2_CONSUMPTION_PER_YEAR = 0.06;
+const FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR = 8;
 
 // Sauerstoffgenerator: technologische Abkuerzung zum Eukaryoten-Gate, unabhaengig
 // von biologischer Prokaryoten-Aktivitaet — deutlich schneller als der biologische

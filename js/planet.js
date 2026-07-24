@@ -317,6 +317,7 @@ const Planet = (() => {
     let landCells = 0;
     let oceanCells = 0;
     let prokaryoteBiomass = 0;
+    let respiringBiomass = 0;
     let oxygenGeneratorCount = 0;
     cells.forEach((cell) => {
       const terrain = currentTerrain(cell);
@@ -349,6 +350,9 @@ const Planet = (() => {
         oceanCells += 1;
         if (cell.faunaType === "prokaryotes") prokaryoteBiomass += cell.fauna;
       }
+      // Atmung: jede Fauna AUSSER Prokaryoten (siehe FAUNA_MAX_O2_CONSUMPTION_
+      // PER_YEAR-Kommentar in data.js) verbraucht O2, unabhaengig vom Habitat.
+      if (cell.faunaType && cell.faunaType !== "prokaryotes") respiringBiomass += cell.fauna;
       if (cell.oxygenGenerator) oxygenGeneratorCount += 1;
     });
 
@@ -359,6 +363,13 @@ const Planet = (() => {
     const prokaryoteBiomassFraction = oceanCells > 0 ? prokaryoteBiomass / (oceanCells * 100) : 0;
     Atmosphere.adjust("o2", prokaryoteBiomassFraction * PROKARYOTE_O2_RELEASE_PER_YEAR);
     Atmosphere.adjust("o2", oxygenGeneratorCount * OXYGEN_GENERATOR_OUTPUT_PER_YEAR);
+
+    // Atmung der uebrigen Fauna wirkt entgegen: verbraucht O2, setzt CO2 frei —
+    // schliesst den Kreislauf, damit O2 nicht unbegrenzt bis zum Anschlag steigt.
+    const totalFaunaCells = landCells + oceanCells;
+    const respiringBiomassFraction = totalFaunaCells > 0 ? respiringBiomass / (totalFaunaCells * 100) : 0;
+    Atmosphere.adjust("o2", -respiringBiomassFraction * FAUNA_MAX_O2_CONSUMPTION_PER_YEAR);
+    Atmosphere.adjust("co2", respiringBiomassFraction * FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR);
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
