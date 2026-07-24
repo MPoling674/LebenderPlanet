@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0 });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false });
       }
     }
   }
@@ -125,6 +125,24 @@ const Planet = (() => {
     if (!cell) return { ok: false, reason: "Ungültige Position." };
     if (currentTerrain(cell) !== "ocean") return { ok: false, reason: "Salzgehalt kann nur auf Ozeanzellen verändert werden." };
     cell.salinity = clamp(cell.salinity + delta, OCEAN_SALINITY_MIN, OCEAN_SALINITY_MAX);
+    return { ok: true };
+  }
+
+  // Sauerstoffgenerator: technologische Abkuerzung zum Eukaryoten-Gate (siehe
+  // OXYGEN_GENERATOR_OUTPUT_PER_YEAR-Kommentar in data.js), auf Land- oder
+  // Ozeanzellen baubar, nicht auf Eis.
+  function toggleOxygenGenerator(x, y, build) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    const terrain = currentTerrain(cell);
+    if (terrain === "ice") return { ok: false, reason: "Auf Eis kann kein Sauerstoffgenerator gebaut werden." };
+    if (build) {
+      if (cell.oxygenGenerator) return { ok: false, reason: "Hier steht bereits ein Sauerstoffgenerator." };
+      cell.oxygenGenerator = true;
+    } else {
+      if (!cell.oxygenGenerator) return { ok: false, reason: "Hier steht kein Sauerstoffgenerator." };
+      cell.oxygenGenerator = false;
+    }
     return { ok: true };
   }
 
@@ -239,6 +257,9 @@ const Planet = (() => {
 
     let totalVegetation = 0;
     let landCells = 0;
+    let oceanCells = 0;
+    let prokaryoteBiomass = 0;
+    let oxygenGeneratorCount = 0;
     cells.forEach((cell) => {
       const terrain = currentTerrain(cell);
       const temp = localTemperature(cell);
@@ -266,7 +287,20 @@ const Planet = (() => {
       } else {
         Fauna.tickCell(cell, terrain, temp);
       }
+      if (terrain === "ocean") {
+        oceanCells += 1;
+        if (cell.faunaType === "prokaryotes") prokaryoteBiomass += cell.fauna;
+      }
+      if (cell.oxygenGenerator) oxygenGeneratorCount += 1;
     });
+
+    // Prokaryoten reichern die Atmosphaere langsam mit O2 an (siehe
+    // PROKARYOTE_O2_RELEASE_PER_YEAR-Kommentar in data.js), Sauerstoffgeneratoren
+    // beschleunigen das unabhaengig von Biologie — beides macht den Weg zum
+    // Eukaryoten-Gate (Fauna.eukaryotesEstablished) am O2-HUD-Wert sichtbar.
+    const prokaryoteBiomassFraction = oceanCells > 0 ? prokaryoteBiomass / (oceanCells * 100) : 0;
+    Atmosphere.adjust("o2", prokaryoteBiomassFraction * PROKARYOTE_O2_RELEASE_PER_YEAR);
+    Atmosphere.adjust("o2", oxygenGeneratorCount * OXYGEN_GENERATOR_OUTPUT_PER_YEAR);
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
@@ -378,6 +412,7 @@ const Planet = (() => {
       hasCity: Civilization.hasCity(cell),
       isHighTech: Civilization.isHighTech(cell),
       radiation: cell.radiation,
+      oxygenGenerator: cell.oxygenGenerator,
     };
   }
 
@@ -394,6 +429,7 @@ const Planet = (() => {
       faunaType: cell.faunaType,
       techLevel: cell.techLevel,
       radiation: cell.radiation,
+      oxygenGenerator: cell.oxygenGenerator,
     }));
   }
 
@@ -410,6 +446,7 @@ const Planet = (() => {
         tempAnomaly: c.tempAnomaly,
         techLevel: c.techLevel,
         radiation: c.radiation,
+        oxygenGenerator: c.oxygenGenerator,
       })),
       lastTotalVegetation,
     };
@@ -439,6 +476,8 @@ const Planet = (() => {
         techLevel: typeof c.techLevel === "number" ? c.techLevel : 0,
         // Aeltere Spielstaende kennen Strahlung noch nicht — dann unverstrahlt annehmen.
         radiation: typeof c.radiation === "number" ? c.radiation : 0,
+        // Aeltere Spielstaende kennen Sauerstoffgeneratoren noch nicht.
+        oxygenGenerator: c.oxygenGenerator === true,
       }));
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
@@ -450,5 +489,5 @@ const Planet = (() => {
     }
   }
 
-  return { init, terraform, adjustSalinity, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, toggleOxygenGenerator, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

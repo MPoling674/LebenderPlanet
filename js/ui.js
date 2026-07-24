@@ -112,6 +112,8 @@ const UI = (() => {
       <button data-tool="remove_fauna" class="${activeTool === "remove_fauna" ? "tool-active" : ""}">🪤 Tier entfernen</button>
       <button data-tool="salt_add" class="${activeTool === "salt_add" ? "tool-active" : ""}">🧂 Salz zuführen</button>
       <button data-tool="salt_remove" class="${activeTool === "salt_remove" ? "tool-active" : ""}">🧂 Salz entnehmen</button>
+      <button data-tool="build_oxygen" class="${activeTool === "build_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator bauen</button>
+      <button data-tool="remove_oxygen" class="${activeTool === "remove_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator entfernen</button>
       <button data-tool="detonate" class="${activeTool === "detonate" ? "tool-active" : ""}">💣 Atombombe</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
     `;
@@ -184,6 +186,9 @@ const UI = (() => {
     }
     if (info.radiation > 0) {
       html += `<br>☢ Verstrahlt (${info.radiation.toFixed(0)})`;
+    }
+    if (info.oxygenGenerator) {
+      html += `<br>🏭 Sauerstoffgenerator`;
     }
     el.mapTooltip.innerHTML = html;
     el.mapTooltip.style.left = clientX + 14 + "px";

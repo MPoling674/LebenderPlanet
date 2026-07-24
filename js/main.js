@@ -119,6 +119,8 @@ const Game = (() => {
     else if (tool === "release_fauna") res = Planet.terraformFauna(x, y, "release", UI.getSelectedFaunaType());
     else if (tool === "remove_fauna") res = Planet.terraformFauna(x, y, "remove");
     else if (tool === "detonate") res = Planet.detonate(x, y);
+    else if (tool === "build_oxygen") res = Planet.toggleOxygenGenerator(x, y, true);
+    else if (tool === "remove_oxygen") res = Planet.toggleOxygenGenerator(x, y, false);
     else res = Planet.terraform(x, y, tool);
     if (!res.ok) {
       UI.log(res.reason);

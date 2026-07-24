@@ -294,10 +294,11 @@ const PlanetMap = (() => {
     ctx.fillRect(0, pixelYSouth, canvas.width, canvas.height - pixelYSouth);
   }
 
-  // Zwei duenne Overlays direkt auf dem Haupt-Canvas, kein Vektor-Clip noetig
+  // Drei duenne Overlays direkt auf dem Haupt-Canvas, kein Vektor-Clip noetig
   // (anders als Land/Eis brauchen sie keine scharfe Kontur): ein dezenter
-  // gelbgruenlicher Tint auf verstrahlten Zellen (Staerke ~ radiation/100) und ein
-  // heller Punkt auf Staedten (groesser/kraeftiger bei Hochtechnologie).
+  // gelbgruenlicher Tint auf verstrahlten Zellen (Staerke ~ radiation/100), ein
+  // heller Punkt auf Staedten (groesser/kraeftiger bei Hochtechnologie) und ein
+  // kleines helles Quadrat auf Sauerstoffgeneratoren.
   function drawOverlays() {
     const cellW = canvas.width / GRID_WIDTH;
     const cellH = canvas.height / GRID_HEIGHT;
@@ -306,6 +307,13 @@ const PlanetMap = (() => {
         const alpha = (cell.radiation / 100) * 0.45;
         ctx.fillStyle = `rgba(190, 210, 60, ${alpha})`;
         ctx.fillRect(cell.x * cellW, cell.y * cellH, cellW, cellH);
+      }
+      if (cell.oxygenGenerator) {
+        const px = (cell.x + 0.5) * cellW;
+        const py = (cell.y + 0.5) * cellH;
+        const size = Math.max(2, Math.min(cellW, cellH) * 0.32);
+        ctx.fillStyle = "rgba(140, 220, 255, 0.95)";
+        ctx.fillRect(px - size / 2, py - size / 2, size, size);
       }
       if (cell.techLevel >= CITY_TECH_THRESHOLD) {
         const highTech = cell.techLevel >= HIGH_TECH_THRESHOLD;

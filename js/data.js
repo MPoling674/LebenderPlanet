@@ -177,16 +177,31 @@ function faunaSalinityRange(type) {
 const FAUNA_GROWTH_RATE = 0.01;
 const FAUNA_DECAY_RATE = 0.025;
 
-// Globales Praerequisiten-Gate: erst wenn auf mindestens diesem ANTEIL der
-// Ozeanzellen ausgereifte (>=90%) Prokaryoten bzw. Eukaryoten leben (zusaetzlich
-// fuer Eukaryoten: irgendwo existiert bereits Vegetation), koennen alle anderen
-// Taxa (Radiata aufwaerts) ueberhaupt entstehen — siehe Fauna.computeGate(). Ein
-// ANTEIL statt eines Durchschnittsbestands ueber ALLE Ozeanzellen, weil Prokaryoten
-// und Eukaryoten sich (Ein-Population-je-Zelle-Modell) sonst um denselben Ozean
-// konkurrieren wuerden: ein Bestands-Ø von je 50 fuer BEIDE gleichzeitig waere nur
-// bei exakt hälftiger Aufteilung UND null Zerfall erreichbar, also faktisch nie
-// stabil haltbar.
-const LIFE_GATE_MATURE_FRACTION = 0.1;
+// Praerequisiten-Gate fuer Eukaryoten (siehe Fauna.suitability()): erst wenn der
+// O2-Gehalt der Atmosphaere diese Schwelle erreicht UND die globale Temperatur in
+// einem lebensfreundlichen Band liegt, kann komplexe Zellentwicklung entstehen —
+// bei extremen Eiszeiten oder kochenden Ozeanen (Temperatur ausserhalb des Bands)
+// stirbt sie wieder ab (suitability()=0 loest den bestehenden Zerfallspfad aus).
+// Reale Analogie: die "Great Oxidation Event" genannte Anreicherung der fruehen
+// Erdatmosphaere mit Sauerstoff durch photosynthetisierende Prokaryoten war
+// Voraussetzung fuer komplexeres Leben. O2_THRESHOLD liegt bewusst nur wenig ueber
+// dem Startwert (21%, siehe GASES in data.js), damit die langsame biologische
+// Anreicherung UND der beschleunigte Weg ueber Sauerstoffgeneratoren (siehe
+// OXYGEN_GENERATOR_OUTPUT_PER_YEAR) beide in ueberschaubarer Zeit ans Ziel fuehren.
+const EUKARYOTE_O2_THRESHOLD = 23;
+const EUKARYOTE_MIN_GLOBAL_TEMP = 5; // °C, darunter globale Vereisung
+const EUKARYOTE_MAX_GLOBAL_TEMP = 26; // °C, darueber kochende/lebensfeindliche Ozeane
+
+// Sauerstoffproduktion der Prokaryoten: Anteil/Jahr O2-Zuwachs bei VOLLER
+// Saettigung (jede Ozeanzelle traegt Prokaryoten mit Bestand 100) — reale
+// Photosynthese-Prokaryoten (Cyanobakterien) reicherten die fruehe Erdatmosphaere
+// tatsaechlich ueber geologische Zeitraeume langsam mit Sauerstoff an.
+const PROKARYOTE_O2_RELEASE_PER_YEAR = 0.02;
+
+// Sauerstoffgenerator: technologische Abkuerzung zum Eukaryoten-Gate, unabhaengig
+// von biologischer Prokaryoten-Aktivitaet — deutlich schneller als der biologische
+// Weg, damit sich das Bauen tatsaechlich als Beschleunigung anfuehlt.
+const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = 0.15;
 
 // Jahreswahrscheinlichkeit, mit der ein reifes Taxon mit crossHabitat-Nachfolger
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.

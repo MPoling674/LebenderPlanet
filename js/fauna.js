@@ -6,44 +6,44 @@
 // Planet noetig.
 
 const Fauna = (() => {
-  // Vom letzten computeGate()-Aufruf zwischengespeicherte Praerequisiten-Gates
-  // (siehe FAUNA_TYPES-Kommentar in data.js): einmal pro Jahr per Grid-Scan
-  // berechnet, nicht bei jeder einzelnen Zellen-Pruefung neu — sonst muesste
-  // suitability() bei jedem Aufruf selbst das ganze Gitter durchsuchen.
-  let cachedProkaryotesEstablished = false;
+  // Vom letzten computeGate()-Aufruf zwischengespeicherte Praerequisiten-Gates:
+  // einmal pro Jahr per Grid-Scan berechnet, nicht bei jeder einzelnen Zellen-
+  // Pruefung neu — sonst muesste suitability() bei jedem Aufruf selbst das ganze
+  // Gitter durchsuchen. Eukaryoten-Gate ist NICHT mehr bestandsbasiert, sondern
+  // direkt an die Atmosphaere/das Klima gekoppelt (siehe EUKARYOTE_O2_THRESHOLD-
+  // Kommentar in data.js): O2-Schwelle erreicht UND globale Temperatur in einem
+  // lebensfreundlichen Band — das macht die Auswirkung von Prokaryoten (O2-
+  // Produktion, siehe Planet.tick()) und Sauerstoffgeneratoren direkt sichtbar
+  // (HUD-Sauerstoffwert), statt in einer verdeckten Bestandsrechnung zu verschwinden.
   let cachedEukaryotesEstablished = false;
   let cachedLifeEstablished = false;
 
-  // getCell(x,y) liefert die lebende Zellreferenz aus Planet, isOcean(cell)/isLand(cell)
-  // das aktuelle Terrain — gleiches Zugriffsmuster wie Currents.tick().
+  // getCell(x,y) liefert die lebende Zellreferenz aus Planet, currentTerrainFn das
+  // aktuelle Terrain — gleiches Zugriffsmuster wie Currents.tick(). Der Grid-Scan
+  // wird nur noch fuer hasVegetation gebraucht (O2/Temperatur sind bereits globale
+  // Werte, kein Scan noetig).
   function computeGate(getCell, currentTerrainFn) {
-    let matureProk = 0, oceanCells = 0, matureEuk = 0, hasVegetation = false;
-    for (let y = 0; y < GRID_HEIGHT; y++) {
+    let hasVegetation = false;
+    for (let y = 0; y < GRID_HEIGHT && !hasVegetation; y++) {
       for (let x = 0; x < GRID_WIDTH; x++) {
         const cell = getCell(x, y);
-        const terrain = currentTerrainFn(cell);
-        if (terrain === "ocean") {
-          oceanCells += 1;
-          if (cell.faunaType === "prokaryotes" && cell.fauna >= 90) matureProk += 1;
-          if (cell.faunaType === "eukaryotes" && cell.fauna >= 90) matureEuk += 1;
-        } else if (terrain === "land" && cell.vegetation > 0) {
+        if (currentTerrainFn(cell) === "land" && cell.vegetation > 0) {
           hasVegetation = true;
+          break;
         }
       }
     }
-    const prokFraction = oceanCells > 0 ? matureProk / oceanCells : 0;
-    const eukFraction = oceanCells > 0 ? matureEuk / oceanCells : 0;
-    cachedProkaryotesEstablished = prokFraction >= LIFE_GATE_MATURE_FRACTION;
-    cachedEukaryotesEstablished = eukFraction >= LIFE_GATE_MATURE_FRACTION;
+    const o2Sufficient = Atmosphere.get("o2") >= EUKARYOTE_O2_THRESHOLD;
+    const temp = Climate.globalTemperature();
+    const temperatureSurvivable = temp >= EUKARYOTE_MIN_GLOBAL_TEMP && temp <= EUKARYOTE_MAX_GLOBAL_TEMP;
+    cachedEukaryotesEstablished = o2Sufficient && temperatureSurvivable;
     cachedLifeEstablished = cachedEukaryotesEstablished && hasVegetation;
   }
 
-  function prokaryotesEstablished() {
-    return cachedProkaryotesEstablished;
-  }
-
-  // Gate fuer die bestehende Vegetation (Pflanzen-Stufe): Prokaryoten -> Eukaryoten
-  // -> erst dann duerfen Pflanzen wachsen/gepflanzt werden (siehe planet.js).
+  // Gate fuer die bestehende Vegetation (Pflanzen-Stufe): Prokaryoten reichern die
+  // Atmosphaere mit O2 an (oder ein Sauerstoffgenerator beschleunigt das) -> erst
+  // wenn genug O2 vorhanden UND das Klima nicht extrem ist, duerfen Pflanzen
+  // wachsen/gepflanzt werden (siehe planet.js).
   function eukaryotesEstablished() {
     return cachedEukaryotesEstablished;
   }
@@ -54,7 +54,12 @@ const Fauna = (() => {
   // (siehe FAUNA_TYPES-Kommentar in data.js) werden zuerst geprueft.
   function suitability(cell, terrain, temp, type) {
     if (type.id === "nanobots") return 1; // kuenstliches Leben ist klimaunabhaengig
-    if (type.id === "eukaryotes" && !cachedProkaryotesEstablished) return 0;
+    // Eukaryoten sterben bei extremer Kaelte/Hitze auch als bereits etablierte
+    // Population wieder ab (nicht nur als Neuentstehung blockiert) — das gleiche
+    // eukaryotesEstablished()=false loest ueber den normalen Zerfallspfad in
+    // tickCell() (suitability<=0 -> Bestand schrumpft) auch ein Sterben bestehender
+    // Zellen aus, kein Sonderfall noetig.
+    if (type.id === "eukaryotes" && !cachedEukaryotesEstablished) return 0;
     if (type.id !== "prokaryotes" && type.id !== "eukaryotes" && !cachedLifeEstablished) return 0;
     if (type.habitat !== terrain) return 0;
     const [tMin, tMax] = faunaTempRange(type);
@@ -178,5 +183,5 @@ const Fauna = (() => {
     });
   }
 
-  return { computeGate, prokaryotesEstablished, eukaryotesEstablished, suitability, tickCell, tickSpawns };
+  return { computeGate, eukaryotesEstablished, suitability, tickCell, tickSpawns };
 })();
