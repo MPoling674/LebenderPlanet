@@ -371,6 +371,11 @@ const Planet = (() => {
     Atmosphere.adjust("o2", -respiringBiomassFraction * FAUNA_MAX_O2_CONSUMPTION_PER_YEAR);
     Atmosphere.adjust("co2", respiringBiomassFraction * FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR);
 
+    // Geologische Oxidation/Verwitterung wirkt unabhaengig von Biologie, auch
+    // bevor irgendeine Fauna zum Atmen existiert (siehe GEOLOGICAL_O2_EQUILIBRIUM-
+    // Kommentar in data.js).
+    Atmosphere.adjust("o2", -(Atmosphere.get("o2") - GEOLOGICAL_O2_EQUILIBRIUM) * GEOLOGICAL_O2_RELAXATION_RATE);
+
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
     Fauna.tickSpawns(cellAt, currentTerrain, localTemperature);

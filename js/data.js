@@ -19,9 +19,33 @@ const GASES = [
   // Haeufigstes Gas der realen Erdatmosphaere (~78%), aber weitgehend inert: kein
   // Treibhausgas (potency 0) und wird von Biologie in diesem Modell nicht
   // umgesetzt — dient der Vollstaendigkeit/Realitaetsnaehe der Atmosphaeren-
-  // Zusammensetzung, nicht als weiterer Wirkhebel.
-  { id: "n2", name: "Stickstoff", symbol: "N₂", unit: "%", min: 0, max: 95, start: 78, startVariation: 4, potency: 0 },
+  // Zusammensetzung. KEIN eigener start/startVariation: N2 ist mit O2 gekoppelt
+  // (siehe ATMOSPHERE_MAJOR_GAS_TOTAL/Atmosphere.set()) und wird immer aus dem
+  // aktuellen O2-Wert abgeleitet, nie unabhaengig gewuerfelt oder veraendert.
+  { id: "n2", name: "Stickstoff", symbol: "N₂", unit: "%", min: 0, max: 95, potency: 0 },
 ];
+
+// O2 und N2 sind beide Volumenanteile DERSELBEN Atmosphaere, keine unabhaengigen
+// Werte — ihre Summe darf realistisch nicht ueber ~100% (abzueglich Argon/Spuren-
+// gasen, hier vereinfacht ignoriert) hinauswachsen. ATMOSPHERE_MAJOR_GAS_TOTAL ist
+// die Ziel-Summe aus O2+N2 (realer Referenzwert: 21%+78%=99%). Siehe
+// Atmosphere.set(): aendert sich eines der beiden (Biologie, Sauerstoffgenerator,
+// Atmung ODER Spieler-Regler), gibt das jeweils andere im GLEICHEN Umfang nach —
+// das verhindert sowohl eine unmoegliche Summe > 100% als auch ein unbegrenztes
+// O2-Wachstum bis zum reinen Regler-Anschlag (35%), unabhaengig von der biologischen
+// Atmungs-Balance (FAUNA_MAX_O2_CONSUMPTION_PER_YEAR).
+const ATMOSPHERE_MAJOR_GAS_TOTAL = 99;
+
+// Geologische Sauerstoffsenke (Oxidation/Verwitterung von Gestein, z.B. Eisen zu
+// Eisenoxid) — unabhaengig von Biologie, wirkt sogar bevor irgendeine Fauna zum
+// Atmen existiert. Ohne diesen Term konnte eine reine Prokaryoten-Frühphase (vor
+// Eukaryoten/Vegetation/Fauna) O2 unopponiert bis zum Anschlag treiben. Als
+// Relaxation Richtung eines geologischen Gleichgewichtswerts modelliert (gleiches
+// Muster wie TEMP_RELAXATION_RATE bei Climate) statt eines reinen Einbahn-
+// Verbrauchs — vereinfacht die realen zusaetzlichen Puffer-Prozesse, die O2 lange
+// nahe seinem historischen Referenzwert halten.
+const GEOLOGICAL_O2_EQUILIBRIUM = 21;
+const GEOLOGICAL_O2_RELAXATION_RATE = 0.01;
 
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
 const CO2_FORCING_COEFFICIENT = 5.35; // W/m² pro ln(CO2eq/CO2_ref) — vereinfachte reale IPCC-Formel
