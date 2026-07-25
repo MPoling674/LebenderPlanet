@@ -15,6 +15,7 @@ const Game = (() => {
       atmosphere: Atmosphere.serialize(),
       climate: Climate.serialize(),
       planet: Planet.serialize(),
+      civilization: Civilization.serialize(),
     };
   }
 
@@ -30,6 +31,7 @@ const Game = (() => {
     Atmosphere.restore(payload.atmosphere);
     Climate.restore(payload.climate); // faellt bei fehlendem/altem Speicherstand sauber auf init() zurueck
     Planet.restore(payload.planet);
+    Civilization.restore(payload.civilization); // faellt bei fehlendem/altem Speicherstand sauber auf 0 zurueck
   }
 
   function loadGame() {
@@ -188,6 +190,7 @@ const Game = (() => {
     Atmosphere.init();
     Climate.init();
     Planet.init();
+    Civilization.init();
     UI.setYear(year);
     renderAll();
     UI.setSaveStatus("Neue Simulation gestartet.");
@@ -213,6 +216,7 @@ const Game = (() => {
     Atmosphere.init();
     Climate.init();
     Planet.init();
+    Civilization.init();
     year = 0;
     loadGame();
 

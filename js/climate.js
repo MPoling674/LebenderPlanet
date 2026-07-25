@@ -6,6 +6,35 @@
 const Climate = (() => {
   let currentTemp = BASE_GLOBAL_TEMP;
   let currentIce = BASE_ICE_COVERAGE;
+  // Zaehlt Simulationsjahre seit init()/restore() unabhaengig vom UI-Jahreszaehler
+  // in main.js — nur fuer die Phase der Milankovitch-Zyklen relevant (siehe
+  // orbitalForcing()). orbitalPhase verschiebt jeden der drei Zyklen bei init()
+  // zufaellig (analog zur GASES-startVariation in data.js), damit nicht jeder
+  // Planet exakt dieselbe Eiszeit-Phasenlage zu Spielbeginn hat.
+  let orbitalYear = 0;
+  let orbitalPhase = { obliquity: 0, precession: 0, eccentricity: 0 };
+
+  function randomPhase() {
+    return Math.random() * Math.PI * 2;
+  }
+
+  // Milankovitch-Zyklen (siehe Konstanten-Kommentar in data.js): drei ueberlagerte
+  // periodische Schwankungen, die zusaetzlich zum Treibhauseffekt auf das
+  // Temperatur-Gleichgewicht wirken. Praezession wird durch die Exzentrizitaet
+  // moduliert (real: bei einer kreisrunden Bahn hat die Ausrichtung des Perihels
+  // zu den Jahreszeiten keinen Effekt) — eccentricitySignal in [-1,1] dient dafuer
+  // gleichgerichtet auf [0,1] als Staerke-Multiplikator.
+  function orbitalForcing() {
+    const t = orbitalYear;
+    const eccentricitySignal = Math.sin((2 * Math.PI * t) / MILANKOVITCH_ECCENTRICITY_PERIOD_YEARS + orbitalPhase.eccentricity);
+    const obliquityTerm = MILANKOVITCH_OBLIQUITY_AMPLITUDE
+      * Math.sin((2 * Math.PI * t) / MILANKOVITCH_OBLIQUITY_PERIOD_YEARS + orbitalPhase.obliquity);
+    const eccentricityStrength = (eccentricitySignal + 1) / 2;
+    const precessionTerm = MILANKOVITCH_PRECESSION_AMPLITUDE * eccentricityStrength
+      * Math.sin((2 * Math.PI * t) / MILANKOVITCH_PRECESSION_PERIOD_YEARS + orbitalPhase.precession);
+    const eccentricityTerm = MILANKOVITCH_ECCENTRICITY_AMPLITUDE * eccentricitySignal;
+    return obliquityTerm + precessionTerm + eccentricityTerm;
+  }
 
   // Zielwerte, denen sich currentTemp/currentIce jedes Jahr annähern — das sind
   // die ehemaligen (sofortigen) Formeln aus Phase 1, jetzt nur noch als Gleichgewicht.
@@ -13,7 +42,7 @@ const Climate = (() => {
     const forcing = Atmosphere.radiativeForcing();
     const deltaGhg = CLIMATE_SENSITIVITY * forcing;
     const deltaTotal = deltaGhg * (1 + WATER_VAPOR_AMPLIFICATION);
-    return BASE_GLOBAL_TEMP + deltaTotal;
+    return BASE_GLOBAL_TEMP + deltaTotal + orbitalForcing();
   }
 
   function equilibriumIceCoverage(temp) {
@@ -22,6 +51,8 @@ const Climate = (() => {
   }
 
   function init() {
+    orbitalYear = 0;
+    orbitalPhase = { obliquity: randomPhase(), precession: randomPhase(), eccentricity: randomPhase() };
     currentTemp = equilibriumTemperature();
     currentIce = equilibriumIceCoverage(currentTemp);
   }
@@ -29,6 +60,7 @@ const Climate = (() => {
   // Ein Simulationsjahr: Temperatur und Eis nähern sich mit unterschiedlicher
   // Trägheit ihrem jeweiligen Gleichgewicht an (Temperatur schneller als Eis).
   function tick() {
+    orbitalYear += 1;
     const tempTarget = equilibriumTemperature();
     currentTemp += (tempTarget - currentTemp) * TEMP_RELAXATION_RATE;
     const iceTarget = equilibriumIceCoverage(currentTemp);
@@ -61,13 +93,19 @@ const Climate = (() => {
   }
 
   function serialize() {
-    return { temp: currentTemp, ice: currentIce };
+    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase };
   }
 
   function restore(saved) {
     if (saved && typeof saved.temp === "number" && typeof saved.ice === "number") {
       currentTemp = saved.temp;
       currentIce = saved.ice;
+      // Aeltere Spielstaende kennen die Milankovitch-Zyklen noch nicht — dann bei
+      // Jahr 0 mit einer frischen zufaelligen Phasenlage starten statt abzustuerzen.
+      orbitalYear = typeof saved.orbitalYear === "number" ? saved.orbitalYear : 0;
+      orbitalPhase = saved.orbitalPhase && typeof saved.orbitalPhase.obliquity === "number"
+        ? saved.orbitalPhase
+        : { obliquity: randomPhase(), precession: randomPhase(), eccentricity: randomPhase() };
     } else {
       init();
     }

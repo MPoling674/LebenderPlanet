@@ -23,6 +23,8 @@ const UI = (() => {
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
+    el.hudCivCo2 = document.getElementById("hud-civ-co2");
+    el.hudCivCh4 = document.getElementById("hud-civ-ch4");
     el.vegLegend = document.getElementById("veg-legend");
     el.speciesList = document.getElementById("species-list");
     el.mapTooltip = document.getElementById("map-tooltip");
@@ -309,6 +311,9 @@ const UI = (() => {
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
+    const civEmissions = Civilization.cumulativeEmissions();
+    el.hudCivCo2.textContent = civEmissions.co2.toFixed(1) + " ppm";
+    el.hudCivCh4.textContent = civEmissions.ch4.toFixed(2) + " ppm";
     renderGasValues();
   }
 

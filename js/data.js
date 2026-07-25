@@ -64,6 +64,26 @@ const SEA_LEVEL_PER_ICE_PERCENT = 0.4; // m Meeresspiegelanstieg je 1 Prozentpun
 const TEMP_RELAXATION_RATE = 1 / 30; // ~63% Annaeherung an neues Gleichgewicht in ~30 Jahren
 const ICE_RELAXATION_RATE = 1 / 500; // ~63% Annaeherung in ~500 Jahren
 
+// Milankovitch-Zyklen: periodische Schwankungen der Erdbahn/-achse, die real KEINE
+// globale Temperaturaenderung direkt verursachen, sondern nur die Verteilung der
+// Sonneneinstrahlung zwischen Breitengraden/Jahreszeiten verschieben (Antrieb der
+// Eiszeitzyklen ueber Breitengrad-Rueckkopplungen, v.a. sommerliche Einstrahlung in
+// hohen Breiten). Da dieses Modell keine Breitengrad-/Jahreszeiten-Klimaphysik
+// kennt, wird ihr Netto-Effekt hier vereinfacht als direkte periodische Schwankung
+// von equilibriumTemperature() angenaehert (siehe Climate.orbitalForcing()) —
+// gleiche Vereinfachung wie beim uebrigen Klimamodell. Amplituden bewusst klein
+// gehalten: reale Glazial/Interglazial-Schwankungen von 4-6°C entstehen erst durch
+// Eis-Albedo- und CO2-Rueckkopplungen, die dieses Modell nicht abbildet (Eisdecke
+// wirkt hier nicht auf die Temperatur zurueck) — hier nur der schwaechere direkte
+// Orbitalanteil, als zusaetzliche natuerliche Schwankung ueber die vom Spieler
+// gesteuerten Treibhausgase hinweg.
+const MILANKOVITCH_OBLIQUITY_PERIOD_YEARS = 41000; // Achsneigung, staerkster Eiszeit-Treiber
+const MILANKOVITCH_OBLIQUITY_AMPLITUDE = 0.7; // °C
+const MILANKOVITCH_PRECESSION_PERIOD_YEARS = 23000; // Praezession der Rotationsachse
+const MILANKOVITCH_PRECESSION_AMPLITUDE = 0.5; // °C, durch Exzentrizitaet moduliert (siehe orbitalForcing())
+const MILANKOVITCH_ECCENTRICITY_PERIOD_YEARS = 100000; // Exzentrizitaet der Erdbahn
+const MILANKOVITCH_ECCENTRICITY_AMPLITUDE = 0.15; // °C, schwacher direkter Effekt
+
 // Simulationstempo: TICK_INTERVAL_MS = Echtzeit-Abstand zwischen Simulationsschritten,
 // SPEED_STEPS = moegliche "Jahre pro Schritt"-Werte (Index 0 = Pause).
 const TICK_INTERVAL_MS = 500;
@@ -180,14 +200,35 @@ const FAUNA_TYPES = [
   { id: "prokaryotes", name: "Prokaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 30, salinityTolerance: 25, color: [120, 168, 120], successors: [{ id: "eukaryotes" }] },
   { id: "eukaryotes", name: "Eukaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 25, salinityTolerance: 20, color: [96, 156, 132], successors: [] },
 
-  // Wasserbewohner (Wurzeln, unabhaengig voneinander) — alle civilizationCapable.
-  { id: "radiata", name: "Radiata", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 20, salinityTolerance: 15, color: [150, 110, 168], successors: [] },
-  { id: "mollusks", name: "Mollusken", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 18, salinityTolerance: 14, color: [176, 132, 104], successors: [] },
-  { id: "trichordates", name: "Trichordaten", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 16, salinityTolerance: 12, color: [120, 132, 176], successors: [] },
-  { id: "fish", name: "Fische", habitat: "ocean", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 14, salinityTolerance: 12, color: [90, 140, 168], successors: [{ id: "amphibians", crossHabitat: true }] },
+  // Wasserbewohner (Wurzeln, unabhaengig voneinander) — alle civilizationCapable:false,
+  // aus denselben realen biologischen Gruenden wie bei Arthropoden (siehe Kommentar
+  // unten), zusaetzlich verhindert das Wasser selbst Feuer/Metallurgie als
+  // Grundvoraussetzung jeder bekannten technologischen Zivilisation:
+  // - Radiata: wie reale Nesseltiere/Stachelhaeuter nur ein Nervennetz, kein
+  //   zentrales Gehirn, radiale statt bilaterale Symmetrie ohne Greifwerkzeuge.
+  // - Mollusken: reale Kopffuesser (Oktopusse) zeigen zwar Intelligenz, aber kurze
+  //   Lebensspanne (1-2 Jahre) und Einzelgaengertum verhindern kulturelle
+  //   Weitergabe von Wissen ueber Generationen — eine Zivilisation braucht beides.
+  // - Trichordaten: primitive Vorstufe echter Wirbeltiere (real z.B. Lanzettfischchen),
+  //   ohne zentrales Gehirn und ohne Gliedmaßen.
+  // - Fische: Flossen statt Greifhaende, zusaetzlich zum generellen Wasser-Feuer-Problem.
+  // Die Nachfolgelinie an Land (Amphibien etc., siehe successors bei "fish") bleibt
+  // civilizationCapable, sobald sie das Wasser verlaesst.
+  { id: "radiata", name: "Radiata", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 20, salinityTolerance: 15, color: [150, 110, 168], successors: [] },
+  { id: "mollusks", name: "Mollusken", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 18, salinityTolerance: 14, color: [176, 132, 104], successors: [] },
+  { id: "trichordates", name: "Trichordaten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 16, salinityTolerance: 12, color: [120, 132, 176], successors: [] },
+  { id: "fish", name: "Fische", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 14, salinityTolerance: 12, color: [90, 140, 168], successors: [{ id: "amphibians", crossHabitat: true }] },
 
   // Land-/Luftbewohner.
-  { id: "arthropods", name: "Arthropoden", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: false, tolerance: 24, minVegetation: 5, color: [176, 158, 64], successors: [] },
+  // civilizationCapable:false ist eine bewusste biologische Grenze, keine
+  // Balance-Entscheidung: das Exoskelett begrenzt Koerpergroesse (haeutungs-
+  // limitiert) und die Tracheenatmung (Sauerstoffdiffusion durch Roehren statt
+  // Lunge/Kiemen) begrenzt sie zusaetzlich weiter — beides zusammen laesst real
+  // kein Arthropoden-Gehirn mit der noetigen Neuronendichte fuer Werkzeugbau/
+  // Zivilisation zu, trotz oft hoher OEkologischer Vielfalt und Anpassungsfaehigkeit
+  // (Insekten gab es bereits ueber 100 Millionen Jahre vor den ersten Landwirbel-
+  // tieren, ohne dass daraus je eine Zivilisation entstand).
+  { id: "arthropods", name: "Arthropoden", habitat: "land", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 24, minVegetation: 5, color: [176, 158, 64], successors: [] },
   { id: "amphibians", name: "Amphibien", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 14, minVegetation: 15, color: [110, 150, 110], successors: [{ id: "reptiles" }, { id: "therapsids" }] },
   { id: "reptiles", name: "Reptilien", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 12, minVegetation: 10, color: [120, 140, 84], successors: [{ id: "dinosaurs" }, { id: "avians" }] },
   { id: "dinosaurs", name: "Dinosphen", habitat: "land", civilizationCapable: true, manualPlacement: true, successorOnly: true, tolerance: 8, minVegetation: 5, color: [150, 100, 76], successors: [{ id: "avians" }] },
@@ -288,6 +329,21 @@ const CIVILIZATION_GROWTH_RATE = 0.1;
 const CIVILIZATION_DECAY_RATE = 0.2;
 const CITY_TECH_THRESHOLD = 30;
 const HIGH_TECH_THRESHOLD = 80;
+
+// Zivilisation stoesst CO2/CH4 aus, proportional zum Tech-Level jeder Zelle
+// (0..100) — genau wie Fauna-Atmung/Vegetation als ANTEIL am theoretischen
+// Maximum (JEDE Zelle des Planeten auf Techlevel 100) modelliert, siehe
+// Civilization.tick(). Die Werte hier sind dieses theoretische Maximum pro Jahr;
+// realistisch bleibt der tatsaechliche Ausstoss weit darunter, da selten das
+// gesamte Planetenraster gleichzeitig hochindustrialisiert ist. CH4 hat einen viel
+// kleineren ppm-Massstab als CO2 (siehe GASES in data.js), traegt ueber seine hohe
+// Treibhauspotenz (potency:25) aber trotzdem spuerbar zur Erwaermung bei.
+// Civilization.cumulativeEmissions() summiert den bisherigen Gesamtausstoss separat
+// von den (durch andere Prozesse wie Vegetation ebenfalls veraenderten) aktuellen
+// Atmosphaerenwerten — fuer die "wie viel hat die Zivilisation insgesamt
+// eingebracht"-Anzeige im HUD.
+const CIVILIZATION_CO2_EMISSION_PPM_PER_YEAR = 5;
+const CIVILIZATION_CH4_EMISSION_PPM_PER_YEAR = 0.3;
 
 // Atombombe: zerstoert eine Hochtechnologie-Stadt (siehe Planet.detonate()).
 // Betroffene Zellen werden verstrahlt (radiation 0..100, klingt langsam ab —
