@@ -338,8 +338,22 @@ const Planet = (() => {
         cell.vegetation = 0;
         cell.vegetationType = null;
       }
-      // Fauna lebt auf Land UND im Ozean, aber nicht auf Eis (Habitat-Pruefung
-      // selbst uebernimmt Fauna.tickCell/-suitability anhand von terrain).
+      // Fauna lebt auf Land UND im Ozean, aber nicht auf Eis. Wechselt das TERRAIN
+      // selbst (z.B. Meeresspiegelanstieg ueberflutet eine Landzelle, oder Land
+      // faellt trocken), muss die dort lebende Fauna sofort verschwinden — genau
+      // wie Vegetation oben bei jedem Nicht-Land-Terrain sofort auf 0 gesetzt wird.
+      // Ohne diese Pruefung blieb z.B. eine Landart wie Arthropoden auf einer nun
+      // ozeanischen Zelle fauna.js's suitability()=0 nur langsam ueber
+      // FAUNA_DECAY_RATE verfallend erhalten — bis dahin zaehlte Planet.stats()
+      // diese Zelle sowohl als "jetzt Ozean" (Nenner) als auch mit ihrem alten
+      // Landarten-Typ (Zaehler), wodurch der Fauna-Arten-Anteil im HUD ueber 100%
+      // steigen konnte (gemeldeter Fehler). "habitat: null" (Nanotech-Roboter) ist
+      // bewusst klimaunabhaengig und bleibt von dieser Pruefung ausgenommen.
+      const currentFaunaType = cell.faunaType ? getFaunaType(cell.faunaType) : null;
+      if (currentFaunaType && currentFaunaType.habitat !== null && currentFaunaType.habitat !== terrain) {
+        cell.fauna = 0;
+        cell.faunaType = null;
+      }
       if (terrain === "ice") {
         cell.fauna = 0;
         cell.faunaType = null;
@@ -391,6 +405,17 @@ const Planet = (() => {
     // Kommentar in data.js).
     o2Delta -= (o2AtYearStart - GEOLOGICAL_O2_EQUILIBRIUM) * GEOLOGICAL_O2_RELAXATION_RATE;
     Atmosphere.adjust("o2", o2Delta);
+
+    // Geologische CO2-Senke (Carbonat-Silikat-Verwitterungszyklus) — analog zur
+    // O2-Variante oben, aber um Groessenordnungen langsamer (siehe
+    // GEOLOGICAL_CO2_RELAXATION_RATE-Kommentar in data.js): reale Verwitterung
+    // stabilisiert CO2 erst ueber zehntausende bis hunderttausende Jahre. Ohne
+    // diesen Term hatte CO2 KEINE langfristige Ruecksetzkraft und blieb nach
+    // genug Spieljahren (Zivilisations-Emissionen, siehe civilization.js) fuer
+    // immer am Anschlag (2000 ppm) haengen, selbst wenn Vegetation laengst durch
+    // die Hitze abgestorben war und keinen Ausgleich mehr liefern konnte
+    // (gemeldeter Fehler: "CO2 geht nicht mehr zurueck").
+    Atmosphere.adjust("co2", -(Atmosphere.get("co2") - GEOLOGICAL_CO2_EQUILIBRIUM) * GEOLOGICAL_CO2_RELAXATION_RATE);
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.

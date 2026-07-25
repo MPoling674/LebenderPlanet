@@ -47,6 +47,27 @@ const ATMOSPHERE_MAJOR_GAS_TOTAL = 99;
 const GEOLOGICAL_O2_EQUILIBRIUM = 21;
 const GEOLOGICAL_O2_RELAXATION_RATE = 0.01;
 
+// Geologische CO2-Senke (vereinfachtes Abbild des Carbonat-Silikat-Verwitterungs-
+// zyklus + der Tatsache, dass eine reife Biosphaere im Gleichgewicht Photosynthese
+// und Gesamt-Atmung/Verrottung ausbalanciert): real haelt dieses Zusammenspiel
+// atmosphaerisches CO2 nahe einem Referenzwert, ohne dass reine Fauna-Atmung
+// (siehe FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR) allein CO2 unbegrenzt weitertreibt —
+// in diesem Modell wird Vegetation nur der NETTO-Zuwachs erfasst (siehe
+// tick()-Kommentar in planet.js), Fauna-Atmung aber als DAUERHAFTER, bestands-
+// proportionaler Fluss — ohne Gegenstueck triebe ein einmal etabliertes,
+// stabiles Oekosystem CO2 allein durch anhaltende Atmung unaufhaltsam an den
+// Anschlag (2000 ppm, siehe GASES) und hielte es dort fuer immer fest (gemeldeter
+// Fehler: "CO2 geht nicht mehr zurueck"), selbst OHNE Zivilisations-Emissionen.
+// Die Rate ist bewusst so gewaehlt, dass sie typische anhaltende Atmungs-Fluesse
+// ueber Jahrtausende ausgleichen kann, dabei aber deutlich traeger bleibt als
+// Vegetation/Fauna (Jahrzehnte) oder sogar die O2-Variante oben (Jahrhunderte) —
+// ein vom Spieler gesetzter CO2-Wert bleibt auf kurze/mittlere Sicht bestehen
+// (Sandbox-Charakter, siehe Atmosphere-Kommentar), driftet aber ueber sehr lange
+// Zeitraeume zu seinem natuerlichen Referenzwert zurueck, statt fuer immer am
+// Anschlag haengen zu bleiben.
+const GEOLOGICAL_CO2_EQUILIBRIUM = 280; // ppm, entspricht CO2_PREINDUSTRIAL_PPM
+const GEOLOGICAL_CO2_RELAXATION_RATE = 1 / 1000; // ~63% Annaeherung in ~1.000 Jahren
+
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
 const CO2_FORCING_COEFFICIENT = 5.35; // W/m² pro ln(CO2eq/CO2_ref) — vereinfachte reale IPCC-Formel
 const CLIMATE_SENSITIVITY = 0.8; // °C pro W/m² Strahlungsantrieb (~3°C pro CO2-Verdopplung)
