@@ -23,6 +23,20 @@ const Fauna = (() => {
   let cachedEukaryotesCanGrow = false;
   let cachedEukaryotesEstablished = false;
   let cachedLifeEstablished = false;
+  // Einmal-Ratsche: sobald Eukaryoten TATSAECHLICH einmal etabliert waren (canGrow
+  // UND hasEukaryotes gleichzeitig erfuellt), bleibt eukaryotesEstablished() auch
+  // dann true, wenn O2 danach wieder unter die Schwelle faellt — solange irgendwo
+  // noch Eukaryoten existieren. Grund: der Uebergang Prokaryoten->Eukaryoten
+  // entzieht dem Ozean selbst O2-produzierende Biomasse (weniger Prokaryoten) UND
+  // fuegt O2-verbrauchende Atmung hinzu (Eukaryoten zaehlen als atmende Fauna,
+  // siehe respiringBiomass in planet.js) — die ERSTEN paar umgewandelten Zellen
+  // druecken O2 dadurch im GLEICHEN Jahr bereits wieder unter die Schwelle, noch
+  // bevor sich ein stabiler gemischter Bestand einpendeln kann. Ohne Ratsche
+  // "entstanden" Eukaryoten dadurch nie dauerhaft (gemeldeter Fehler: Eukaryoten
+  // entstehen nie) — cachedEukaryotesCanGrow selbst bleibt UNGERATSCHT, damit
+  // WEITERE Umwandlung/Neubesiedlung weiterhin an echtes O2-Wachstum gebunden
+  // bleibt (keine unregulierte Laufzeit-Umwandlung des gesamten Ozeans).
+  let everEukaryotesEstablished = false;
 
   // getCell(x,y) liefert die lebende Zellreferenz aus Planet, currentTerrainFn das
   // aktuelle Terrain — gleiches Zugriffsmuster wie Currents.tick().
@@ -36,12 +50,48 @@ const Fauna = (() => {
         if (!hasEukaryotes && cell.faunaType === "eukaryotes" && cell.fauna > 0) hasEukaryotes = true;
       }
     }
-    const o2Sufficient = Atmosphere.get("o2") >= EUKARYOTE_O2_THRESHOLD;
+    // Toleranz von 0,01 Prozentpunkten: bei voller Prokaryoten-Ozeanabdeckung liegt
+    // das rechnerische O2-Gleichgewicht (GEOLOGICAL_O2_EQUILIBRIUM +
+    // PROKARYOTE_O2_RELEASE_PER_YEAR / GEOLOGICAL_O2_RELAXATION_RATE = 21+2 = 23)
+    // exakt auf EUKARYOTE_O2_THRESHOLD — eine reine Asymptote, der sich der Wert
+    // nur ueber Fliesskomma-Rundung je einmal annaehern kann. Ausserdem druecken
+    // schon die ERSTEN paar Prokaryoten->Eukaryoten-Uebergaenge (siehe
+    // everEukaryotesEstablished-Kommentar oben) O2 im selben Jahr um ein paar
+    // Tausendstel wieder unter einen exakten Schwellenwert. 0,01 ueberbrueckt
+    // beides, ohne die Schwelle nennenswert aufzuweichen (Start-O2 variiert per
+    // GASES-startVariation um hoechstens ±2, weit ausserhalb dieser Toleranz).
+    const o2Sufficient = Atmosphere.get("o2") >= EUKARYOTE_O2_THRESHOLD - 0.01;
     const temp = Climate.globalTemperature();
     const temperatureSurvivable = temp >= EUKARYOTE_MIN_GLOBAL_TEMP && temp <= EUKARYOTE_MAX_GLOBAL_TEMP;
     cachedEukaryotesCanGrow = o2Sufficient && temperatureSurvivable;
-    cachedEukaryotesEstablished = cachedEukaryotesCanGrow && hasEukaryotes;
+    const liveEukaryotesEstablished = cachedEukaryotesCanGrow && hasEukaryotes;
+    if (liveEukaryotesEstablished) everEukaryotesEstablished = true;
+    cachedEukaryotesEstablished = liveEukaryotesEstablished || (everEukaryotesEstablished && hasEukaryotes);
     cachedLifeEstablished = cachedEukaryotesEstablished && hasVegetation;
+  }
+
+  // Von Planet.tick() ganz am JAHRESENDE aufgerufen (nach Sukzession UND O2-
+  // Fluessen dieses Jahres). Prueft bewusst NICHT den inzwischen schon wieder
+  // veraenderten O2-Wert neu, sondern nutzt cachedEukaryotesCanGrow so, wie es zu
+  // JAHRESBEGINN (computeGate() oben) galt — genau DIESE Bedingung hat die
+  // diesjaehrigen Prokaryoten->Eukaryoten-Uebergaenge erst ermoeglicht. Ohne diese
+  // Trennung war ein Beobachten von "canGrow UND hasEukaryotes gleichzeitig" nie
+  // moeglich: die ersten Uebergaenge selbst druecken O2 noch IM SELBEN JAHR unter
+  // die Schwelle (siehe everEukaryotesEstablished-Kommentar oben), sodass ein
+  // erneuter computeGate()-Aufruf am Jahresende die Bedingung immer schon wieder
+  // als false gesehen haette (Kernursache des gemeldeten Fehlers).
+  function noteYearEnd(getCell) {
+    if (!cachedEukaryotesCanGrow || everEukaryotesEstablished) return;
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+      for (let x = 0; x < GRID_WIDTH; x++) {
+        const cell = getCell(x, y);
+        if (cell.faunaType === "eukaryotes" && cell.fauna > 0) {
+          everEukaryotesEstablished = true;
+          cachedEukaryotesEstablished = true;
+          return;
+        }
+      }
+    }
   }
 
   // Gate fuer die bestehende Vegetation (Pflanzen-Stufe): Prokaryoten reichern die
@@ -67,6 +117,17 @@ const Fauna = (() => {
     if (type.id === "eukaryotes" && !cachedEukaryotesCanGrow) return 0;
     if (type.id !== "prokaryotes" && type.id !== "eukaryotes" && !cachedLifeEstablished) return 0;
     if (type.habitat !== terrain) return 0;
+    // Prokaryoten sind extremophile Basis der Nahrungskette (analog zu den
+    // Nanotech-Robotern klimaunabhaengig) und muessen JEDE nicht-vereiste
+    // Ozeanzelle besiedeln koennen: der O2-Gehalt kann EUKARYOTE_O2_THRESHOLD nur
+    // erreichen, wenn ihre Ozeanabdeckung gegen 100% geht (Formel: 21% + 2 *
+    // Abdeckung, siehe GEOLOGICAL_O2_EQUILIBRIUM-Kommentar in data.js). Mit einem
+    // numerischen Temperatur-/Salzgehalt-Toleranzband blieb der kaelteste Saum
+    // direkt am Polareis (ca. -16 bis -19°C, siehe localTemperature() in
+    // planet.js) unabhaengig vom Zufallsklima IMMER unbesiedelbar — die Schwelle
+    // war dadurch bei jedem Neustart unerreichbar (gemeldeter Fehler: O2 blieb
+    // dauerhaft bei ca. 22-23% haengen, nie darueber).
+    if (type.id === "prokaryotes") return 1;
     const [tMin, tMax] = faunaTempRange(type);
     const tempSuit = Climate.vegetationSuitability(temp, tMin, tMax);
     if (tempSuit <= 0) return 0;
@@ -116,7 +177,19 @@ const Fauna = (() => {
       return;
     }
 
-    if (cell.fauna >= 90 && currentType.successors.length > 0) {
+    // Gleiche Jahreswahrscheinlichkeit wie bei der Neubesiedlung leerer Zellen
+    // (NATURAL_COLONIZATION_CHANCE) statt eines garantierten Uebergangs: sonst
+    // "evolviert" bei einer reifen, raeumlich einheitlichen Population (z.B. ein
+    // Ozean voller Prokaryoten, die alle gleichzeitig fauna>=90 erreicht haben und
+    // im selben Jahr gleichzeitig geeignet werden) die GESAMTE Flaeche im selben
+    // Jahr — bei Prokaryoten->Eukaryoten stuerzt das die O2-produzierende
+    // Prokaryoten-Biomasse (und damit den O2-Gehalt) augenblicklich ab, noch bevor
+    // Fauna.eukaryotesEstablished() das ueberhaupt einmal als true erfassen konnte
+    // (Kernursache des gemeldeten Fehlers "Eukaryoten entstehen nie", Teil 2: der
+    // Ozean sprang instantan komplett zu Eukaryoten um und liess O2 sofort wieder
+    // unter die Schwelle fallen). Mit der Jahreswahrscheinlichkeit verteilt sich
+    // der Uebergang wie bei jeder anderen Sukzession ueber mehrere Jahre.
+    if (cell.fauna >= 90 && currentType.successors.length > 0 && Math.random() < NATURAL_COLONIZATION_CHANCE) {
       for (const succ of currentType.successors) {
         if (succ.crossHabitat) continue;
         const succType = getFaunaType(succ.id);
@@ -191,5 +264,5 @@ const Fauna = (() => {
     });
   }
 
-  return { computeGate, eukaryotesEstablished, suitability, tickCell, tickSpawns };
+  return { computeGate, noteYearEnd, eukaryotesEstablished, suitability, tickCell, tickSpawns };
 })();

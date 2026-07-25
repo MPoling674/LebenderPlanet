@@ -356,25 +356,41 @@ const Planet = (() => {
       if (cell.oxygenGenerator) oxygenGeneratorCount += 1;
     });
 
+    // Alle O2-Fluesse dieses Jahres (Biologie UND Geologie) werden zu EINEM Delta
+    // aufsummiert und als EINZIGER Atmosphere.adjust()-Aufruf angewandt, statt
+    // nacheinander vier einzelne (die sich bei O2 nahe des Gleichgewichts fast
+    // aufheben, z.B. +0.02 gefolgt von -0,019999...). Mehrere sequentielle
+    // Adjust()-Aufrufe runden JEDER FUER SICH auf den naechsten double, wodurch das
+    // sehr kleine Netto-Delta (Groessenordnung 1e-14 nahe 23%) durch Rundung in
+    // der Addition/Subtraktion komplett verschluckt wurde — die Simulation blieb
+    // dadurch bei exakt 22,999999999998...% haengen, hauchduenn UNTER
+    // EUKARYOTE_O2_THRESHOLD, und die >=-Pruefung schlug fuer immer fehl (Teil des
+    // gemeldeten "O2 bleibt bei jedem Neustart haengen"-Fehlers). Mit einem
+    // einzigen aufsummierten Delta rundet die Fliesskomma-Arithmetik nur noch
+    // einmal, wodurch der rechnerische Fixpunkt tatsaechlich bei 21%+2*Abdeckung
+    // (siehe GEOLOGICAL_O2_EQUILIBRIUM-Kommentar) ankommt.
+    const o2AtYearStart = Atmosphere.get("o2");
+
     // Prokaryoten reichern die Atmosphaere langsam mit O2 an (siehe
     // PROKARYOTE_O2_RELEASE_PER_YEAR-Kommentar in data.js), Sauerstoffgeneratoren
     // beschleunigen das unabhaengig von Biologie — beides macht den Weg zum
     // Eukaryoten-Gate (Fauna.eukaryotesEstablished) am O2-HUD-Wert sichtbar.
     const prokaryoteBiomassFraction = oceanCells > 0 ? prokaryoteBiomass / (oceanCells * 100) : 0;
-    Atmosphere.adjust("o2", prokaryoteBiomassFraction * PROKARYOTE_O2_RELEASE_PER_YEAR);
-    Atmosphere.adjust("o2", oxygenGeneratorCount * OXYGEN_GENERATOR_OUTPUT_PER_YEAR);
+    let o2Delta = prokaryoteBiomassFraction * PROKARYOTE_O2_RELEASE_PER_YEAR;
+    o2Delta += oxygenGeneratorCount * OXYGEN_GENERATOR_OUTPUT_PER_YEAR;
 
     // Atmung der uebrigen Fauna wirkt entgegen: verbraucht O2, setzt CO2 frei —
     // schliesst den Kreislauf, damit O2 nicht unbegrenzt bis zum Anschlag steigt.
     const totalFaunaCells = landCells + oceanCells;
     const respiringBiomassFraction = totalFaunaCells > 0 ? respiringBiomass / (totalFaunaCells * 100) : 0;
-    Atmosphere.adjust("o2", -respiringBiomassFraction * FAUNA_MAX_O2_CONSUMPTION_PER_YEAR);
+    o2Delta -= respiringBiomassFraction * FAUNA_MAX_O2_CONSUMPTION_PER_YEAR;
     Atmosphere.adjust("co2", respiringBiomassFraction * FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR);
 
     // Geologische Oxidation/Verwitterung wirkt unabhaengig von Biologie, auch
     // bevor irgendeine Fauna zum Atmen existiert (siehe GEOLOGICAL_O2_EQUILIBRIUM-
     // Kommentar in data.js).
-    Atmosphere.adjust("o2", -(Atmosphere.get("o2") - GEOLOGICAL_O2_EQUILIBRIUM) * GEOLOGICAL_O2_RELAXATION_RATE);
+    o2Delta -= (o2AtYearStart - GEOLOGICAL_O2_EQUILIBRIUM) * GEOLOGICAL_O2_RELAXATION_RATE;
+    Atmosphere.adjust("o2", o2Delta);
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
@@ -392,6 +408,13 @@ const Planet = (() => {
     Atmosphere.adjust("co2", -co2Absorbed);
     Atmosphere.adjust("o2", o2Released);
     lastTotalVegetation = totalVegetation;
+    // Am Jahresende pruefen, ob die zu JAHRESBEGINN geltende O2-Bedingung (siehe
+    // computeGate()) diesjaehrige Prokaryoten->Eukaryoten-Uebergaenge tatsaechlich
+    // hervorgebracht hat (siehe Fauna.noteYearEnd()-Kommentar) — NICHT durch einen
+    // erneuten computeGate()-Aufruf, der den durch genau diese Uebergaenge bereits
+    // wieder gesunkenen O2-Wert saehe und die Erkennung dadurch permanent verpassen
+    // wuerde (Kernursache des gemeldeten Fehlers "Eukaryoten entstehen nie").
+    Fauna.noteYearEnd(cellAt);
     return { vegetationFraction, co2Absorbed, o2Released, events: scanForDiscoveries() };
   }
 

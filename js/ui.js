@@ -170,11 +170,19 @@ const UI = (() => {
     if (type.id === "nanobots") {
       return `<strong>${type.name}</strong>: entstehen nur, wenn eine Hochtechnologie-Stadt durch eine Atombombe zerstört wird.`;
     }
-    const [tMin, tMax] = faunaTempRange(type);
+    // Prokaryoten sind klimaunabhaengig (siehe Fauna.suitability()-Sonderfall) —
+    // kein numerisches Temperaturband anzeigen, das faelschlich eine Einschraenkung
+    // suggerieren wuerde.
+    const climateLabel = type.id === "prokaryotes" ? "beliebig" : (() => {
+      const [tMin, tMax] = faunaTempRange(type);
+      return `${tMin.toFixed(0)}–${tMax.toFixed(0)} °C`;
+    })();
     const habitatLabel = type.habitat === "land" ? "Land" : "Ozean";
     let need;
     if (type.habitat === "land") {
       need = `Vegetation ≥ ${type.minVegetation}%`;
+    } else if (type.id === "prokaryotes") {
+      need = "Salzgehalt beliebig";
     } else {
       const [sMin, sMax] = faunaSalinityRange(type);
       need = `Salzgehalt ${sMin.toFixed(0)}–${sMax.toFixed(0)}‰`;
@@ -188,7 +196,7 @@ const UI = (() => {
     const predecessors = FAUNA_TYPES.filter((t) => t.successors.some((s) => s.id === type.id)).map((t) => t.name);
     const evolvesFrom = predecessors.length ? ` Entwickelt sich aus: ${predecessors.join(", ")}.` : "";
     const extra = type.id === "prokaryotes" ? " Reichert die Atmosphäre langsam mit O₂ an." : "";
-    return `<strong>${type.name}</strong> (${habitatLabel}): ${tMin.toFixed(0)}–${tMax.toFixed(0)} °C, ${need}.${prereq}${evolvesFrom}${extra}`;
+    return `<strong>${type.name}</strong> (${habitatLabel}): ${climateLabel}, ${need}.${prereq}${evolvesFrom}${extra}`;
   }
 
   function renderSpeciesList() {

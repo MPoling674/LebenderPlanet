@@ -164,7 +164,20 @@ function vegTypeRange(type) {
 const FAUNA_TYPES = [
   // Mikroorganismen — civilizationCapable: nein, muessen sich global etablieren,
   // bevor jegliche Fauna ab Radiata ueberhaupt entstehen kann (siehe Fauna.computeGate).
-  { id: "prokaryotes", name: "Prokaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 30, salinityTolerance: 25, color: [120, 168, 120], successors: [] },
+  // tolerance/salinityTolerance werden fuer Prokaryoten NICHT zur Eignungspruefung
+  // herangezogen (siehe Fauna.suitability()-Sonderfall) — sie sind als extremophile
+  // Basis der Nahrungskette klimaunabhaengig im gesamten Ozean lebensfaehig, analog
+  // zu den Nanotech-Robotern. Werte hier dienen nur noch als Alt-Referenz.
+  // successors:[eukaryotes] ist NOTWENDIG, nicht nur kosmetisch: Eukaryoten
+  // koennen nur ueber leere Ozeanzellen ODER Sukzession aus einer reifen
+  // Vorgaenger-Population entstehen (siehe Fauna.tickCell/bestTypeFor). Sobald
+  // der O2-Gehalt die Schwelle erreicht, ist der Ozean aber typischerweise schon
+  // VOLLSTAENDIG mit Prokaryoten besiedelt (das ist ja gerade die Voraussetzung
+  // fuer den hohen O2-Wert) — ohne diese Sukzessionsroute gab es dann keine
+  // leere Zelle mehr, in der Eukaryoten je haetten entstehen koennen: ein
+  // permanenter Sackgassen-Zustand, selbst nachdem O2 tatsaechlich ausreichte
+  // (Kernursache des gemeldeten Fehlers "Eukaryoten entstehen nie").
+  { id: "prokaryotes", name: "Prokaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 30, salinityTolerance: 25, color: [120, 168, 120], successors: [{ id: "eukaryotes" }] },
   { id: "eukaryotes", name: "Eukaryoten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 25, salinityTolerance: 20, color: [96, 156, 132], successors: [] },
 
   // Wasserbewohner (Wurzeln, unabhaengig voneinander) — alle civilizationCapable.

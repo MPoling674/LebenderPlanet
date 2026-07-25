@@ -42,8 +42,18 @@ const Atmosphere = (() => {
     const requestedDelta = requested - get(gasId);
     const pg = getGas(pairedId);
     const pairedOld = get(pairedId);
-    const pairedNew = clamp(pairedOld - requestedDelta, pg.min, pg.max);
-    const actualDelta = pairedOld - pairedNew; // wie weit der Partner TATSAECHLICH nachgab
+    const pairedUnclamped = pairedOld - requestedDelta;
+    const pairedNew = clamp(pairedUnclamped, pg.min, pg.max);
+    // Wenn der Partner den vollen Betrag ohne Klemmung aufnehmen/hergeben konnte,
+    // requestedDelta DIREKT uebernehmen statt es aus der Vorher/Nachher-Differenz
+    // des Partners zurueckzurechnen — der Partner hat typischerweise eine andere
+    // Groessenordnung (z.B. N2~76% vs O2~21%) und damit eine groebere Fliesskomma-
+    // Aufloesung; sehr kleine Deltas (etwa die letzten Nachkommastellen beim
+    // Annaehern an einen Schwellenwert wie EUKARYOTE_O2_THRESHOLD) rundeten beim
+    // Ruecktransport durch die groebere Partner-Aufloesung sonst auf exakt 0,
+    // wodurch O2 asymptotisch knapp UNTER einem Zielwert wie 23% haengen blieb,
+    // statt ihn nach ausreichend Simulationsjahren tatsaechlich zu erreichen.
+    const actualDelta = pairedNew === pairedUnclamped ? requestedDelta : pairedOld - pairedNew;
     gases[pairedId] = pairedNew;
     gases[gasId] = clamp(get(gasId) + actualDelta, g.min, g.max);
   }
