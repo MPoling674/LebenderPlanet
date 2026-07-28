@@ -87,12 +87,14 @@ const Planet = (() => {
   let discoveredFauna = new Set();
   let cityFounded = false;
   let highTechReached = false;
+  let oceansFormed = false;
 
   function rebuildDiscoveries() {
     discoveredVeg = new Set();
     discoveredFauna = new Set();
     cityFounded = false;
     highTechReached = false;
+    oceansFormed = cells.some((cell) => currentTerrain(cell) === "ocean");
     cells.forEach((cell) => {
       if (cell.vegetationType) discoveredVeg.add(cell.vegetationType);
       if (cell.faunaType) discoveredFauna.add(cell.faunaType);
@@ -106,6 +108,10 @@ const Planet = (() => {
   // ueber die Laufzeit eines Spielstands nur EIN einziges Mal.
   function scanForDiscoveries() {
     const events = [];
+    if (!oceansFormed && cells.some((c) => currentTerrain(c) === "ocean")) {
+      oceansFormed = true;
+      events.push({ category: "climate", message: "🌊 Die Oberflächentemperatur ist unter den Siedepunkt gefallen — die ersten Ozeane kondensieren aus der Dampfatmosphäre." });
+    }
     cells.forEach((cell) => {
       if (cell.vegetationType && !discoveredVeg.has(cell.vegetationType)) {
         discoveredVeg.add(cell.vegetationType);
@@ -153,9 +159,20 @@ const Planet = (() => {
     // weiter reicht das Eis Richtung Äquator (und umgekehrt bei Erwärmung).
     const iceCoverage = Climate.iceCoverage();
     const effectiveThreshold = clamp(POLAR_LATITUDE_THRESHOLD - (iceCoverage - BASE_ICE_COVERAGE) * 2, 0, 1);
-    if (cell.latitude >= effectiveThreshold) return "ice";
+    // ">" statt ">=": bei extremer Hitze (z.B. waehrend der Planetenentstehung,
+    // siehe PRIMORDIAL_HEAT_*) klemmt effectiveThreshold auf genau 1 — und die
+    // Zeilen y=0/y=GRID_HEIGHT-1 haben eine Breite von exakt 1.0 (siehe
+    // generateTerrain()). Mit ">=" waeren diese Pol-Zeilen selbst auf einem
+    // gluehend heissen Planeten faelschlich "Eis"; ">" bedeutet "Schwelle bei
+    // exakt 1 -> ueberhaupt kein Eis", was fuer diesen Grenzfall korrekt ist.
+    if (cell.latitude > effectiveThreshold) return "ice";
+    // Waehrend der Planetenentstehungsphase (siehe PRIMORDIAL_HEAT_*-Kommentar in
+    // data.js) ist noch kein Wasser kondensiert — waterCoverage() ist dann 0 und
+    // praktisch die gesamte Oberflaeche zaehlt als "Land" (heisses Gestein ohne
+    // Ozean), bis genug abgekuehlt und ausgegast ist.
+    const waterThreshold = Climate.waterCoverage() * SEA_LEVEL_THRESHOLD;
     const seaLevelOffset = Climate.seaLevelRise() / MAX_ELEVATION_METERS;
-    if (cell.elevation - seaLevelOffset <= SEA_LEVEL_THRESHOLD) return "ocean";
+    if (cell.elevation - seaLevelOffset <= waterThreshold) return "ocean";
     return "land";
   }
 

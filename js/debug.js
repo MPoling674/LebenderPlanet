@@ -51,6 +51,8 @@ const Debug = (() => {
     });
 
     check(Number.isFinite(Climate.globalTemperature()), "Globale Temperatur ist nicht-numerisch (NaN/Infinity).");
+    const water = Climate.waterCoverage();
+    check(water >= -DEBUG_EPSILON && water <= 1 + DEBUG_EPSILON, `Wasserbedeckung ausserhalb 0–1: ${water.toFixed(4)}`);
 
     const stats = Planet.stats();
     const terrainSum = stats.oceanPercent + stats.landPercent + stats.icePercent;

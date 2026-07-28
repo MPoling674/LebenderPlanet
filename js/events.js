@@ -86,7 +86,10 @@ const Events = (() => {
       }
     }
 
-    if (Math.random() < STORM_CHANCE_PER_YEAR) {
+    // Stuerme brauchen einen Wasser-/Atmosphaerenkreislauf — auf einem noch
+    // kochenden Planeten ohne kondensiertes Wasser (siehe PRIMORDIAL_HEAT_*-
+    // Kommentar in data.js) ergeben sie narrativ keinen Sinn.
+    if (Climate.waterCoverage() > 0 && Math.random() < STORM_CHANCE_PER_YEAR) {
       const target = findRandomCell(getCell, currentTerrainFn, ["land"]);
       if (target) {
         devastate(target.cell, STORM_DAMAGE);

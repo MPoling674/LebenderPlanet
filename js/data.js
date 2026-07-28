@@ -110,6 +110,30 @@ const BASE_ICE_COVERAGE = 0.12; // Anteil der Planetenoberfläche bei Basistempe
 const ICE_TEMP_SENSITIVITY = 0.018; // Aenderung des Eisanteils je °C Abweichung von BASE_GLOBAL_TEMP
 const SEA_LEVEL_PER_ICE_PERCENT = 0.4; // m Meeresspiegelanstieg je 1 Prozentpunkt geschmolzenes Eis
 
+// Planetenentstehung: der Spielstart ist ein "kochender" Planet OHNE Ozeane
+// (Restwaerme aus Akkretion/Kernbildung), der erst abkuehlen muss, bevor
+// ausgegastes Wasser ueberhaupt als Ozean kondensieren kann — reale Analogie:
+// die fruehe Erde hatte eine heisse Dampfatmosphaere, Ozeane kondensierten erst,
+// als die Oberflaeche unter den Siedepunkt fiel. primordialHeat ist ein
+// zusaetzlicher, langsam abklingender Term OBEN AUF der normalen
+// equilibriumTemperature() (siehe climate.js) — bewusst NICHT mit
+// EVOLUTION_TIME_FACTOR skaliert: wie die uebrige Klimaphysik (TEMP_RELAXATION_RATE
+// etc.) ist das ein rein geophysikalischer Abkuehlungsprozess, keine biologische
+// Rate, und soll als klar abgegrenzte, ueberschaubare Vorphase VOR dem
+// eigentlichen (durch EVOLUTION_TIME_FACTOR gestreckten) Evolutionsverlauf
+// ablaufen.
+const PRIMORDIAL_HEAT_START = 1200; // °C zusaetzlich zur normalen Gleichgewichtstemperatur
+const PRIMORDIAL_HEAT_RELAXATION_RATE = 0.0015; // ~63% Abklingen in ~667 Jahren
+// Ausgegastes Wasser sammelt sich unabhaengig von der Temperatur (Vulkanismus/
+// Mantel-Entgasung laeuft schon waehrend der heissen Phase), kondensiert aber
+// erst zu tatsaechlichem Ozean, sobald die Temperatur unter WATER_CONDENSATION_TEMP
+// faellt — waterVolume (0..1) skaliert dann den effektiven Meeresspiegel-
+// Schwellwert (siehe currentTerrain() in planet.js), 1 entspricht dem normalen
+// SEA_LEVEL_THRESHOLD.
+const WATER_CONDENSATION_TEMP = 100; // °C, vereinfachter Siedepunkt
+const OUTGASSING_RATE = 1 / 1500; // Anteil/Jahr, Reservoir fuellt sich in ~1.500 Jahren
+const WATER_CONDENSATION_RATE = 0.05; // ~63% Annaeherung an das Reservoir in ~20 Jahren, sobald kuehl genug
+
 // Klima reagiert nicht sofort auf eine neue Strahlungsbilanz, sondern nur traege
 // (Exponential-Glaettung Richtung Gleichgewicht) — realistische Naeherung an die
 // thermische Traegheit von Ozean (Temperatur, Jahrzehnte) und Eisschilden
