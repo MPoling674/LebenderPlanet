@@ -365,7 +365,7 @@ const UI = (() => {
   }
 
   function setYear(year) {
-    el.hudYear.textContent = "Jahr " + year;
+    el.hudYear.textContent = formatSimTime(year);
   }
 
   function setSpeedLabel(yearsPerTick) {
@@ -379,7 +379,7 @@ const UI = (() => {
 
   function log(message) {
     const li = document.createElement("li");
-    li.textContent = `Jahr ${Game.currentYear()}: ${message}`;
+    li.textContent = `${formatSimTime(Game.currentYear())}: ${message}`;
     el.eventLog.insertBefore(li, el.eventLog.firstChild);
     while (el.eventLog.children.length > 60) el.eventLog.removeChild(el.eventLog.lastChild);
   }

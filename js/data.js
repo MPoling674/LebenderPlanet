@@ -6,6 +6,38 @@
 const GRID_WIDTH = 60;
 const GRID_HEIGHT = 30;
 
+// Zeithorizont-Rekalibrierung (empirisch ueberprueft: die urspruengliche Version
+// liess die komplette Evolution — Prokaryoten bis Hochtechnologie — in
+// ~20.000-45.000 Ticks ablaufen UND verzerrt: die fruehe mikrobielle Phase
+// (Prokaryoten->Eukaryoten->erste Tiere), die real ueber 80% der gesamten
+// Erdgeschichte ausmacht, war im Spiel eher KUERZER als die spaeteren
+// Tier-Uebergaenge, statt weitaus laenger. EVOLUTION_TIME_FACTOR streckt alle
+// rein biologisch/geologisch getriebenen Jahresraten (Wachstum, O2-Produktion,
+// Zivilisations-Fortschritt, Naturkatastrophen-Haeufigkeit) GLEICHMAESSIG —
+// Klimaphysik (Ozean-/Eis-Traegheit, Stroemungen, TEMP_RELAXATION_RATE etc.)
+// bleibt bewusst UNVERAENDERT: reale thermische Traegheit ist unabhaengig
+// davon, wie schnell sich Arten entwickeln (Klima reagiert in der Realitaet
+// ohnehin um Groessenordnungen schneller als Evolution — das war vorher schon
+// so und bleibt es). Spieler-Werkzeuge (Sauerstoffgenerator/CO2-Scrubber/
+// Emitter) werden mit dem kleineren TOOL_TIME_FACTOR gestreckt, damit sie
+// gegenueber der neuen, viel laengeren biologischen Baseline weiterhin als
+// spuerbare Abkuerzung wirken statt bedeutungslos zu werden.
+const EVOLUTION_TIME_FACTOR = 25;
+const TOOL_TIME_FACTOR = 8;
+
+// Anzeige-Zeiteinheit: durch die Streckung oben laeuft ein voller Durchlauf jetzt
+// ueber mehrere hunderttausend Simulationsjahre — als "Jahr" angezeigt waeren das
+// unhandliche sechsstellige Zahlen. formatSimTime() rechnet die interne Jahreszahl
+// fuer die Anzeige in TIME_UNIT_LABEL um; intern (Speicherstand, Ticks) bleibt es
+// bei rohen Jahren, das betrifft ausschliesslich die UI-Darstellung.
+const TIME_UNIT_DIVISOR = 1000;
+const TIME_UNIT_LABEL = "Jahrtausend";
+function formatSimTime(rawYear) {
+  const value = rawYear / TIME_UNIT_DIVISOR;
+  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+  return `${TIME_UNIT_LABEL} ${rounded}`;
+}
+
 // Gase, die der Spieler direkt regeln kann. potency = Treibhauswirkung relativ zu CO2
 // pro Volumeneinheit (CH4 ≈ 25x CO2 über 100 Jahre, realer IPCC-Näherungswert/GWP100).
 // startVariation: bei jedem Neustart (Atmosphere.init()) wird "start" um einen
@@ -45,7 +77,7 @@ const ATMOSPHERE_MAJOR_GAS_TOTAL = 99;
 // Verbrauchs — vereinfacht die realen zusaetzlichen Puffer-Prozesse, die O2 lange
 // nahe seinem historischen Referenzwert halten.
 const GEOLOGICAL_O2_EQUILIBRIUM = 21;
-const GEOLOGICAL_O2_RELAXATION_RATE = 0.01;
+const GEOLOGICAL_O2_RELAXATION_RATE = 0.01 / EVOLUTION_TIME_FACTOR;
 
 // Geologische CO2-Senke (vereinfachtes Abbild des Carbonat-Silikat-Verwitterungs-
 // zyklus + der Tatsache, dass eine reife Biosphaere im Gleichgewicht Photosynthese
@@ -66,7 +98,7 @@ const GEOLOGICAL_O2_RELAXATION_RATE = 0.01;
 // Zeitraeume zu seinem natuerlichen Referenzwert zurueck, statt fuer immer am
 // Anschlag haengen zu bleiben.
 const GEOLOGICAL_CO2_EQUILIBRIUM = 280; // ppm, entspricht CO2_PREINDUSTRIAL_PPM
-const GEOLOGICAL_CO2_RELAXATION_RATE = 1 / 1000; // ~63% Annaeherung in ~1.000 Jahren
+const GEOLOGICAL_CO2_RELAXATION_RATE = (1 / 1000) / EVOLUTION_TIME_FACTOR;
 
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
 const CO2_FORCING_COEFFICIENT = 5.35; // W/m² pro ln(CO2eq/CO2_ref) — vereinfachte reale IPCC-Formel
@@ -160,8 +192,8 @@ const VEG_OPTIMAL_TEMP = 17; // °C, beste Wachstumsbedingungen
 // Bewusst langsam (~4x langsamer als eine fruehere Version) — Evolution soll sich
 // ueber Jahrtausende statt Jahrhunderte entfalten, nicht in wenigen hundert Jahren
 // bis zur Hochtechnologie durchlaufen.
-const VEG_GROWTH_RATE = 0.004; // Anteil/Jahr Richtung 100%, bei optimalen Bedingungen (~230 Jahre bis ~63%)
-const VEG_DECAY_RATE = 0.008; // Anteil/Jahr Richtung 0%, bei ungeeigneten Bedingungen
+const VEG_GROWTH_RATE = 0.004 / EVOLUTION_TIME_FACTOR; // Anteil/Jahr Richtung 100%, bei optimalen Bedingungen
+const VEG_DECAY_RATE = 0.008 / EVOLUTION_TIME_FACTOR; // Anteil/Jahr Richtung 0%, bei ungeeigneten Bedingungen
 
 // Vegetationsstufen von einfach (toleriert fast jedes Klima) bis komplex (gedeiht
 // nur in einem schmalen Band um VEG_OPTIMAL_TEMP). "tolerance" ist die zulaessige
@@ -286,8 +318,8 @@ function faunaSalinityRange(type) {
 // Langsamer als Vegetation, da sich Tierbestaende in der Realitaet traeger
 // aendern als Pflanzendecken (Fortpflanzungszyklen statt Ausbreitung/Wachstum).
 // Ebenfalls ~4x gegenueber einer fruehen Version verlangsamt (siehe VEG_GROWTH_RATE).
-const FAUNA_GROWTH_RATE = 0.0025;
-const FAUNA_DECAY_RATE = 0.006;
+const FAUNA_GROWTH_RATE = 0.0025 / EVOLUTION_TIME_FACTOR;
+const FAUNA_DECAY_RATE = 0.006 / EVOLUTION_TIME_FACTOR;
 
 // Praerequisiten-Gate fuer Eukaryoten (siehe Fauna.suitability()): erst wenn der
 // O2-Gehalt der Atmosphaere diese Schwelle erreicht UND die globale Temperatur in
@@ -308,7 +340,7 @@ const EUKARYOTE_MAX_GLOBAL_TEMP = 26; // °C, darueber kochende/lebensfeindliche
 // Saettigung (jede Ozeanzelle traegt Prokaryoten mit Bestand 100) — reale
 // Photosynthese-Prokaryoten (Cyanobakterien) reicherten die fruehe Erdatmosphaere
 // tatsaechlich ueber geologische Zeitraeume langsam mit Sauerstoff an.
-const PROKARYOTE_O2_RELEASE_PER_YEAR = 0.02;
+const PROKARYOTE_O2_RELEASE_PER_YEAR = 0.02 / EVOLUTION_TIME_FACTOR;
 
 // Atmung: jede Fauna AUSSER Prokaryoten (die stattdessen Photosynthese betreiben,
 // siehe oben) verbraucht O2 und setzt CO2 frei — proportional zum AKTUELLEN
@@ -318,26 +350,26 @@ const PROKARYOTE_O2_RELEASE_PER_YEAR = 0.02;
 // Waldes. Das schliesst den Kreislauf zur einseitigen O2-Produktion (Prokaryoten/
 // Vegetation/Sauerstoffgenerator) — ohne Gegenspieler stieg O2 sonst unbegrenzt
 // bis zum Anschlag (35%).
-const FAUNA_MAX_O2_CONSUMPTION_PER_YEAR = 0.06;
-const FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR = 8;
+const FAUNA_MAX_O2_CONSUMPTION_PER_YEAR = 0.06 / EVOLUTION_TIME_FACTOR;
+const FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR = 8 / EVOLUTION_TIME_FACTOR;
 
 // Sauerstoffgenerator: technologische Abkuerzung zum Eukaryoten-Gate, unabhaengig
 // von biologischer Prokaryoten-Aktivitaet — deutlich schneller als der biologische
 // Weg, damit sich das Bauen tatsaechlich als Beschleunigung anfuehlt.
-const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = 0.15;
+const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = 0.15 / TOOL_TIME_FACTOR;
 
 // CO2-Scrubber/Emitter: analoge Terraforming-Strukturen fuer CO2/CH4 statt O2 —
 // wirken kontinuierlich ueber Jahre (im Gegensatz zum Gas-Regler, der den Wert
 // einmalig sofort verschiebt), damit der Spieler das Klima gezielt UND graduell
 // gestalten kann. Rate am CO2-Wertebereich orientiert (150-2000 ppm, siehe GASES),
 // deutlich groesser als beim O2-Generator (0-35%-Skala).
-const CO2_SCRUBBER_OUTPUT_PER_YEAR = 8;
-const EMITTER_CO2_OUTPUT_PER_YEAR = 8;
-const EMITTER_CH4_OUTPUT_PER_YEAR = 0.2;
+const CO2_SCRUBBER_OUTPUT_PER_YEAR = 8 / TOOL_TIME_FACTOR;
+const EMITTER_CO2_OUTPUT_PER_YEAR = 8 / TOOL_TIME_FACTOR;
+const EMITTER_CH4_OUTPUT_PER_YEAR = 0.2 / TOOL_TIME_FACTOR;
 
 // Jahreswahrscheinlichkeit, mit der ein reifes Taxon mit crossHabitat-Nachfolger
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
-const CROSS_HABITAT_SPAWN_CHANCE = 0.1;
+const CROSS_HABITAT_SPAWN_CHANCE = 0.1 / 3;
 
 // Jahreswahrscheinlichkeit, mit der eine geeignete, noch unbesiedelte Zelle
 // spontan von der best-passenden Wurzelart (Vegetation ODER Fauna) kolonisiert
@@ -347,7 +379,7 @@ const CROSS_HABITAT_SPAWN_CHANCE = 0.1;
 // (deterministisch, kein Zufall) — das wirkte wie ein einziger globaler Sprung
 // statt einer organisch ueber die Karte wandernden Besiedlung, und machte den
 // Spielverlauf bei gleichem Vorgehen praktisch identisch reproduzierbar.
-const NATURAL_COLONIZATION_CHANCE = 0.15;
+const NATURAL_COLONIZATION_CHANCE = 0.15 / 3;
 
 // Zivilisation: Zellen mit reifem (>=90%) zivilisationsfaehigem Taxon bauen pro
 // Jahr Tech-Level auf (0..100), sonst faellt er zurueck — Kollaps schneller als
@@ -355,8 +387,8 @@ const NATURAL_COLONIZATION_CHANCE = 0.15;
 // zerfaellt schneller, als sie entsteht. Ab CITY_TECH_THRESHOLD gilt eine Zelle
 // als "Stadt", ab HIGH_TECH_THRESHOLD als "Hochtechnologie" (Voraussetzung fuer
 // die Atombombe, siehe civilization.js).
-const CIVILIZATION_GROWTH_RATE = 0.1;
-const CIVILIZATION_DECAY_RATE = 0.2;
+const CIVILIZATION_GROWTH_RATE = 0.1 / EVOLUTION_TIME_FACTOR;
+const CIVILIZATION_DECAY_RATE = 0.2 / EVOLUTION_TIME_FACTOR;
 const CITY_TECH_THRESHOLD = 30;
 const HIGH_TECH_THRESHOLD = 80;
 
@@ -372,8 +404,8 @@ const HIGH_TECH_THRESHOLD = 80;
 // von den (durch andere Prozesse wie Vegetation ebenfalls veraenderten) aktuellen
 // Atmosphaerenwerten — fuer die "wie viel hat die Zivilisation insgesamt
 // eingebracht"-Anzeige im HUD.
-const CIVILIZATION_CO2_EMISSION_PPM_PER_YEAR = 5;
-const CIVILIZATION_CH4_EMISSION_PPM_PER_YEAR = 0.3;
+const CIVILIZATION_CO2_EMISSION_PPM_PER_YEAR = 5 / EVOLUTION_TIME_FACTOR;
+const CIVILIZATION_CH4_EMISSION_PPM_PER_YEAR = 0.3 / EVOLUTION_TIME_FACTOR;
 
 // Atombombe: zerstoert eine Hochtechnologie-Stadt (siehe Planet.detonate()).
 // Betroffene Zellen werden verstrahlt (radiation 0..100, klingt langsam ab —
@@ -389,8 +421,8 @@ const MUTANT_PLANT_SPAWN_CHANCE = 0.05;
 
 // Photosynthese-Näherung: volle Vegetationsdecke (Summe über alle Zellen bei 100%)
 // entzieht der Atmosphäre so viel CO2 und gibt so viel O2 ab, pro Jahr.
-const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6;
-const VEG_MAX_O2_RELEASE_PERCENT_PER_YEAR = 0.05;
+const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6 / EVOLUTION_TIME_FACTOR;
+const VEG_MAX_O2_RELEASE_PERCENT_PER_YEAR = 0.05 / EVOLUTION_TIME_FACTOR;
 
 // Zufaellige Naturereignisse (siehe js/events.js): seltene, aber spuerbare
 // Unterbrechungen des sonst glatten Wachstumsverlaufs. Jaehrliche
@@ -398,10 +430,10 @@ const VEG_MAX_O2_RELEASE_PERCENT_PER_YEAR = 0.05;
 // Haeufigkeiten grosser Ereignisse (z.B. VEI-6-Vulkanausbrueche global ~1x/100
 // Jahre) dienen als grobe Groessenordnung, nicht als exakte Simulation — auf
 // Spielbarkeit/Erzaehlwert statt geologischer Praezision getrimmt.
-const VOLCANO_ERUPTION_CHANCE_PER_YEAR = 0.01;
-const EARTHQUAKE_CHANCE_PER_YEAR = 0.015;
-const METEOR_IMPACT_CHANCE_PER_YEAR = 0.003;
-const STORM_CHANCE_PER_YEAR = 0.04;
+const VOLCANO_ERUPTION_CHANCE_PER_YEAR = 0.01 / EVOLUTION_TIME_FACTOR;
+const EARTHQUAKE_CHANCE_PER_YEAR = 0.015 / EVOLUTION_TIME_FACTOR;
+const METEOR_IMPACT_CHANCE_PER_YEAR = 0.003 / EVOLUTION_TIME_FACTOR;
+const STORM_CHANCE_PER_YEAR = 0.04 / EVOLUTION_TIME_FACTOR;
 
 // Vulkanausbruch: zerstoert die Einschlagzelle vollstaendig, die Nachbarzellen
 // (Diamant-Radius 1, gleiches Muster wie Planet.detonate) teilweise, und

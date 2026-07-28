@@ -112,9 +112,9 @@ const Charts = (() => {
     ctx.font = "10px 'Segoe UI', sans-serif";
     ctx.textBaseline = "top";
     ctx.textAlign = "left";
-    ctx.fillText(`Jahr ${minYear}`, padding.left, h - padding.bottom + 4);
+    ctx.fillText(formatSimTime(minYear), padding.left, h - padding.bottom + 4);
     ctx.textAlign = "right";
-    ctx.fillText(`Jahr ${maxYear}`, w - padding.right, h - padding.bottom + 4);
+    ctx.fillText(formatSimTime(maxYear), w - padding.right, h - padding.bottom + 4);
   }
 
   const GAS_CHART_COLORS = { o2: "#3987e5", n2: "#9085e9", co2: "#e66767", ch4: "#199e70" };

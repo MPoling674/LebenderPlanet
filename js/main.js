@@ -161,7 +161,7 @@ const Game = (() => {
 
   function handleSaveNow() {
     saveGame();
-    UI.setSaveStatus(`Gespeichert (Jahr ${year}).`);
+    UI.setSaveStatus(`Gespeichert (${formatSimTime(year)}).`);
     UI.log("Spielstand manuell gespeichert.");
   }
 
@@ -176,7 +176,7 @@ const Game = (() => {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    UI.setSaveStatus(`Als Datei gesichert (Jahr ${year}).`);
+    UI.setSaveStatus(`Als Datei gesichert (${formatSimTime(year)}).`);
     UI.log("Spielstand als Datei heruntergeladen.");
   }
 
@@ -195,7 +195,7 @@ const Game = (() => {
     saveGame();
     UI.setYear(year);
     renderAll();
-    UI.setSaveStatus(`Spielstand aus Datei geladen (Jahr ${year}).`);
+    UI.setSaveStatus(`Spielstand aus Datei geladen (${formatSimTime(year)}).`);
     UI.log("Spielstand aus Datei geladen.");
   }
 
