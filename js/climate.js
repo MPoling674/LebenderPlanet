@@ -14,6 +14,15 @@ const Climate = (() => {
   let orbitalYear = 0;
   let orbitalPhase = { obliquity: 0, precession: 0, eccentricity: 0 };
 
+  // Einschlagswinter (siehe Events.tick()/Meteoriteneinschlag in data.js): eine
+  // zusaetzliche, zeitlich abklingende Abkuehlung obendrauf auf das normale
+  // Gleichgewicht — mehrere Einschlaege kurz hintereinander addieren sich.
+  let impactWinterIntensity = 0;
+
+  function triggerImpactWinter(intensity) {
+    impactWinterIntensity += intensity;
+  }
+
   function randomPhase() {
     return Math.random() * Math.PI * 2;
   }
@@ -42,7 +51,7 @@ const Climate = (() => {
     const forcing = Atmosphere.radiativeForcing();
     const deltaGhg = CLIMATE_SENSITIVITY * forcing;
     const deltaTotal = deltaGhg * (1 + WATER_VAPOR_AMPLIFICATION);
-    return BASE_GLOBAL_TEMP + deltaTotal + orbitalForcing();
+    return BASE_GLOBAL_TEMP + deltaTotal + orbitalForcing() - impactWinterIntensity;
   }
 
   function equilibriumIceCoverage(temp) {
@@ -53,6 +62,7 @@ const Climate = (() => {
   function init() {
     orbitalYear = 0;
     orbitalPhase = { obliquity: randomPhase(), precession: randomPhase(), eccentricity: randomPhase() };
+    impactWinterIntensity = 0;
     currentTemp = equilibriumTemperature();
     currentIce = equilibriumIceCoverage(currentTemp);
   }
@@ -61,6 +71,8 @@ const Climate = (() => {
   // Trägheit ihrem jeweiligen Gleichgewicht an (Temperatur schneller als Eis).
   function tick() {
     orbitalYear += 1;
+    impactWinterIntensity -= impactWinterIntensity * IMPACT_WINTER_RELAXATION_RATE;
+    if (impactWinterIntensity < 0.01) impactWinterIntensity = 0;
     const tempTarget = equilibriumTemperature();
     currentTemp += (tempTarget - currentTemp) * TEMP_RELAXATION_RATE;
     const iceTarget = equilibriumIceCoverage(currentTemp);
@@ -93,7 +105,7 @@ const Climate = (() => {
   }
 
   function serialize() {
-    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase };
+    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase, impactWinterIntensity };
   }
 
   function restore(saved) {
@@ -106,10 +118,12 @@ const Climate = (() => {
       orbitalPhase = saved.orbitalPhase && typeof saved.orbitalPhase.obliquity === "number"
         ? saved.orbitalPhase
         : { obliquity: randomPhase(), precession: randomPhase(), eccentricity: randomPhase() };
+      // Aeltere Spielstaende kennen keinen Einschlagswinter — dann bei 0 starten.
+      impactWinterIntensity = typeof saved.impactWinterIntensity === "number" ? saved.impactWinterIntensity : 0;
     } else {
       init();
     }
   }
 
-  return { init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, vegetationSuitability, serialize, restore };
+  return { init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, vegetationSuitability, triggerImpactWinter, serialize, restore };
 })();

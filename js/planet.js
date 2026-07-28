@@ -486,7 +486,15 @@ const Planet = (() => {
     // wieder gesunkenen O2-Wert saehe und die Erkennung dadurch permanent verpassen
     // wuerde (Kernursache des gemeldeten Fehlers "Eukaryoten entstehen nie").
     Fauna.noteYearEnd(cellAt);
-    return { vegetationFraction, co2Absorbed, o2Released, events: scanForDiscoveries() };
+    // Naturereignisse zuletzt: koennen Vegetation/Fauna/Zivilisation betreffen, die
+    // dieses Jahr bereits fertig weiterentwickelt wurden — ihre Wirkung ist damit
+    // der ENDGUELTIGE Zustand fuer dieses Jahr, nicht durch nachfolgendes Wachstum
+    // im selben Tick ueberdeckt. In der Ereignis-Liste bewusst NACH den
+    // Entstehungs-Meldungen (siehe UI.log(): der zuletzt eingefuegte Eintrag
+    // erscheint oben — ein Vulkanausbruch soll auffaelliger stehen als "X sind
+    // entstanden").
+    const disasterEvents = Events.tick(cellAt, currentTerrain);
+    return { vegetationFraction, co2Absorbed, o2Released, events: [...scanForDiscoveries(), ...disasterEvents] };
   }
 
   function sumVegetation() {

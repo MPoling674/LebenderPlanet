@@ -392,6 +392,49 @@ const MUTANT_PLANT_SPAWN_CHANCE = 0.05;
 const VEG_MAX_CO2_UPTAKE_PPM_PER_YEAR = 6;
 const VEG_MAX_O2_RELEASE_PERCENT_PER_YEAR = 0.05;
 
+// Zufaellige Naturereignisse (siehe js/events.js): seltene, aber spuerbare
+// Unterbrechungen des sonst glatten Wachstumsverlaufs. Jaehrliche
+// Wahrscheinlichkeit je Ereignistyp, unabhaengig voneinander gewuerfelt. Reale
+// Haeufigkeiten grosser Ereignisse (z.B. VEI-6-Vulkanausbrueche global ~1x/100
+// Jahre) dienen als grobe Groessenordnung, nicht als exakte Simulation — auf
+// Spielbarkeit/Erzaehlwert statt geologischer Praezision getrimmt.
+const VOLCANO_ERUPTION_CHANCE_PER_YEAR = 0.01;
+const EARTHQUAKE_CHANCE_PER_YEAR = 0.015;
+const METEOR_IMPACT_CHANCE_PER_YEAR = 0.003;
+const STORM_CHANCE_PER_YEAR = 0.04;
+
+// Vulkanausbruch: zerstoert die Einschlagzelle vollstaendig, die Nachbarzellen
+// (Diamant-Radius 1, gleiches Muster wie Planet.detonate) teilweise, und
+// schleudert CO2/CH4 in die Atmosphaere — reale Vulkanausbrueche setzen beide
+// Gase frei, hier fuer spuerbare Spielwirkung skaliert (siehe allgemeines
+// Simplifizierungs-Prinzip im GEOLOGICAL_CO2_EQUILIBRIUM-Kommentar).
+const VOLCANO_NEIGHBOR_DAMAGE = 0.6;
+const VOLCANO_CO2_BURST_PPM = 30;
+const VOLCANO_CH4_BURST_PPM = 1;
+
+// Erdbeben: mildere, rein lokale Zerstoerung ohne Atmosphaeren-Wirkung, trifft
+// aber gezielt Infrastruktur (Tech-Level-Rueckschlag), wenn eine Stadt betroffen ist.
+const EARTHQUAKE_DAMAGE = 0.4;
+const EARTHQUAKE_TECH_DAMAGE = 15;
+
+// Meteoriteneinschlag: das seltenste, aber verheerendste Ereignis — kann auch
+// Ozeanzellen treffen, zerstoert einen groesseren Radius vollstaendig/teilweise
+// UND loest einen "Einschlagswinter" aus (globale Abkuehlung, klingt ueber
+// Jahrzehnte ab, siehe Climate.triggerImpactWinter) — reale Analogie: der Staub-/
+// Aerosolschleier nach grossen Einschlaegen (z.B. Chicxulub) blockierte ueber
+// Jahre bis Jahrzehnte Sonnenlicht.
+const METEOR_DEVASTATION_RADIUS = 2;
+const METEOR_NEIGHBOR_DAMAGE = 0.7;
+const METEOR_IMPACT_WINTER_COOLING = 4; // °C
+const IMPACT_WINTER_RELAXATION_RATE = 1 / 40; // ~63% Erholung in ~40 Jahren
+
+// Sturm (Taifun/Hurrikan/Orkan — je nach Weltregion unterschiedlich benannte
+// tropische/aussertropische Wirbelstuerme, hier mechanisch identisch behandelt,
+// nur der angezeigte Name wechselt zufaellig): das haeufigste, aber mildeste
+// Ereignis — nur lokale Teilzerstoerung, keine Atmosphaeren-/Klimawirkung.
+const STORM_DAMAGE = 0.25;
+const STORM_NAMES = ["Taifun", "Hurrikan", "Orkan"];
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
