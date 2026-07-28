@@ -20,6 +20,7 @@ const UI = (() => {
     el.hudFauna = document.getElementById("hud-fauna");
     el.hudFaunaTypes = document.getElementById("hud-faunatypes");
     el.hudCities = document.getElementById("hud-cities");
+    el.hudPopulation = document.getElementById("hud-population");
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
@@ -47,6 +48,13 @@ const UI = (() => {
     el.saveStatus = document.getElementById("save-status");
     el.newGameBtn = document.getElementById("new-game-btn");
 
+    el.eventsOverviewBtn = document.getElementById("events-overview-btn");
+    el.eventsOverviewModal = document.getElementById("events-overview-modal");
+    el.eventsOverviewClose = document.getElementById("events-overview-close");
+    el.eventsOverviewFilters = document.getElementById("events-overview-filters");
+    el.eventsOverviewList = document.getElementById("events-overview-list");
+    el.eventsOverviewDetail = document.getElementById("events-overview-detail");
+
     renderGasControls();
     renderToolButtons();
     renderVegLegend();
@@ -72,6 +80,16 @@ const UI = (() => {
       el.saveImportInput.value = "";
     });
     el.newGameBtn.addEventListener("click", () => callbacks.newGame && callbacks.newGame());
+
+    el.eventsOverviewBtn.addEventListener("click", () => {
+      el.eventsOverviewModal.classList.remove("hidden");
+      renderEventsOverview();
+    });
+    el.eventsOverviewClose.addEventListener("click", () => el.eventsOverviewModal.classList.add("hidden"));
+    el.eventsOverviewModal.addEventListener("click", (e) => {
+      if (e.target === el.eventsOverviewModal) el.eventsOverviewModal.classList.add("hidden");
+    });
+    el.eventsOverviewFilters.addEventListener("change", renderEventsOverview);
   }
 
   function on(name, cb) {
@@ -239,6 +257,7 @@ const UI = (() => {
   function showTooltip(info, clientX, clientY) {
     if (!el.mapTooltip) return;
     let html = `<strong>${terrainLabel(info.terrain)}</strong><br>Temperatur: ${info.temperature.toFixed(1)} °C`;
+    html += `<br>Niederschlag: ${info.precipitation.toFixed(0)} %`;
     if (info.terrain === "land") {
       const type = info.vegetationType ? getVegType(info.vegetationType) : null;
       html += type
@@ -254,7 +273,7 @@ const UI = (() => {
       html += `<br>${faunaType.name}: ${info.fauna.toFixed(0)} %`;
     }
     if (info.hasCity) {
-      html += `<br>🏙 Stadt (Tech-Level ${info.techLevel.toFixed(0)}${info.isHighTech ? ", Hochtechnologie" : ""})`;
+      html += `<br>🏙 Stadt (Tech-Level ${info.techLevel.toFixed(0)}${info.isHighTech ? ", Hochtechnologie" : ""}), Bevölkerung: ${info.population.toLocaleString("de-DE")}`;
     }
     if (info.radiation > 0) {
       html += `<br>☢ Verstrahlt (${info.radiation.toFixed(0)})`;
@@ -328,6 +347,7 @@ const UI = (() => {
     el.hudFauna.textContent = stats.avgFauna.toFixed(1) + " %";
     el.hudFaunaTypes.textContent = faunaBreakdownText(stats);
     el.hudCities.textContent = stats.cityCount;
+    el.hudPopulation.textContent = stats.totalPopulation.toLocaleString("de-DE");
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
@@ -377,11 +397,79 @@ const UI = (() => {
     el.speedLabel.textContent = `${perSecond} Jahre/Sekunde`;
   }
 
-  function log(message) {
+  // Volle, unbegrenzte Ereignis-Historie fuer die Uebersicht (siehe
+  // renderEventsOverview) — getrennt vom sichtbaren #event-log, das aus
+  // Performance-/Uebersichtsgruenden auf die letzten 60 Eintraege gekappt wird.
+  // Nicht Teil des Spielstands (siehe Charts.resetHistory()-Kommentar: die
+  // Historie beginnt mit jedem Laden/Neustart neu, wie der sichtbare Log auch).
+  let eventHistory = [];
+
+  const EVENT_CATEGORY_LABELS = {
+    evolution: "Evolution",
+    disaster: "Naturereignis",
+    climate: "Klima",
+    civilization: "Zivilisation",
+    system: "System",
+  };
+
+  function log(message, category, meta) {
+    const cat = category || "system";
+    const entry = { year: Game.currentYear(), category: cat, message, ...(meta || {}) };
+    eventHistory.push(entry);
+
     const li = document.createElement("li");
-    li.textContent = `${formatSimTime(Game.currentYear())}: ${message}`;
+    li.textContent = `${formatSimTime(entry.year)}: ${message}`;
     el.eventLog.insertBefore(li, el.eventLog.firstChild);
     while (el.eventLog.children.length > 60) el.eventLog.removeChild(el.eventLog.lastChild);
+
+    if (el.eventsOverviewModal && !el.eventsOverviewModal.classList.contains("hidden")) renderEventsOverview();
+  }
+
+  function activeEventCategories() {
+    const boxes = el.eventsOverviewFilters.querySelectorAll("input[type=checkbox]");
+    const active = new Set();
+    boxes.forEach((box) => { if (box.checked) active.add(box.dataset.category); });
+    return active;
+  }
+
+  // Detailtext je Ereignis: Evolutions-Ereignisse verweisen auf dieselbe
+  // Beschreibung wie das Artenlexikon (describeVegType/describeFaunaType), damit
+  // die Information nur an einer Stelle gepflegt werden muss; andere Kategorien
+  // zeigen Jahr/Kategorie und, falls vorhanden, den betroffenen Kartenort.
+  function eventDetailHtml(entry) {
+    let html = `<strong>${formatSimTime(entry.year)}</strong> — ${EVENT_CATEGORY_LABELS[entry.category] || entry.category}<br>${entry.message}`;
+    if (entry.kind === "vegetation") {
+      const type = getVegType(entry.typeId);
+      if (type) html += `<hr>${describeVegType(type)}`;
+    } else if (entry.kind === "fauna") {
+      const type = getFaunaType(entry.typeId);
+      if (type) html += `<hr>${describeFaunaType(type)}`;
+    }
+    if (typeof entry.x === "number" && typeof entry.y === "number") {
+      html += `<br>Ort: Zelle (${entry.x}, ${entry.y})`;
+    }
+    return html;
+  }
+
+  function renderEventsOverview() {
+    if (!el.eventsOverviewList) return;
+    const active = activeEventCategories();
+    const filtered = eventHistory.filter((e) => active.has(e.category));
+    el.eventsOverviewList.innerHTML = "";
+    for (let i = filtered.length - 1; i >= 0; i--) {
+      const entry = filtered[i];
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="events-overview-category">${EVENT_CATEGORY_LABELS[entry.category] || entry.category}</span>${formatSimTime(entry.year)}: ${entry.message}`;
+      li.addEventListener("click", () => {
+        el.eventsOverviewList.querySelectorAll("li.selected").forEach((n) => n.classList.remove("selected"));
+        li.classList.add("selected");
+        el.eventsOverviewDetail.innerHTML = eventDetailHtml(entry);
+      });
+      el.eventsOverviewList.appendChild(li);
+    }
+    if (filtered.length === 0) {
+      el.eventsOverviewDetail.textContent = "Keine Ereignisse in dieser Auswahl.";
+    }
   }
 
   function setSaveStatus(message) {

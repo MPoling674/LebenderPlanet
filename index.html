@@ -18,6 +18,7 @@
   <div class="hud-item"><span class="label">Fauna</span><span id="hud-fauna">0 %</span></div>
   <div class="hud-item hud-item-wide"><span class="label">Fauna-Arten</span><span id="hud-faunatypes">–</span></div>
   <div class="hud-item"><span class="label">Städte</span><span id="hud-cities">0</span></div>
+  <div class="hud-item"><span class="label">Weltbevölkerung</span><span id="hud-population">0</span></div>
   <div class="hud-item"><span class="label">Sauerstoff</span><span id="hud-o2">0 %</span></div>
   <div class="hud-item"><span class="label">Kohlendioxid</span><span id="hud-co2">0 ppm</span></div>
   <div class="hud-item"><span class="label">Methan</span><span id="hud-ch4">0 ppm</span></div>
@@ -74,6 +75,7 @@
 
     <section id="panel-log">
       <h2>Ereignisse</h2>
+      <button id="events-overview-btn">Alle Ereignisse anzeigen</button>
       <ul id="event-log"></ul>
     </section>
 
@@ -101,6 +103,26 @@
     </section>
   </aside>
 </main>
+
+<div id="events-overview-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Ereignisse-Übersicht</h2>
+      <button id="events-overview-close" class="modal-close" aria-label="Schließen">✕</button>
+    </div>
+    <div id="events-overview-filters" class="events-overview-filters">
+      <label><input type="checkbox" data-category="evolution" checked> Evolution</label>
+      <label><input type="checkbox" data-category="disaster" checked> Naturereignisse</label>
+      <label><input type="checkbox" data-category="climate" checked> Klima</label>
+      <label><input type="checkbox" data-category="civilization" checked> Zivilisation</label>
+      <label><input type="checkbox" data-category="system" checked> System</label>
+    </div>
+    <div class="events-overview-body">
+      <ul id="events-overview-list"></ul>
+      <div id="events-overview-detail" class="events-overview-detail">Ereignis auswählen, um Details zu sehen.</div>
+    </div>
+  </div>
+</div>
 
 <script src="js/data.js"></script>
 <script src="js/atmosphere.js"></script>

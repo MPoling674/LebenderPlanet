@@ -48,8 +48,8 @@ const Game = (() => {
   // Meldet im Ereignis-Log, wenn ein Wert eine Schwelle über- bzw. unterschreitet —
   // verhindert, dass das Log bei jedem Jahr mit denselben Zahlen vollläuft.
   function checkThreshold(prevValue, newValue, threshold, aboveMessage, belowMessage) {
-    if (prevValue < threshold && newValue >= threshold && aboveMessage) UI.log(aboveMessage);
-    if (prevValue >= threshold && newValue < threshold && belowMessage) UI.log(belowMessage);
+    if (prevValue < threshold && newValue >= threshold && aboveMessage) UI.log(aboveMessage, "climate");
+    if (prevValue >= threshold && newValue < threshold && belowMessage) UI.log(belowMessage, "climate");
   }
 
   function snapshot() {
@@ -90,7 +90,7 @@ const Game = (() => {
       Climate.tick();
       const result = Planet.tick();
       checkMilestones(before, snapshot());
-      result.events.forEach((message) => UI.log(message));
+      result.events.forEach((event) => UI.log(event.message, event.category, event));
       Charts.recordTemperatureSample(year, Climate.globalTemperature());
       // Nur wenn eingeschaltet (siehe Debug.setEnabled) — kein Overhead im
       // normalen Spielbetrieb, da Debug.runChecks() bei jedem Aufruf einen
@@ -138,7 +138,7 @@ const Game = (() => {
       UI.log(res.reason);
       return;
     }
-    if (tool === "detonate") UI.log("Eine Atombombe hat eine Hochtechnologie-Stadt zerstört — Nanotech-Roboter entstehen aus den Trümmern.");
+    if (tool === "detonate") UI.log("Eine Atombombe hat eine Hochtechnologie-Stadt zerstört — Nanotech-Roboter entstehen aus den Trümmern.", "civilization", { x, y });
     renderAll();
     saveGame();
   }

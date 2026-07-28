@@ -24,6 +24,13 @@ const Civilization = (() => {
     return cell.techLevel >= HIGH_TECH_THRESHOLD;
   }
 
+  // Einwohnerzahl, siehe CITY_POPULATION_*-Kommentar in data.js.
+  function population(cell) {
+    if (!hasCity(cell)) return 0;
+    const t = clamp((cell.techLevel - CITY_TECH_THRESHOLD) / (100 - CITY_TECH_THRESHOLD), 0, 1);
+    return Math.round(CITY_POPULATION_MIN * Math.pow(CITY_POPULATION_MAX / CITY_POPULATION_MIN, t));
+  }
+
   function cumulativeEmissions() {
     return { co2: cumulativeCo2, ch4: cumulativeCh4 };
   }
@@ -86,5 +93,5 @@ const Civilization = (() => {
     cumulativeCh4 = typeof saved?.cumulativeCh4 === "number" ? saved.cumulativeCh4 : 0;
   }
 
-  return { init, hasCity, isHighTech, cumulativeEmissions, tick, detonate, serialize, restore };
+  return { init, hasCity, isHighTech, population, cumulativeEmissions, tick, detonate, serialize, restore };
 })();

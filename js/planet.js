@@ -33,7 +33,38 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false, co2Scrubber: false, emitter: false });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false, co2Scrubber: false, emitter: false, coastDistance: 0 });
+      }
+    }
+    computeCoastDistances();
+  }
+
+  // Fuellt cell.coastDistance (Gitterzellen bis zur naechsten Basis-Ozeanzelle,
+  // per Breitensuche von allen Ozeanzellen gleichzeitig aus) — einmalig aus der
+  // fixen Hoehenkarte abgeleitet, siehe PRECIPITATION_*-Kommentar in data.js.
+  function computeCoastDistances() {
+    const queue = [];
+    cells.forEach((cell, i) => {
+      if (cell.elevation <= SEA_LEVEL_THRESHOLD) {
+        cell.coastDistance = 0;
+        queue.push(i);
+      } else {
+        cell.coastDistance = -1; // noch unbesucht
+      }
+    });
+    let head = 0;
+    while (head < queue.length) {
+      const i = queue[head++];
+      const x = i % GRID_WIDTH;
+      const y = Math.floor(i / GRID_WIDTH);
+      const neighbors = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+      for (const [nx, ny] of neighbors) {
+        if (nx < 0 || nx >= GRID_WIDTH || ny < 0 || ny >= GRID_HEIGHT) continue;
+        const ni = index(nx, ny);
+        if (cells[ni].coastDistance === -1) {
+          cells[ni].coastDistance = cells[i].coastDistance + 1;
+          queue.push(ni);
+        }
       }
     }
   }
@@ -79,21 +110,23 @@ const Planet = (() => {
       if (cell.vegetationType && !discoveredVeg.has(cell.vegetationType)) {
         discoveredVeg.add(cell.vegetationType);
         const type = getVegType(cell.vegetationType);
-        events.push(type.radiationOnly ? `${type.name} sind durch Strahlung mutiert.` : `${type.name} sind entstanden.`);
+        const message = type.radiationOnly ? `${type.name} sind durch Strahlung mutiert.` : `${type.name} sind entstanden.`;
+        events.push({ category: "evolution", message, kind: "vegetation", typeId: type.id });
       }
       if (cell.faunaType && !discoveredFauna.has(cell.faunaType)) {
         discoveredFauna.add(cell.faunaType);
         const type = getFaunaType(cell.faunaType);
-        events.push(type.id === "nanobots" ? `${type.name} sind aus den Trümmern entstanden.` : `${type.name} sind entstanden.`);
+        const message = type.id === "nanobots" ? `${type.name} sind aus den Trümmern entstanden.` : `${type.name} sind entstanden.`;
+        events.push({ category: "evolution", message, kind: "fauna", typeId: type.id });
       }
     });
     if (!cityFounded && cells.some((c) => Civilization.hasCity(c))) {
       cityFounded = true;
-      events.push("Die erste Stadt ist entstanden.");
+      events.push({ category: "civilization", message: "Die erste Stadt ist entstanden." });
     }
     if (!highTechReached && cells.some((c) => Civilization.isHighTech(c))) {
       highTechReached = true;
-      events.push("Eine Stadt hat Hochtechnologie erreicht.");
+      events.push({ category: "civilization", message: "Eine Stadt hat Hochtechnologie erreicht." });
     }
     return events;
   }
@@ -131,6 +164,24 @@ const Planet = (() => {
   function localTemperature(cell) {
     const globalTemp = Climate.globalTemperature();
     return globalTemp + EQUATOR_TEMP_BONUS - cell.latitude * (EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE) + cell.tempAnomaly;
+  }
+
+  // Lokaler Niederschlag (0-100) — siehe PRECIPITATION_*-Kommentar in data.js.
+  function localPrecipitation(cell, terrain, temp) {
+    let value;
+    if (terrain === "ocean") {
+      value = PRECIPITATION_OCEAN_BASE;
+    } else if (terrain === "ice") {
+      value = PRECIPITATION_ICE_BASE;
+    } else {
+      const distance = cell.coastDistance >= 0 ? cell.coastDistance : GRID_WIDTH + GRID_HEIGHT;
+      value = PRECIPITATION_OCEAN_BASE - distance * PRECIPITATION_COAST_FALLOFF_PER_CELL;
+      value += (cell.vegetation / 100) * PRECIPITATION_VEGETATION_BONUS_MAX;
+    }
+    if (temp < PRECIPITATION_COLD_THRESHOLD) {
+      value -= (PRECIPITATION_COLD_THRESHOLD - temp) * PRECIPITATION_COLD_PENALTY_PER_DEGREE;
+    }
+    return clamp(value, PRECIPITATION_MIN, 100);
   }
 
   // Komplexeste Vegetationsstufe, deren Toleranzband die gegebene Temperatur
@@ -513,6 +564,7 @@ const Planet = (() => {
     let salinitySum = 0;
     let faunaSum = 0;
     let cityCount = 0;
+    let totalPopulation = 0;
     const typeCounts = {};
     VEGETATION_TYPES.forEach((t) => {
       typeCounts[t.id] = 0;
@@ -535,7 +587,10 @@ const Planet = (() => {
       if (t !== "ice") {
         faunaSum += cell.fauna;
         if (cell.faunaType) faunaTypeCounts[cell.faunaType] += 1;
-        if (Civilization.hasCity(cell)) cityCount += 1;
+        if (Civilization.hasCity(cell)) {
+          cityCount += 1;
+          totalPopulation += Civilization.population(cell);
+        }
       }
     });
     const total = cells.length;
@@ -564,6 +619,7 @@ const Planet = (() => {
       avgFauna: habitatCells > 0 ? faunaSum / habitatCells : 0,
       faunaByType,
       cityCount,
+      totalPopulation,
     };
   }
 
@@ -580,6 +636,7 @@ const Planet = (() => {
       vegetation: cell.vegetation,
       vegetationType: cell.vegetationType,
       temperature: localTemperature(cell),
+      precipitation: localPrecipitation(cell, currentTerrain(cell), localTemperature(cell)),
       salinity: cell.salinity,
       fauna: cell.fauna,
       faunaType: cell.faunaType,
@@ -587,6 +644,7 @@ const Planet = (() => {
       techLevel: cell.techLevel,
       hasCity: Civilization.hasCity(cell),
       isHighTech: Civilization.isHighTech(cell),
+      population: Civilization.population(cell),
       radiation: cell.radiation,
       oxygenGenerator: cell.oxygenGenerator,
       co2Scrubber: cell.co2Scrubber,
@@ -662,7 +720,12 @@ const Planet = (() => {
         oxygenGenerator: c.oxygenGenerator === true,
         co2Scrubber: c.co2Scrubber === true,
         emitter: c.emitter === true,
+        coastDistance: 0,
       }));
+      // coastDistance wird nie serialisiert (rein aus der Hoehenkarte ableitbar,
+      // siehe computeCoastDistances) — nach jedem Laden aus der (immer vorhandenen)
+      // Hoehenkarte neu berechnen, auch fuer Spielstaende von vor diesem Feature.
+      computeCoastDistances();
       // Aeltere Spielstaende kennen lastTotalVegetation noch nicht — dann den
       // aktuellen Bestand als Basislinie nehmen, statt eine falsche Sprung-
       // Aenderung im naechsten tick() zu erzeugen.

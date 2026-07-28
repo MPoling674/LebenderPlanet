@@ -186,6 +186,24 @@ const CURRENT_RELAXATION_RATE = 0.05; // Anteil/Jahr, um den sich die Temperatur
 const MAX_ELEVATION_METERS = 80;
 const POLAR_LATITUDE_THRESHOLD = 0.82; // Breite (0=Aequator,1=Pol), ab der bei Basisklima Eis beginnt
 
+// Lokaler Niederschlag (0-100, grobe Groessenordnung statt echter mm-Simulation):
+// feuchte Meeresluft draengt vom Ozean landeinwaerts und verliert dabei zunehmend
+// Feuchtigkeit (Kontinentalitaets-Effekt) — daher COAST_FALLOFF pro Gitterzelle
+// Entfernung zur naechsten Kueste. Kalte Luft kann weniger Feuchtigkeit halten
+// (polare/kontinentale Trockenheit), Vegetation erhoeht die lokale Feuchte ueber
+// Evapotranspiration (Regenwald-Rueckkopplung). coastDistance selbst wird einmalig
+// aus der (fixen) Hoehenkarte berechnet, siehe Planet.computeCoastDistances —
+// bewusst NICHT von der aktuellen (durch Meeresspiegel/Eis schwankenden) Kueste
+// abgeleitet, da reale Kontinentalitaet nicht mit kurzfristigen Klimaschwankungen
+// mitwandert.
+const PRECIPITATION_OCEAN_BASE = 90;
+const PRECIPITATION_ICE_BASE = 35;
+const PRECIPITATION_COAST_FALLOFF_PER_CELL = 4;
+const PRECIPITATION_MIN = 5;
+const PRECIPITATION_COLD_THRESHOLD = 0; // °C, darunter sinkt die Luftfeuchte-Kapazitaet
+const PRECIPITATION_COLD_PENALTY_PER_DEGREE = 1.5;
+const PRECIPITATION_VEGETATION_BONUS_MAX = 15; // bei 100% Vegetationsbedeckung
+
 const VEG_MIN_TEMP = 2; // °C, unterhalb stirbt Vegetation ab (Dauerfrost)
 const VEG_MAX_TEMP = 32; // °C, oberhalb stirbt Vegetation ab (Hitzestress)
 const VEG_OPTIMAL_TEMP = 17; // °C, beste Wachstumsbedingungen
@@ -391,6 +409,14 @@ const CIVILIZATION_GROWTH_RATE = 0.1 / EVOLUTION_TIME_FACTOR;
 const CIVILIZATION_DECAY_RATE = 0.2 / EVOLUTION_TIME_FACTOR;
 const CITY_TECH_THRESHOLD = 30;
 const HIGH_TECH_THRESHOLD = 80;
+
+// Einwohnerzahl einer Stadt-Zelle: rein aus dem Tech-Level abgeleitet (kein
+// eigener State), exponentiell zwischen CITY_POPULATION_MIN (an der Stadt-
+// Schwelle, kleine Siedlung) und CITY_POPULATION_MAX (bei Tech-Level 100,
+// Megastadt) interpoliert — Staedte wachsen real eher exponentiell als linear
+// mit ihrer technologischen/wirtschaftlichen Reife.
+const CITY_POPULATION_MIN = 5000;
+const CITY_POPULATION_MAX = 12000000;
 
 // Zivilisation stoesst CO2/CH4 aus, proportional zum Tech-Level jeder Zelle
 // (0..100) — genau wie Fauna-Atmung/Vegetation als ANTEIL am theoretischen

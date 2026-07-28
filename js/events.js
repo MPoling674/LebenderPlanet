@@ -60,7 +60,7 @@ const Events = (() => {
         neighborsWithin(target.x, target.y, getCell, 1).forEach((c) => devastate(c, VOLCANO_NEIGHBOR_DAMAGE));
         Atmosphere.adjust("co2", VOLCANO_CO2_BURST_PPM);
         Atmosphere.adjust("ch4", VOLCANO_CH4_BURST_PPM);
-        events.push("🌋 Ein Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.");
+        events.push({ category: "disaster", message: "🌋 Ein Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", x: target.x, y: target.y });
       }
     }
 
@@ -71,7 +71,7 @@ const Events = (() => {
         if (Civilization.hasCity(target.cell)) {
           target.cell.techLevel = clamp(target.cell.techLevel - EARTHQUAKE_TECH_DAMAGE, 0, 100);
         }
-        events.push("🌍 Ein Erdbeben hat die Region erschüttert.");
+        events.push({ category: "disaster", message: "🌍 Ein Erdbeben hat die Region erschüttert.", x: target.x, y: target.y });
       }
     }
 
@@ -82,7 +82,7 @@ const Events = (() => {
         target.cell.techLevel = 0;
         neighborsWithin(target.x, target.y, getCell, METEOR_DEVASTATION_RADIUS).forEach((c) => devastate(c, METEOR_NEIGHBOR_DAMAGE));
         Climate.triggerImpactWinter(METEOR_IMPACT_WINTER_COOLING);
-        events.push("☄️ Ein Meteorit ist eingeschlagen — die aufgewirbelte Staubwolke kühlt das Klima für Jahrzehnte spürbar ab.");
+        events.push({ category: "disaster", message: "☄️ Ein Meteorit ist eingeschlagen — die aufgewirbelte Staubwolke kühlt das Klima für Jahrzehnte spürbar ab.", x: target.x, y: target.y });
       }
     }
 
@@ -91,7 +91,7 @@ const Events = (() => {
       if (target) {
         devastate(target.cell, STORM_DAMAGE);
         const name = STORM_NAMES[Math.floor(Math.random() * STORM_NAMES.length)];
-        events.push(`🌪️ Ein ${name} hat die Küste getroffen.`);
+        events.push({ category: "disaster", message: `🌪️ Ein ${name} hat die Küste getroffen.`, x: target.x, y: target.y });
       }
     }
 
