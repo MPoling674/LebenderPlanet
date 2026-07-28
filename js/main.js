@@ -91,6 +91,7 @@ const Game = (() => {
       const result = Planet.tick();
       checkMilestones(before, snapshot());
       result.events.forEach((message) => UI.log(message));
+      Charts.recordTemperatureSample(year, Climate.globalTemperature());
     }
     UI.setYear(year);
     renderAll();
@@ -180,6 +181,10 @@ const Game = (() => {
       UI.log("Import fehlgeschlagen: " + e.message);
       return;
     }
+    // Temperaturverlauf wird bewusst nicht mitgespeichert (siehe charts.js) — ein
+    // importierter Spielstand zeigt den Verlauf ab dem Ladezeitpunkt neu, statt
+    // eine Zeitreihe einer anderen Zeitlinie fortzuschreiben.
+    Charts.resetHistory();
     saveGame();
     UI.setYear(year);
     renderAll();
@@ -195,6 +200,7 @@ const Game = (() => {
     Climate.init();
     Planet.init();
     Civilization.init();
+    Charts.resetHistory();
     UI.setYear(year);
     renderAll();
     UI.setSaveStatus("Neue Simulation gestartet.");

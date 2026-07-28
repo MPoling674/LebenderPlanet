@@ -39,6 +39,18 @@
       <div id="gas-controls"></div>
     </section>
 
+    <section id="panel-charts">
+      <h2>Grafiken</h2>
+      <p class="hint">Temperaturverlauf und aktuelle Atmosphärenzusammensetzung.</p>
+      <div class="chart-title">Temperaturverlauf</div>
+      <canvas id="temp-chart" width="300" height="140"></canvas>
+      <div class="chart-title">Atmosphärenzusammensetzung</div>
+      <div class="composition-chart-wrap">
+        <canvas id="composition-chart" width="130" height="130"></canvas>
+        <ul id="composition-legend" class="chart-legend"></ul>
+      </div>
+    </section>
+
     <section id="panel-tools">
       <h2>Terraforming</h2>
       <p class="hint">Vegetationsart wählen, "Pflanzen" aktivieren, dann auf eine Landzelle der Karte klicken. Komplexere Arten gedeihen nur in einem schmalen Temperaturband (siehe Legende unter der Karte).</p>
@@ -87,6 +99,7 @@
 <script src="js/fauna.js"></script>
 <script src="js/currents.js"></script>
 <script src="js/civilization.js"></script>
+<script src="js/charts.js"></script>
 <script src="js/planet.js"></script>
 <script src="js/map.js"></script>
 <script src="js/ui.js"></script>

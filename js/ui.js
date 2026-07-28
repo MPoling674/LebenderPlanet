@@ -28,6 +28,9 @@ const UI = (() => {
     el.vegLegend = document.getElementById("veg-legend");
     el.speciesList = document.getElementById("species-list");
     el.mapTooltip = document.getElementById("map-tooltip");
+    el.tempChart = document.getElementById("temp-chart");
+    el.compositionChart = document.getElementById("composition-chart");
+    el.compositionLegend = document.getElementById("composition-legend");
 
     el.gasControls = document.getElementById("gas-controls");
     el.toolButtons = document.getElementById("tool-buttons");
@@ -325,6 +328,8 @@ const UI = (() => {
     el.hudCivCo2.textContent = civEmissions.co2.toFixed(1) + " ppm";
     el.hudCivCh4.textContent = civEmissions.ch4.toFixed(2) + " ppm";
     renderGasValues();
+    Charts.renderTemperatureChart(el.tempChart);
+    Charts.renderCompositionChart(el.compositionChart, el.compositionLegend);
   }
 
   function setYear(year) {
