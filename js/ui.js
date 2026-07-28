@@ -31,6 +31,9 @@ const UI = (() => {
     el.tempChart = document.getElementById("temp-chart");
     el.compositionChart = document.getElementById("composition-chart");
     el.compositionLegend = document.getElementById("composition-legend");
+    el.debugEnabled = document.getElementById("debug-enabled");
+    el.debugWarnings = document.getElementById("debug-warnings");
+    el.debugCellDump = document.getElementById("debug-cell-dump");
 
     el.gasControls = document.getElementById("gas-controls");
     el.toolButtons = document.getElementById("tool-buttons");
@@ -52,6 +55,10 @@ const UI = (() => {
     el.speedSlider.addEventListener("input", () => {
       const idx = parseInt(el.speedSlider.value, 10);
       callbacks.setSpeed && callbacks.setSpeed(SPEED_STEPS[idx]);
+    });
+    el.debugEnabled.addEventListener("change", () => {
+      Debug.setEnabled(el.debugEnabled.checked);
+      renderDebugWarnings();
     });
     el.saveNowBtn.addEventListener("click", () => callbacks.saveNow && callbacks.saveNow());
     el.saveExportBtn.addEventListener("click", () => callbacks.exportSave && callbacks.exportSave());
@@ -330,6 +337,31 @@ const UI = (() => {
     renderGasValues();
     Charts.renderTemperatureChart(el.tempChart);
     Charts.renderCompositionChart(el.compositionChart, el.compositionLegend);
+    renderDebugWarnings();
+  }
+
+  // Zeigt die aktuellen Konsistenzpruefungs-Ergebnisse (siehe Debug.runChecks(),
+  // von main.js einmal pro Simulationsjahr aufgerufen) — IMMER der aktuelle
+  // Stand, kein Log: eine dauerhaft bestehende Abweichung soll sichtbar bleiben,
+  // statt im Ereignis-Log unterzugehen oder es zuzuspammen.
+  function renderDebugWarnings() {
+    if (!el.debugWarnings) return;
+    if (!Debug.isEnabled()) {
+      el.debugWarnings.innerHTML = `<li class="debug-off">Konsistenzprüfung ausgeschaltet.</li>`;
+      return;
+    }
+    const warnings = Debug.currentWarnings();
+    el.debugWarnings.innerHTML = warnings.length
+      ? warnings.map((w) => `<li class="debug-warning">⚠️ ${w}</li>`).join("")
+      : `<li class="debug-ok">✅ Keine Auffälligkeiten.</li>`;
+  }
+
+  // Roh-JSON der gerade gehoverten Zelle (siehe Planet.cellInfoAt) — zeigt ALLE
+  // Felder, nicht nur die im normalen Tooltip kuratierte Auswahl, damit sich
+  // ein konkreter Zellzustand ohne Konsolen-Skript nachvollziehen laesst.
+  function showCellDebugData(info) {
+    if (!el.debugCellDump) return;
+    el.debugCellDump.textContent = info ? JSON.stringify(info, null, 1) : "Keine Zelle unter dem Mauszeiger.";
   }
 
   function setYear(year) {
@@ -356,5 +388,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip, showCellDebugData };
 })();

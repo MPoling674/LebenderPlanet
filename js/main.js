@@ -92,6 +92,10 @@ const Game = (() => {
       checkMilestones(before, snapshot());
       result.events.forEach((message) => UI.log(message));
       Charts.recordTemperatureSample(year, Climate.globalTemperature());
+      // Nur wenn eingeschaltet (siehe Debug.setEnabled) — kein Overhead im
+      // normalen Spielbetrieb, da Debug.runChecks() bei jedem Aufruf einen
+      // vollen Planet.stats()-Scan macht.
+      Debug.runChecks();
     }
     UI.setYear(year);
     renderAll();
@@ -142,14 +146,17 @@ const Game = (() => {
   function handleCellHover(x, y, clientX, clientY) {
     if (x === null) {
       UI.hideTooltip();
+      UI.showCellDebugData(null);
       return;
     }
     const info = Planet.cellInfoAt(x, y);
     if (!info) {
       UI.hideTooltip();
+      UI.showCellDebugData(null);
       return;
     }
     UI.showTooltip(info, clientX, clientY);
+    UI.showCellDebugData(info);
   }
 
   function handleSaveNow() {

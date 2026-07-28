@@ -77,6 +77,15 @@
       <ul id="event-log"></ul>
     </section>
 
+    <section id="panel-debug">
+      <h2>Debug</h2>
+      <p class="hint">Prüft die Simulation laufend auf interne Konsistenz und zeigt die Rohdaten der Zelle unter dem Mauszeiger — hilft, die Korrektheit der Simulation nachzuvollziehen.</p>
+      <label class="debug-toggle"><input type="checkbox" id="debug-enabled"> Konsistenzprüfung aktiv</label>
+      <ul id="debug-warnings"></ul>
+      <div class="chart-title">Zell-Rohdaten (Mauszeiger)</div>
+      <pre id="debug-cell-dump">Keine Zelle unter dem Mauszeiger.</pre>
+    </section>
+
     <section id="panel-save">
       <h2>Spielstand</h2>
       <p id="save-status" class="hint"></p>
@@ -100,6 +109,7 @@
 <script src="js/currents.js"></script>
 <script src="js/civilization.js"></script>
 <script src="js/events.js"></script>
+<script src="js/debug.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/planet.js"></script>
 <script src="js/map.js"></script>

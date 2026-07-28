@@ -435,6 +435,11 @@ const IMPACT_WINTER_RELAXATION_RATE = 1 / 40; // ~63% Erholung in ~40 Jahren
 const STORM_DAMAGE = 0.25;
 const STORM_NAMES = ["Taifun", "Hurrikan", "Orkan"];
 
+// Toleranz fuer die automatischen Konsistenzpruefungen (siehe js/debug.js) — rein
+// fuer Entwicklungs-/Pruefzwecke, kein Gameplay-Wert. Groesser als reine
+// Fliesskomma-Rundungsfehler, aber klein genug, um echte Abweichungen zu erkennen.
+const DEBUG_EPSILON = 0.05;
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
