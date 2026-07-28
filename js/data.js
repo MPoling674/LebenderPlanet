@@ -326,6 +326,15 @@ const FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR = 8;
 // Weg, damit sich das Bauen tatsaechlich als Beschleunigung anfuehlt.
 const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = 0.15;
 
+// CO2-Scrubber/Emitter: analoge Terraforming-Strukturen fuer CO2/CH4 statt O2 —
+// wirken kontinuierlich ueber Jahre (im Gegensatz zum Gas-Regler, der den Wert
+// einmalig sofort verschiebt), damit der Spieler das Klima gezielt UND graduell
+// gestalten kann. Rate am CO2-Wertebereich orientiert (150-2000 ppm, siehe GASES),
+// deutlich groesser als beim O2-Generator (0-35%-Skala).
+const CO2_SCRUBBER_OUTPUT_PER_YEAR = 8;
+const EMITTER_CO2_OUTPUT_PER_YEAR = 8;
+const EMITTER_CH4_OUTPUT_PER_YEAR = 0.2;
+
 // Jahreswahrscheinlichkeit, mit der ein reifes Taxon mit crossHabitat-Nachfolger
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
 const CROSS_HABITAT_SPAWN_CHANCE = 0.1;

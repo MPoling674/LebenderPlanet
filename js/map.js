@@ -315,6 +315,20 @@ const PlanetMap = (() => {
         ctx.fillStyle = "rgba(140, 220, 255, 0.95)";
         ctx.fillRect(px - size / 2, py - size / 2, size, size);
       }
+      if (cell.co2Scrubber) {
+        const px = (cell.x + 0.5) * cellW;
+        const py = (cell.y + 0.5) * cellH;
+        const size = Math.max(2, Math.min(cellW, cellH) * 0.32);
+        ctx.fillStyle = "rgba(140, 255, 170, 0.95)";
+        ctx.fillRect(px - size / 2, py - size / 2, size, size);
+      }
+      if (cell.emitter) {
+        const px = (cell.x + 0.5) * cellW;
+        const py = (cell.y + 0.5) * cellH;
+        const size = Math.max(2, Math.min(cellW, cellH) * 0.32);
+        ctx.fillStyle = "rgba(255, 140, 90, 0.95)";
+        ctx.fillRect(px - size / 2, py - size / 2, size, size);
+      }
       if (cell.techLevel >= CITY_TECH_THRESHOLD) {
         const highTech = cell.techLevel >= HIGH_TECH_THRESHOLD;
         const px = (cell.x + 0.5) * cellW;

@@ -124,6 +124,10 @@ const Game = (() => {
     else if (tool === "detonate") res = Planet.detonate(x, y);
     else if (tool === "build_oxygen") res = Planet.toggleOxygenGenerator(x, y, true);
     else if (tool === "remove_oxygen") res = Planet.toggleOxygenGenerator(x, y, false);
+    else if (tool === "build_scrubber") res = Planet.toggleCO2Scrubber(x, y, true);
+    else if (tool === "remove_scrubber") res = Planet.toggleCO2Scrubber(x, y, false);
+    else if (tool === "build_emitter") res = Planet.toggleEmitter(x, y, true);
+    else if (tool === "remove_emitter") res = Planet.toggleEmitter(x, y, false);
     else res = Planet.terraform(x, y, tool);
     if (!res.ok) {
       UI.log(res.reason);

@@ -118,6 +118,10 @@ const UI = (() => {
       <button data-tool="salt_remove" class="${activeTool === "salt_remove" ? "tool-active" : ""}">🧂 Salz entnehmen</button>
       <button data-tool="build_oxygen" class="${activeTool === "build_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator bauen</button>
       <button data-tool="remove_oxygen" class="${activeTool === "remove_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator entfernen</button>
+      <button data-tool="build_scrubber" class="${activeTool === "build_scrubber" ? "tool-active" : ""}">🏭 CO2-Scrubber bauen</button>
+      <button data-tool="remove_scrubber" class="${activeTool === "remove_scrubber" ? "tool-active" : ""}">🏭 CO2-Scrubber entfernen</button>
+      <button data-tool="build_emitter" class="${activeTool === "build_emitter" ? "tool-active" : ""}">🌋 Emitter bauen</button>
+      <button data-tool="remove_emitter" class="${activeTool === "remove_emitter" ? "tool-active" : ""}">🌋 Emitter entfernen</button>
       <button data-tool="detonate" class="${activeTool === "detonate" ? "tool-active" : ""}">💣 Atombombe</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
     `;
@@ -247,6 +251,12 @@ const UI = (() => {
     }
     if (info.oxygenGenerator) {
       html += `<br>🏭 Sauerstoffgenerator`;
+    }
+    if (info.co2Scrubber) {
+      html += `<br>🏭 CO2-Scrubber`;
+    }
+    if (info.emitter) {
+      html += `<br>🌋 Emitter`;
     }
     el.mapTooltip.innerHTML = html;
     el.mapTooltip.style.left = clientX + 14 + "px";
