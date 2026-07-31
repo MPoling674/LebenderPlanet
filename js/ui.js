@@ -30,6 +30,10 @@ const UI = (() => {
     el.speciesList = document.getElementById("species-list");
     el.mapTooltip = document.getElementById("map-tooltip");
     el.tempChart = document.getElementById("temp-chart");
+    el.co2Chart = document.getElementById("co2-chart");
+    el.populationChart = document.getElementById("population-chart");
+    el.correlationChart = document.getElementById("correlation-chart");
+    el.correlationLegend = document.getElementById("correlation-legend");
     el.compositionChart = document.getElementById("composition-chart");
     el.compositionLegend = document.getElementById("composition-legend");
     el.debugEnabled = document.getElementById("debug-enabled");
@@ -148,6 +152,8 @@ const UI = (() => {
       <button data-tool="remove_oxygen" class="${activeTool === "remove_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator entfernen</button>
       <button data-tool="build_scrubber" class="${activeTool === "build_scrubber" ? "tool-active" : ""}">🏭 CO2-Scrubber bauen</button>
       <button data-tool="remove_scrubber" class="${activeTool === "remove_scrubber" ? "tool-active" : ""}">🏭 CO2-Scrubber entfernen</button>
+      <button data-tool="build_methane_scrubber" class="${activeTool === "build_methane_scrubber" ? "tool-active" : ""}">🏭 Methanfilter bauen</button>
+      <button data-tool="remove_methane_scrubber" class="${activeTool === "remove_methane_scrubber" ? "tool-active" : ""}">🏭 Methanfilter entfernen</button>
       <button data-tool="build_emitter" class="${activeTool === "build_emitter" ? "tool-active" : ""}">🌋 Emitter bauen</button>
       <button data-tool="remove_emitter" class="${activeTool === "remove_emitter" ? "tool-active" : ""}">🌋 Emitter entfernen</button>
       <button data-tool="detonate" class="${activeTool === "detonate" ? "tool-active" : ""}">💣 Atombombe</button>
@@ -284,6 +290,9 @@ const UI = (() => {
     if (info.co2Scrubber) {
       html += `<br>🏭 CO2-Scrubber`;
     }
+    if (info.methaneScrubber) {
+      html += `<br>🏭 Methanfilter`;
+    }
     if (info.emitter) {
       html += `<br>🌋 Emitter`;
     }
@@ -356,6 +365,9 @@ const UI = (() => {
     el.hudCivCh4.textContent = civEmissions.ch4.toFixed(2) + " ppm";
     renderGasValues();
     Charts.renderTemperatureChart(el.tempChart);
+    Charts.renderCo2Chart(el.co2Chart);
+    Charts.renderPopulationChart(el.populationChart);
+    Charts.renderCorrelationChart(el.correlationChart, el.correlationLegend);
     Charts.renderCompositionChart(el.compositionChart, el.compositionLegend);
     renderDebugWarnings();
   }

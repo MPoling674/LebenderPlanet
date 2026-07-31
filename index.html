@@ -45,6 +45,14 @@
       <p class="hint">Temperaturverlauf und aktuelle Atmosphärenzusammensetzung.</p>
       <div class="chart-title">Temperaturverlauf</div>
       <canvas id="temp-chart" width="300" height="140"></canvas>
+      <div class="chart-title">CO₂-Verlauf</div>
+      <canvas id="co2-chart" width="300" height="140"></canvas>
+      <div class="chart-title">Bevölkerungsverlauf</div>
+      <canvas id="population-chart" width="300" height="140"></canvas>
+      <div class="chart-title">CO₂ &amp; Bevölkerung im Vergleich</div>
+      <p class="hint">Beide Linien auf ihre eigene Min/Max-Spanne normiert, um den zeitlichen Zusammenhang statt der absoluten Werte zu zeigen (die stehen in den Grafiken oben).</p>
+      <canvas id="correlation-chart" width="300" height="140"></canvas>
+      <ul id="correlation-legend" class="chart-legend"></ul>
       <div class="chart-title">Atmosphärenzusammensetzung</div>
       <div class="composition-chart-wrap">
         <canvas id="composition-chart" width="130" height="130"></canvas>

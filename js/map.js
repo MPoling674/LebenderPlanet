@@ -298,7 +298,8 @@ const PlanetMap = (() => {
   // (anders als Land/Eis brauchen sie keine scharfe Kontur): ein dezenter
   // gelbgruenlicher Tint auf verstrahlten Zellen (Staerke ~ radiation/100), ein
   // heller Punkt auf Staedten (groesser/kraeftiger bei Hochtechnologie) und ein
-  // kleines helles Quadrat auf Sauerstoffgeneratoren.
+  // kleines helles Quadrat auf Sauerstoffgeneratoren/CO2-Scrubbern/Methanfiltern/
+  // Emittern (je eigene Farbe, siehe unten).
   function drawOverlays() {
     const cellW = canvas.width / GRID_WIDTH;
     const cellH = canvas.height / GRID_HEIGHT;
@@ -320,6 +321,13 @@ const PlanetMap = (() => {
         const py = (cell.y + 0.5) * cellH;
         const size = Math.max(2, Math.min(cellW, cellH) * 0.32);
         ctx.fillStyle = "rgba(140, 255, 170, 0.95)";
+        ctx.fillRect(px - size / 2, py - size / 2, size, size);
+      }
+      if (cell.methaneScrubber) {
+        const px = (cell.x + 0.5) * cellW;
+        const py = (cell.y + 0.5) * cellH;
+        const size = Math.max(2, Math.min(cellW, cellH) * 0.32);
+        ctx.fillStyle = "rgba(160, 230, 255, 0.95)";
         ctx.fillRect(px - size / 2, py - size / 2, size, size);
       }
       if (cell.emitter) {

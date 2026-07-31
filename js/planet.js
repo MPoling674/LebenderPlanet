@@ -33,7 +33,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false, co2Scrubber: false, emitter: false, coastDistance: 0 });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false, co2Scrubber: false, methaneScrubber: false, emitter: false, coastDistance: 0 });
       }
     }
     computeCoastDistances();
@@ -286,6 +286,24 @@ const Planet = (() => {
     return { ok: true };
   }
 
+  // Methanfilter: senkt CH4 kontinuierlich (Gegenstueck zum CO2-Scrubber, siehe
+  // METHANE_SCRUBBER_OUTPUT_PER_YEAR-Kommentar in data.js). Gleiche
+  // Platzierungsregeln wie der Sauerstoffgenerator.
+  function toggleMethaneScrubber(x, y, build) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    const terrain = currentTerrain(cell);
+    if (terrain === "ice") return { ok: false, reason: "Auf Eis kann kein Methanfilter gebaut werden." };
+    if (build) {
+      if (cell.methaneScrubber) return { ok: false, reason: "Hier steht bereits ein Methanfilter." };
+      cell.methaneScrubber = true;
+    } else {
+      if (!cell.methaneScrubber) return { ok: false, reason: "Hier steht kein Methanfilter." };
+      cell.methaneScrubber = false;
+    }
+    return { ok: true };
+  }
+
   // Emitter (Industrieanlage/Vulkanschlot): erhoeht CO2 UND CH4 kontinuierlich —
   // Gegenstueck zum CO2-Scrubber, um das Klima gezielt aufzuheizen. Gleiche
   // Platzierungsregeln wie der Sauerstoffgenerator.
@@ -423,6 +441,7 @@ const Planet = (() => {
     let respiringBiomass = 0;
     let oxygenGeneratorCount = 0;
     let co2ScrubberCount = 0;
+    let methaneScrubberCount = 0;
     let emitterCount = 0;
     cells.forEach((cell) => {
       const terrain = currentTerrain(cell);
@@ -474,13 +493,15 @@ const Planet = (() => {
       if (cell.faunaType && cell.faunaType !== "prokaryotes") respiringBiomass += cell.fauna;
       if (cell.oxygenGenerator) oxygenGeneratorCount += 1;
       if (cell.co2Scrubber) co2ScrubberCount += 1;
+      if (cell.methaneScrubber) methaneScrubberCount += 1;
       if (cell.emitter) emitterCount += 1;
     });
 
-    // CO2-Scrubber/Emitter: gebaute Strukturen wirken kontinuierlich, im Gegensatz
-    // zum einmaligen Sprung des Gas-Reglers (siehe CO2_SCRUBBER_OUTPUT_PER_YEAR-
-    // Kommentar in data.js).
+    // CO2-Scrubber/Methanfilter/Emitter: gebaute Strukturen wirken kontinuierlich,
+    // im Gegensatz zum einmaligen Sprung des Gas-Reglers (siehe
+    // CO2_SCRUBBER_OUTPUT_PER_YEAR-Kommentar in data.js).
     Atmosphere.adjust("co2", -co2ScrubberCount * CO2_SCRUBBER_OUTPUT_PER_YEAR);
+    Atmosphere.adjust("ch4", -methaneScrubberCount * METHANE_SCRUBBER_OUTPUT_PER_YEAR);
     Atmosphere.adjust("co2", emitterCount * EMITTER_CO2_OUTPUT_PER_YEAR);
     Atmosphere.adjust("ch4", emitterCount * EMITTER_CH4_OUTPUT_PER_YEAR);
 
@@ -665,6 +686,7 @@ const Planet = (() => {
       radiation: cell.radiation,
       oxygenGenerator: cell.oxygenGenerator,
       co2Scrubber: cell.co2Scrubber,
+      methaneScrubber: cell.methaneScrubber,
       emitter: cell.emitter,
     };
   }
@@ -684,6 +706,7 @@ const Planet = (() => {
       radiation: cell.radiation,
       oxygenGenerator: cell.oxygenGenerator,
       co2Scrubber: cell.co2Scrubber,
+      methaneScrubber: cell.methaneScrubber,
       emitter: cell.emitter,
     }));
   }
@@ -703,6 +726,7 @@ const Planet = (() => {
         radiation: c.radiation,
         oxygenGenerator: c.oxygenGenerator,
         co2Scrubber: c.co2Scrubber,
+        methaneScrubber: c.methaneScrubber,
         emitter: c.emitter,
       })),
       lastTotalVegetation,
@@ -733,9 +757,10 @@ const Planet = (() => {
         techLevel: typeof c.techLevel === "number" ? c.techLevel : 0,
         // Aeltere Spielstaende kennen Strahlung noch nicht — dann unverstrahlt annehmen.
         radiation: typeof c.radiation === "number" ? c.radiation : 0,
-        // Aeltere Spielstaende kennen Sauerstoffgeneratoren/CO2-Scrubber/Emitter noch nicht.
+        // Aeltere Spielstaende kennen Sauerstoffgeneratoren/CO2-Scrubber/Methanfilter/Emitter noch nicht.
         oxygenGenerator: c.oxygenGenerator === true,
         co2Scrubber: c.co2Scrubber === true,
+        methaneScrubber: c.methaneScrubber === true,
         emitter: c.emitter === true,
         coastDistance: 0,
       }));
@@ -754,5 +779,5 @@ const Planet = (() => {
     rebuildDiscoveries();
   }
 
-  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleEmitter, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

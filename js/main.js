@@ -53,10 +53,13 @@ const Game = (() => {
   }
 
   function snapshot() {
+    const stats = Planet.stats();
     return {
       temp: Climate.globalTemperature(),
-      ice: Planet.stats().icePercent,
+      ice: stats.icePercent,
       seaLevel: Climate.seaLevelRise(),
+      co2: Atmosphere.get("co2"),
+      population: stats.totalPopulation,
     };
   }
 
@@ -89,9 +92,10 @@ const Game = (() => {
       year += 1;
       Climate.tick();
       const result = Planet.tick();
-      checkMilestones(before, snapshot());
+      const after = snapshot();
+      checkMilestones(before, after);
       result.events.forEach((event) => UI.log(event.message, event.category, event));
-      Charts.recordTemperatureSample(year, Climate.globalTemperature());
+      Charts.recordSample(year, after.temp, after.co2, after.population);
       // Nur wenn eingeschaltet (siehe Debug.setEnabled) — kein Overhead im
       // normalen Spielbetrieb, da Debug.runChecks() bei jedem Aufruf einen
       // vollen Planet.stats()-Scan macht.
@@ -131,6 +135,8 @@ const Game = (() => {
     else if (tool === "remove_oxygen") res = Planet.toggleOxygenGenerator(x, y, false);
     else if (tool === "build_scrubber") res = Planet.toggleCO2Scrubber(x, y, true);
     else if (tool === "remove_scrubber") res = Planet.toggleCO2Scrubber(x, y, false);
+    else if (tool === "build_methane_scrubber") res = Planet.toggleMethaneScrubber(x, y, true);
+    else if (tool === "remove_methane_scrubber") res = Planet.toggleMethaneScrubber(x, y, false);
     else if (tool === "build_emitter") res = Planet.toggleEmitter(x, y, true);
     else if (tool === "remove_emitter") res = Planet.toggleEmitter(x, y, false);
     else res = Planet.terraform(x, y, tool);

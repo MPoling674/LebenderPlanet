@@ -409,6 +409,14 @@ const CO2_SCRUBBER_OUTPUT_PER_YEAR = 8 / TOOL_TIME_FACTOR;
 const EMITTER_CO2_OUTPUT_PER_YEAR = 8 / TOOL_TIME_FACTOR;
 const EMITTER_CH4_OUTPUT_PER_YEAR = 0.2 / TOOL_TIME_FACTOR;
 
+// Methanfilter: Gegenstueck zum CO2-Scrubber, aber fuer CH4 — bislang liess sich
+// Methan nur ueber den Gas-Regler (einmaliger Sprung, siehe oben) senken, der von
+// laufenden CH4-Emissionen (Zivilisation, Emitter) im naechsten Jahr wieder
+// aufgeholt wird. Rate im selben Verhaeltnis zur CH4-Skala (0-50 ppm) wie der
+// CO2-Scrubber zur CO2-Skala (150-2000 ppm) — daher identisch zu
+// EMITTER_CH4_OUTPUT_PER_YEAR (CO2_SCRUBBER_OUTPUT_PER_YEAR / 40 ≈ CH4-Aequivalent).
+const METHANE_SCRUBBER_OUTPUT_PER_YEAR = 0.2 / TOOL_TIME_FACTOR;
+
 // Jahreswahrscheinlichkeit, mit der ein reifes Taxon mit crossHabitat-Nachfolger
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
 const CROSS_HABITAT_SPAWN_CHANCE = 0.1 / 3;
