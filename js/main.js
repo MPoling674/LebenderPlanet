@@ -131,6 +131,10 @@ const Game = (() => {
     else if (tool === "release_fauna") res = Planet.terraformFauna(x, y, "release", UI.getSelectedFaunaType());
     else if (tool === "remove_fauna") res = Planet.terraformFauna(x, y, "remove");
     else if (tool === "detonate") res = Planet.detonate(x, y);
+    else if (tool === "trigger_volcano") res = Planet.triggerVolcano(x, y);
+    else if (tool === "trigger_earthquake") res = Planet.triggerEarthquake(x, y);
+    else if (tool === "trigger_tsunami") res = Planet.triggerTsunami(x, y);
+    else if (tool === "trigger_plague") res = Planet.triggerPlague(x, y);
     else if (tool === "build_oxygen") res = Planet.toggleOxygenGenerator(x, y, true);
     else if (tool === "remove_oxygen") res = Planet.toggleOxygenGenerator(x, y, false);
     else if (tool === "build_scrubber") res = Planet.toggleCO2Scrubber(x, y, true);
@@ -145,6 +149,10 @@ const Game = (() => {
       return;
     }
     if (tool === "detonate") UI.log("Eine Atombombe hat eine Hochtechnologie-Stadt zerstört — Nanotech-Roboter entstehen aus den Trümmern.", "civilization", { x, y });
+    else if (tool === "trigger_volcano") UI.log("🌋 Ein ausgelöster Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", "disaster", { x, y });
+    else if (tool === "trigger_earthquake") UI.log("🌍 Ein ausgelöstes Erdbeben hat die Region erschüttert.", "disaster", { x, y });
+    else if (tool === "trigger_tsunami") UI.log("🌊 Ein ausgelöster Tsunami hat die Küste überflutet.", "disaster", { x, y });
+    else if (tool === "trigger_plague") UI.log("☣️ Eine ausgelöste Seuche breitet sich aus.", "disaster", { x, y });
     renderAll();
     saveGame();
   }

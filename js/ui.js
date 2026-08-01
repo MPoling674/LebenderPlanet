@@ -157,6 +157,10 @@ const UI = (() => {
       <button data-tool="build_emitter" class="${activeTool === "build_emitter" ? "tool-active" : ""}">🌋 Emitter bauen</button>
       <button data-tool="remove_emitter" class="${activeTool === "remove_emitter" ? "tool-active" : ""}">🌋 Emitter entfernen</button>
       <button data-tool="detonate" class="${activeTool === "detonate" ? "tool-active" : ""}">💣 Atombombe</button>
+      <button data-tool="trigger_volcano" class="${activeTool === "trigger_volcano" ? "tool-active" : ""}">🌋 Vulkanausbruch auslösen</button>
+      <button data-tool="trigger_earthquake" class="${activeTool === "trigger_earthquake" ? "tool-active" : ""}">🌍 Erdbeben auslösen</button>
+      <button data-tool="trigger_tsunami" class="${activeTool === "trigger_tsunami" ? "tool-active" : ""}">🌊 Tsunami auslösen</button>
+      <button data-tool="trigger_plague" class="${activeTool === "trigger_plague" ? "tool-active" : ""}">☣️ Seuche auslösen</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
     `;
     el.toolButtons.querySelectorAll("button").forEach((btn) => {

@@ -357,6 +357,52 @@ const Planet = (() => {
     return { ok: true };
   }
 
+  // Loest einen Vulkanausbruch gezielt an (x,y) aus — dieselbe Wirkung wie das
+  // Zufallsereignis in Events.tick(), nur spielergesteuert statt gewuerfelt.
+  function triggerVolcano(x, y) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    if (currentTerrain(cell) !== "land") return { ok: false, reason: "Ein Vulkan kann nur auf einer Landzelle ausbrechen." };
+    Events.applyVolcano(x, y, cellAt);
+    return { ok: true };
+  }
+
+  // Loest ein Erdbeben gezielt an (x,y) aus (siehe triggerVolcano()-Kommentar).
+  function triggerEarthquake(x, y) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    if (currentTerrain(cell) !== "land") return { ok: false, reason: "Ein Erdbeben kann nur auf einer Landzelle ausgelöst werden." };
+    Events.applyEarthquake(x, y, cellAt);
+    return { ok: true };
+  }
+
+  // Tsunami: nur auf Kuestenlandzellen (coastDistance===1, direkt angrenzend an
+  // die urspruengliche Ozeanflaeche, siehe computeCoastDistances()) — anders als
+  // die uebrigen currentTerrain()-Pruefungen bewusst zusaetzlich ueber die FIXE
+  // Hoehenkarte statt nur das aktuelle Terrain, weil ein Tsunami eine Kuestennaehe
+  // voraussetzt, die sich nicht durch kurzfristigen Meeresspiegelanstieg aendert.
+  function triggerTsunami(x, y) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    if (currentTerrain(cell) !== "land") return { ok: false, reason: "Ein Tsunami trifft nur Landzellen an der Küste." };
+    if (cell.coastDistance !== 1) return { ok: false, reason: "Ein Tsunami kann nur eine Zelle direkt an der Küste treffen." };
+    Events.applyTsunami(x, y, cellAt);
+    return { ok: true };
+  }
+
+  // Seuche: braucht ein Ziel mit etwas, das sie befallen kann (Fauna oder eine
+  // Stadt) — auf Eis gibt es ohnehin nie Fauna (siehe Planet.tick()), daher reicht
+  // die Fauna/Stadt-Pruefung allein, ohne die Eis-Sonderregel der uebrigen Werkzeuge.
+  function triggerPlague(x, y) {
+    const cell = cellAt(x, y);
+    if (!cell) return { ok: false, reason: "Ungültige Position." };
+    if (cell.fauna <= 0 && !Civilization.hasCity(cell)) {
+      return { ok: false, reason: "Hier gibt es keine Fauna oder Bevölkerung, die eine Seuche befallen könnte." };
+    }
+    Events.applyPlague(x, y, cellAt);
+    return { ok: true };
+  }
+
   // Summe der Vegetation aller Landzellen zum Zeitpunkt des letzten tick() —
   // Referenzwert fuer die CO2/O2-Nettobilanz (siehe tick()).
   let lastTotalVegetation = 0;
@@ -551,6 +597,13 @@ const Planet = (() => {
     // die Hitze abgestorben war und keinen Ausgleich mehr liefern konnte
     // (gemeldeter Fehler: "CO2 geht nicht mehr zurueck").
     Atmosphere.adjust("co2", -(Atmosphere.get("co2") - GEOLOGICAL_CO2_EQUILIBRIUM) * GEOLOGICAL_CO2_RELAXATION_RATE);
+
+    // Chemische CH4-Senke (troposphaerische OH-Oxidation, siehe GEOLOGICAL_CH4_
+    // RELAXATION_RATE-Kommentar in data.js) — deutlich schneller als die CO2-Senke
+    // oben, da Methan real binnen ~einem Jahrzehnt abgebaut wird statt ueber
+    // Jahrtausende. Ohne diesen Term blieb CH4 bei jeder laufenden Quelle
+    // (Zivilisation, Emitter, Vulkane) permanent am Anschlag (50 ppm) haengen.
+    Atmosphere.adjust("ch4", -(Atmosphere.get("ch4") - GEOLOGICAL_CH4_EQUILIBRIUM) * GEOLOGICAL_CH4_RELAXATION_RATE);
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.
@@ -779,5 +832,5 @@ const Planet = (() => {
     rebuildDiscoveries();
   }
 
-  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, triggerVolcano, triggerEarthquake, triggerTsunami, triggerPlague, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
 })();

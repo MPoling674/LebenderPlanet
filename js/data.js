@@ -101,6 +101,18 @@ const GEOLOGICAL_CO2_EQUILIBRIUM = 280; // ppm, entspricht CO2_PREINDUSTRIAL_PPM
 const GEOLOGICAL_CO2_RELAXATION_RATE = (1 / 1000) / EVOLUTION_TIME_FACTOR;
 
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
+
+// Chemische CH4-Senke (troposphaerische Oxidation durch OH-Radikale zu CO2/H2O) —
+// anders als bei CO2 (Verwitterung ueber Jahrtausende) ist das real ein SCHNELLER
+// Prozess: atmosphaerisches Methan hat nur eine Lebensdauer von ~10 Jahren, bevor
+// es abgebaut ist. Deshalb hier eine um zwei Groessenordnungen HOEHERE Rate als
+// GEOLOGICAL_CO2_RELAXATION_RATE (1/10 statt 1/1000) — nicht identisch uebernommen.
+// Ohne diesen Term hatte CH4 (anders als CO2/O2) KEINE Ruecksetzkraft und blieb bei
+// jeder laufenden Quelle (Zivilisation, Emitter, Vulkane) dauerhaft am Anschlag
+// (50 ppm, siehe GASES) haengen, selbst nachdem die Quelle laengst abgeklungen war.
+const CH4_PREINDUSTRIAL_PPM = 0.7; // realer vorindustrieller Referenzwert (heute ~1.9 ppm)
+const GEOLOGICAL_CH4_EQUILIBRIUM = CH4_PREINDUSTRIAL_PPM;
+const GEOLOGICAL_CH4_RELAXATION_RATE = (1 / 10) / EVOLUTION_TIME_FACTOR;
 const CO2_FORCING_COEFFICIENT = 5.35; // W/m² pro ln(CO2eq/CO2_ref) — vereinfachte reale IPCC-Formel
 const CLIMATE_SENSITIVITY = 0.8; // °C pro W/m² Strahlungsantrieb (~3°C pro CO2-Verdopplung)
 const WATER_VAPOR_AMPLIFICATION = 0.4; // Wasserdampf-Rückkopplung verstärkt die GHG-Erwärmung zusätzlich
@@ -524,6 +536,31 @@ const IMPACT_WINTER_RELAXATION_RATE = 1 / 40; // ~63% Erholung in ~40 Jahren
 // Ereignis — nur lokale Teilzerstoerung, keine Atmosphaeren-/Klimawirkung.
 const STORM_DAMAGE = 0.25;
 const STORM_NAMES = ["Taifun", "Hurrikan", "Orkan"];
+
+// Tsunami: existiert (anders als die vier Ereignisse oben) NICHT als
+// Zufallsereignis, sondern nur als vom Spieler gezielt ausgeloestes Werkzeug
+// (siehe Planet.triggerTsunami) — reale Tsunamis werden durch Unterwasser-
+// Erdbeben/Erdrutsche ausgeloest, die hier nicht simuliert werden; der Spieler
+// spielt stattdessen direkt die Ausloesung. Trifft nur Kuestenlandzellen
+// (cell.coastDistance === 1, siehe Planet.computeCoastDistances), staerker als
+// ein Erdbeben, mit groesserem Wirkradius als Vulkan/Erdbeben, da die Wellen
+// weiter ins Landesinnere reichen als eine lokale Erschuetterung.
+const TSUNAMI_DAMAGE = 0.6;
+const TSUNAMI_NEIGHBOR_DAMAGE = 0.3;
+const TSUNAMI_RADIUS = 2;
+const TSUNAMI_TECH_DAMAGE = 20;
+
+// Seuche: ebenfalls rein spielergesteuert (siehe Tsunami-Kommentar oben), kein
+// Zufallsereignis. Anders als die physischen Katastrophen oben wirkt sie NICHT
+// auf Vegetation (eine Krankheit vernichtet keine Pflanzen) und richtet auch bei
+// vollem Ausbruch keine Totalzerstoerung an (Populationen erholen sich, anders
+// als bei Atombombe/Meteor) — dafuer breitet sie sich als Kontagion ueber einen
+// GROESSEREN Radius aus als die physischen Ereignisse, da Ansteckung nicht durch
+// die Wirkung einer lokalen Explosion/Erschuetterung begrenzt ist.
+const PLAGUE_DAMAGE = 0.5;
+const PLAGUE_NEIGHBOR_DAMAGE = 0.25;
+const PLAGUE_RADIUS = 3;
+const PLAGUE_TECH_DAMAGE = 20;
 
 // Toleranz fuer die automatischen Konsistenzpruefungen (siehe js/debug.js) — rein
 // fuer Entwicklungs-/Pruefzwecke, kein Gameplay-Wert. Groesser als reine

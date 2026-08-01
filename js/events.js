@@ -1,9 +1,12 @@
-// Zufaellige Naturereignisse: Vulkanausbrueche, Erdbeben, Meteoriteneinschlaege
-// und Stuerme (Taifun/Hurrikan/Orkan) — unterbrechen den sonst glatten
-// Wachstumsverlauf mit seltenen, aber spuerbaren lokalen Zerstoerungen (und beim
-// Vulkan/Meteorit zusaetzlich globalen Auswirkungen auf Atmosphaere/Klima).
-// Struktur parallel zu currents.js/civilization.js (zustandslos, operiert auf
-// uebergebenen Zellreferenzen) — Planet.tick() ruft tick() einmal pro Jahr auf.
+// Naturereignisse: Vulkanausbrueche, Erdbeben, Meteoriteneinschlaege und Stuerme
+// (Taifun/Hurrikan/Orkan) wuerfelt tick() jaehrlich zufaellig aus — unterbrechen
+// den sonst glatten Wachstumsverlauf mit seltenen, aber spuerbaren lokalen
+// Zerstoerungen (und beim Vulkan/Meteorit zusaetzlich globalen Auswirkungen auf
+// Atmosphaere/Klima). Tsunami und Seuche sind KEINE Zufallsereignisse, sondern
+// nur ueber Planet.triggerTsunami()/triggerPlague() vom Spieler gezielt
+// ausloesbar (siehe apply*()-Kommentare unten). Struktur parallel zu
+// currents.js/civilization.js (zustandslos, operiert auf uebergebenen
+// Zellreferenzen) — Planet.tick() ruft tick() einmal pro Jahr auf.
 
 const Events = (() => {
   // Sucht per Zufalls-Retry eine Zelle mit passendem Terrain — bei seltenen
@@ -50,16 +53,64 @@ const Events = (() => {
     }
   }
 
+  // Seuche-Pendant zu devastate(): wirkt NUR auf Fauna, nie auf Vegetation (siehe
+  // PLAGUE_DAMAGE-Kommentar in data.js) und nie mit severity>=1 (kein Totalschaden).
+  function afflict(cell, severity) {
+    cell.fauna = clamp(cell.fauna * (1 - severity), 0, 100);
+  }
+
+  // Wirkung eines Vulkanausbruchs auf eine bereits validierte Landzelle (x,y) —
+  // gemeinsam genutzt vom jaehrlichen Zufalls-Wuerfeln (tick() unten) UND von
+  // Planet.triggerVolcano() (spielergesteuerte Ausloesung).
+  function applyVolcano(x, y, getCell) {
+    devastate(getCell(x, y), 1);
+    neighborsWithin(x, y, getCell, 1).forEach((c) => devastate(c, VOLCANO_NEIGHBOR_DAMAGE));
+    Atmosphere.adjust("co2", VOLCANO_CO2_BURST_PPM);
+    Atmosphere.adjust("ch4", VOLCANO_CH4_BURST_PPM);
+  }
+
+  // Wirkung eines Erdbebens, gemeinsam genutzt von tick() und
+  // Planet.triggerEarthquake() (siehe applyVolcano()-Kommentar).
+  function applyEarthquake(x, y, getCell) {
+    const cell = getCell(x, y);
+    devastate(cell, EARTHQUAKE_DAMAGE);
+    if (Civilization.hasCity(cell)) {
+      cell.techLevel = clamp(cell.techLevel - EARTHQUAKE_TECH_DAMAGE, 0, 100);
+    }
+  }
+
+  // Tsunami: nur von Planet.triggerTsunami() genutzt (siehe TSUNAMI_DAMAGE-
+  // Kommentar in data.js — kein Zufallsereignis). Epizentrum + Nachbarn im
+  // TSUNAMI_RADIUS werden getroffen, eine betroffene Stadt verliert zusaetzlich
+  // Tech-Level (Infrastruktur-/Bevoelkerungsverlust durch die Flutwelle).
+  function applyTsunami(x, y, getCell) {
+    const cell = getCell(x, y);
+    devastate(cell, TSUNAMI_DAMAGE);
+    if (Civilization.hasCity(cell)) {
+      cell.techLevel = clamp(cell.techLevel - TSUNAMI_TECH_DAMAGE, 0, 100);
+    }
+    neighborsWithin(x, y, getCell, TSUNAMI_RADIUS).forEach((c) => devastate(c, TSUNAMI_NEIGHBOR_DAMAGE));
+  }
+
+  // Seuche: nur von Planet.triggerPlague() genutzt (siehe PLAGUE_DAMAGE-Kommentar
+  // in data.js — kein Zufallsereignis). Nutzt afflict() statt devastate(): trifft
+  // Fauna/Bevoelkerung, laesst Vegetation unberuehrt.
+  function applyPlague(x, y, getCell) {
+    const cell = getCell(x, y);
+    afflict(cell, PLAGUE_DAMAGE);
+    if (Civilization.hasCity(cell)) {
+      cell.techLevel = clamp(cell.techLevel - PLAGUE_TECH_DAMAGE, 0, 100);
+    }
+    neighborsWithin(x, y, getCell, PLAGUE_RADIUS).forEach((c) => afflict(c, PLAGUE_NEIGHBOR_DAMAGE));
+  }
+
   function tick(getCell, currentTerrainFn) {
     const events = [];
 
     if (Math.random() < VOLCANO_ERUPTION_CHANCE_PER_YEAR) {
       const target = findRandomCell(getCell, currentTerrainFn, ["land"]);
       if (target) {
-        devastate(target.cell, 1);
-        neighborsWithin(target.x, target.y, getCell, 1).forEach((c) => devastate(c, VOLCANO_NEIGHBOR_DAMAGE));
-        Atmosphere.adjust("co2", VOLCANO_CO2_BURST_PPM);
-        Atmosphere.adjust("ch4", VOLCANO_CH4_BURST_PPM);
+        applyVolcano(target.x, target.y, getCell);
         events.push({ category: "disaster", message: "🌋 Ein Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", x: target.x, y: target.y });
       }
     }
@@ -67,10 +118,7 @@ const Events = (() => {
     if (Math.random() < EARTHQUAKE_CHANCE_PER_YEAR) {
       const target = findRandomCell(getCell, currentTerrainFn, ["land"]);
       if (target) {
-        devastate(target.cell, EARTHQUAKE_DAMAGE);
-        if (Civilization.hasCity(target.cell)) {
-          target.cell.techLevel = clamp(target.cell.techLevel - EARTHQUAKE_TECH_DAMAGE, 0, 100);
-        }
+        applyEarthquake(target.x, target.y, getCell);
         events.push({ category: "disaster", message: "🌍 Ein Erdbeben hat die Region erschüttert.", x: target.x, y: target.y });
       }
     }
@@ -101,5 +149,5 @@ const Events = (() => {
     return events;
   }
 
-  return { tick };
+  return { tick, applyVolcano, applyEarthquake, applyTsunami, applyPlague };
 })();
