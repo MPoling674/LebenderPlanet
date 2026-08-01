@@ -544,8 +544,10 @@ const Planet = (() => {
     });
 
     // CO2-Scrubber/Methanfilter/Emitter: gebaute Strukturen wirken kontinuierlich,
-    // im Gegensatz zum einmaligen Sprung des Gas-Reglers (siehe
-    // CO2_SCRUBBER_OUTPUT_PER_YEAR-Kommentar in data.js).
+    // im Gegensatz zum einmaligen Sprung des Gas-Reglers — verschieben zusammen mit
+    // der jeweiligen geologischen/chemischen Senke den Gleichgewichtspunkt um
+    // Strukturanzahl * MAX_SHIFT (siehe *_OUTPUT_PER_YEAR-Kommentar in data.js),
+    // statt (wie zuvor) unbegrenzt bis zum Anschlag zu laufen.
     Atmosphere.adjust("co2", -co2ScrubberCount * CO2_SCRUBBER_OUTPUT_PER_YEAR);
     Atmosphere.adjust("ch4", -methaneScrubberCount * METHANE_SCRUBBER_OUTPUT_PER_YEAR);
     Atmosphere.adjust("co2", emitterCount * EMITTER_CO2_OUTPUT_PER_YEAR);
@@ -562,8 +564,9 @@ const Planet = (() => {
     // EUKARYOTE_O2_THRESHOLD, und die >=-Pruefung schlug fuer immer fehl (Teil des
     // gemeldeten "O2 bleibt bei jedem Neustart haengen"-Fehlers). Mit einem
     // einzigen aufsummierten Delta rundet die Fliesskomma-Arithmetik nur noch
-    // einmal, wodurch der rechnerische Fixpunkt tatsaechlich bei 21%+2*Abdeckung
-    // (siehe GEOLOGICAL_O2_EQUILIBRIUM-Kommentar) ankommt.
+    // einmal, wodurch der rechnerische Fixpunkt (GEOLOGICAL_O2_EQUILIBRIUM plus
+    // Generatorenanzahl * OXYGEN_GENERATOR_MAX_SHIFT, siehe dessen Kommentar in
+    // data.js) tatsaechlich erreicht wird, statt hauchduenn darunter stecken zu bleiben.
     const o2AtYearStart = Atmosphere.get("o2");
 
     // Prokaryoten reichern die Atmosphaere langsam mit O2 an (siehe

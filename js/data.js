@@ -18,12 +18,8 @@ const GRID_HEIGHT = 30;
 // bleibt bewusst UNVERAENDERT: reale thermische Traegheit ist unabhaengig
 // davon, wie schnell sich Arten entwickeln (Klima reagiert in der Realitaet
 // ohnehin um Groessenordnungen schneller als Evolution — das war vorher schon
-// so und bleibt es). Spieler-Werkzeuge (Sauerstoffgenerator/CO2-Scrubber/
-// Emitter) werden mit dem kleineren TOOL_TIME_FACTOR gestreckt, damit sie
-// gegenueber der neuen, viel laengeren biologischen Baseline weiterhin als
-// spuerbare Abkuerzung wirken statt bedeutungslos zu werden.
+// so und bleibt es).
 const EVOLUTION_TIME_FACTOR = 25;
-const TOOL_TIME_FACTOR = 8;
 
 // Anzeige-Zeiteinheit: durch die Streckung oben laeuft ein voller Durchlauf jetzt
 // ueber mehrere hunderttausend Simulationsjahre — als "Jahr" angezeigt waeren das
@@ -407,27 +403,41 @@ const PROKARYOTE_O2_RELEASE_PER_YEAR = 0.02 / EVOLUTION_TIME_FACTOR;
 const FAUNA_MAX_O2_CONSUMPTION_PER_YEAR = 0.06 / EVOLUTION_TIME_FACTOR;
 const FAUNA_MAX_CO2_RELEASE_PPM_PER_YEAR = 8 / EVOLUTION_TIME_FACTOR;
 
-// Sauerstoffgenerator: technologische Abkuerzung zum Eukaryoten-Gate, unabhaengig
-// von biologischer Prokaryoten-Aktivitaet — deutlich schneller als der biologische
-// Weg, damit sich das Bauen tatsaechlich als Beschleunigung anfuehlt.
-const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = 0.15 / TOOL_TIME_FACTOR;
+// Sauerstoffgenerator/CO2-Scrubber/Methanfilter/Emitter: alle vier wirken als
+// KONSTANTER Jahresfluss, der der jeweiligen geologischen/chemischen Senke
+// (GEOLOGICAL_O2_RELAXATION_RATE/GEOLOGICAL_CO2_RELAXATION_RATE/GEOLOGICAL_CH4_
+// RELAXATION_RATE, siehe deren Kommentare oben) entgegenwirkt. Ein konstanter
+// Fluss gegen eine Senke, die proportional zur Abweichung vom Referenzwert
+// zurueckzieht, pendelt sich mathematisch auf einen NEUEN, stabilen Fixpunkt ein:
+// Referenzwert + (Fluss / Senkenrate) — z.B. verschiebt EIN Sauerstoffgenerator
+// den O2-Fixpunkt dauerhaft von GEOLOGICAL_O2_EQUILIBRIUM (21%) auf 22%, statt
+// (wie zuvor) unbegrenzt bis zum Anschlag (35%) zu wachsen. *_OUTPUT_PER_YEAR wird
+// deshalb bewusst NICHT als eigener, willkuerlich gewaehlter Wert definiert,
+// sondern aus dem gewuenschten Fixpunkt-Versatz (*_MAX_SHIFT) und der jeweiligen
+// Senkenrate ZURUECKGERECHNET — nur so ergibt sich exakt dieser Versatz und kein
+// anderer. Wichtige Nebenwirkung: die Anflugsgeschwindigkeit zum neuen Fixpunkt
+// ist an die Senkenrate gekoppelt (nicht mehr frei ueber TOOL_TIME_FACTOR
+// einstellbar) — Strukturen wirken damit auf derselben geologischen Zeitskala wie
+// die Senke selbst, statt als kurzfristige Abkuerzung.
+const OXYGEN_GENERATOR_MAX_SHIFT = 1; // Prozentpunkte O2, Fixpunkt-Versatz PRO Generator
+const OXYGEN_GENERATOR_OUTPUT_PER_YEAR = OXYGEN_GENERATOR_MAX_SHIFT * GEOLOGICAL_O2_RELAXATION_RATE;
 
-// CO2-Scrubber/Emitter: analoge Terraforming-Strukturen fuer CO2/CH4 statt O2 —
-// wirken kontinuierlich ueber Jahre (im Gegensatz zum Gas-Regler, der den Wert
-// einmalig sofort verschiebt), damit der Spieler das Klima gezielt UND graduell
-// gestalten kann. Rate am CO2-Wertebereich orientiert (150-2000 ppm, siehe GASES),
-// deutlich groesser als beim O2-Generator (0-35%-Skala).
-const CO2_SCRUBBER_OUTPUT_PER_YEAR = 8 / TOOL_TIME_FACTOR;
-const EMITTER_CO2_OUTPUT_PER_YEAR = 8 / TOOL_TIME_FACTOR;
-const EMITTER_CH4_OUTPUT_PER_YEAR = 0.2 / TOOL_TIME_FACTOR;
+// CO2-Scrubber/Emitter: analoge Terraforming-Strukturen fuer CO2 statt O2 (siehe
+// Kommentar oben). MAX_SHIFT aequivalent zu OXYGEN_GENERATOR_MAX_SHIFT abgeleitet:
+// 1% von O2s Spanne (0-35) ist 1/35 davon; derselbe Anteil auf die CO2-Spanne
+// (150-2000, siehe GASES) angewendet ergibt ~50 ppm.
+const CO2_SCRUBBER_MAX_SHIFT = -50; // ppm CO2, Fixpunkt-Versatz PRO Scrubber
+const CO2_SCRUBBER_OUTPUT_PER_YEAR = -CO2_SCRUBBER_MAX_SHIFT * GEOLOGICAL_CO2_RELAXATION_RATE;
+const EMITTER_CO2_MAX_SHIFT = 50; // ppm CO2, Fixpunkt-Versatz PRO Emitter
+const EMITTER_CO2_OUTPUT_PER_YEAR = EMITTER_CO2_MAX_SHIFT * GEOLOGICAL_CO2_RELAXATION_RATE;
 
-// Methanfilter: Gegenstueck zum CO2-Scrubber, aber fuer CH4 — bislang liess sich
-// Methan nur ueber den Gas-Regler (einmaliger Sprung, siehe oben) senken, der von
-// laufenden CH4-Emissionen (Zivilisation, Emitter) im naechsten Jahr wieder
-// aufgeholt wird. Rate im selben Verhaeltnis zur CH4-Skala (0-50 ppm) wie der
-// CO2-Scrubber zur CO2-Skala (150-2000 ppm) — daher identisch zu
-// EMITTER_CH4_OUTPUT_PER_YEAR (CO2_SCRUBBER_OUTPUT_PER_YEAR / 40 ≈ CH4-Aequivalent).
-const METHANE_SCRUBBER_OUTPUT_PER_YEAR = 0.2 / TOOL_TIME_FACTOR;
+// Methanfilter: Gegenstueck zum CO2-Scrubber, aber fuer CH4 (siehe Kommentar
+// oben) — MAX_SHIFT aequivalent zu OXYGEN_GENERATOR_MAX_SHIFT abgeleitet: derselbe
+// Anteil (1/35) auf die CH4-Spanne (0-50 ppm, siehe GASES) angewendet ergibt ~1,5 ppm.
+const METHANE_SCRUBBER_MAX_SHIFT = -1.5; // ppm CH4, Fixpunkt-Versatz PRO Methanfilter
+const METHANE_SCRUBBER_OUTPUT_PER_YEAR = -METHANE_SCRUBBER_MAX_SHIFT * GEOLOGICAL_CH4_RELAXATION_RATE;
+const EMITTER_CH4_MAX_SHIFT = 1.5; // ppm CH4, Fixpunkt-Versatz PRO Emitter
+const EMITTER_CH4_OUTPUT_PER_YEAR = EMITTER_CH4_MAX_SHIFT * GEOLOGICAL_CH4_RELAXATION_RATE;
 
 // Jahreswahrscheinlichkeit, mit der ein reifes Taxon mit crossHabitat-Nachfolger
 // (z.B. Fische -> Amphibien) eine geeignete leere Nachbarzelle neu besiedelt.
