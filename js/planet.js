@@ -796,6 +796,10 @@ const Planet = (() => {
   function cellInfoAt(x, y) {
     const cell = cellAt(x, y);
     if (!cell) return null;
+    const terrain = currentTerrain(cell);
+    const boundaryBias = terrain === "ocean"
+      ? Currents.boundaryCurrentBias(cellAt, (c) => currentTerrain(c) === "ocean", x, y)
+      : 0;
     return {
       x,
       y,
@@ -808,6 +812,10 @@ const Planet = (() => {
       fauna: cell.fauna,
       faunaType: cell.faunaType,
       currentDirection: Currents.currentDirectionFor(cell.latitude),
+      // Randstrom-Klassifikation (siehe BOUNDARY_CURRENT_*-Kommentar in
+      // data.js) — nur fuer den Tooltip relevant, daher hier statt in einem
+      // heissen Pfad wie Planet.tick() berechnet.
+      boundaryCurrent: boundaryBias > 0 ? "warm" : boundaryBias < 0 ? "cool" : null,
       techLevel: cell.techLevel,
       hasCity: Civilization.hasCity(cell),
       isHighTech: Civilization.isHighTech(cell),
@@ -829,6 +837,12 @@ const Planet = (() => {
       vegetationType: cell.vegetationType,
       elevation: cell.elevation,
       salinity: cell.salinity,
+      // Von PlanetMap.oceanColor() (js/map.js) fuer den Stroemungs-Tint
+      // benoetigt — ohne dieses Feld war cell.tempAnomaly dort `undefined`,
+      // was ueber Math.abs()/clamp() zu NaN-Farbwerten fuehrte (in einem
+      // Uint8ClampedArray wird NaN zu 0 -> die betroffenen Zellen erschienen
+      // schwarz statt in ihrer eigentlichen Ozeanfarbe).
+      tempAnomaly: cell.tempAnomaly,
       fauna: cell.fauna,
       faunaType: cell.faunaType,
       techLevel: cell.techLevel,

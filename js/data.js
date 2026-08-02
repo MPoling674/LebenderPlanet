@@ -368,7 +368,24 @@ const CURRENT_BANDS = [
   { maxLatitude: 1.0, direction: -1 },
 ];
 const CURRENT_ADVECTION_RATE = 0.03; // Anteil/Jahr, der von der stromaufwaerts liegenden Zelle uebernommen wird
-const CURRENT_RELAXATION_RATE = 0.05; // Anteil/Jahr, um den sich die Temperatur-Anomalie Richtung 0 (Atmosphaerenausgleich) bewegt
+const CURRENT_RELAXATION_RATE = 0.05; // Anteil/Jahr, um den sich die Temperatur-Anomalie Richtung ihres Ziels (siehe unten) bewegt
+
+// Randstroeme (Golfstrom-Analogon, siehe Currents.boundaryCurrentBias() in
+// currents.js): CURRENT_BANDS oben ist rein zonal (Ost-West) und kann daher
+// GRUNDSAETZLICH keinen polwaertigen Waermetransport abbilden — genau das ist
+// aber die reale Kernwirkung des Golfstroms (waermt Nordeuropa deutlich ueber
+// die Breitengrad-Erwartung hinaus). Modelliert stattdessen die reale
+// Ozeanwirbel-Physik: Westrandstroeme (an der Westkueste eines Ozeanbeckens)
+// transportieren warmes Wasser polwaerts, Ostrandstroeme kuehles Wasser
+// aequatorwaerts (Auftrieb, reales Beispiel Humboldtstrom vor Peru/
+// Kalifornien) — dieselbe Zirkulation, zwei Seiten. BOUNDARY_CURRENT_SCAN_
+// RADIUS bestimmt, wie nah eine Ozeanzelle an einer Kueste liegen muss, um
+// als Randstrom zu gelten. WARM_BIAS/COOL_BIAS sind die Ziel-Temperatur-
+// anomalien, denen sich cell.tempAnomaly annaehert (ersetzt die vorherige
+// feste Relaxation Richtung 0 fuer offenen Ozean bleibt weiterhin 0).
+const BOUNDARY_CURRENT_SCAN_RADIUS = 4;
+const BOUNDARY_CURRENT_WARM_BIAS = 4; // °C, Westrandstrom (golfstromartig)
+const BOUNDARY_CURRENT_COOL_BIAS = -3; // °C, Ostrandstrom (Auftrieb)
 
 // Normierung, um Meeresspiegelanstieg (m) auf die 0..1-Hoehenskala zu beziehen.
 // Bewusst NICHT die reale Hoehe des hoechsten Berges (das waere hier irrelevant,

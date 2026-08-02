@@ -336,6 +336,8 @@ const UI = (() => {
     if (info.terrain === "ocean") {
       html += `<br>Salzgehalt: ${info.salinity.toFixed(1)} ‰`;
       html += `<br>Strömung: Richtung ${info.currentDirection > 0 ? "Osten" : "Westen"}`;
+      if (info.boundaryCurrent === "warm") html += ` (warmer Küstenstrom, golfstromartig)`;
+      else if (info.boundaryCurrent === "cool") html += ` (kalter Auftriebsstrom)`;
     }
     if (info.faunaType) {
       const faunaType = getFaunaType(info.faunaType);

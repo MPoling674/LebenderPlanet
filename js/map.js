@@ -102,12 +102,25 @@ const PlanetMap = (() => {
   const SALINITY_LOW_TINT = [58, 128, 108];
   const SALINITY_HIGH_TINT = [58, 118, 148];
 
+  // Stroemungs-Tint (siehe BOUNDARY_CURRENT_*-Kommentar in data.js): macht
+  // Randstroeme (Golfstrom-Analogon) und sonstige Temperatur-Anomalien
+  // (z.B. Einschlagswinter-Ausbreitung ueber die zonale Stroemung) sichtbar
+  // — warme Anomalien orange-rot, kalte blau. Da der 3D-Globus (js/planet3d.js)
+  // denselben Canvas als Textur wiederverwendet, ist der Effekt automatisch
+  // auch dort sichtbar.
+  const CURRENT_WARM_TINT = [214, 104, 58];
+  const CURRENT_COOL_TINT = [56, 104, 156];
+
   function oceanColor(cell) {
     const depthFraction = (SEA_LEVEL_THRESHOLD - cell.elevation) / SEA_LEVEL_THRESHOLD;
     const base = lerpColor(OCEAN_SHALLOW, OCEAN_DEEP, depthFraction);
     const salinityFraction = clamp((cell.salinity - OCEAN_SALINITY_MIN) / (OCEAN_SALINITY_MAX - OCEAN_SALINITY_MIN), 0, 1);
     const tint = lerpColor(SALINITY_LOW_TINT, SALINITY_HIGH_TINT, salinityFraction);
-    return lerpColor(base, tint, 0.15);
+    const withSalinity = lerpColor(base, tint, 0.15);
+    const currentFraction = clamp(Math.abs(cell.tempAnomaly) / BOUNDARY_CURRENT_WARM_BIAS, 0, 1);
+    if (currentFraction <= 0) return withSalinity;
+    const currentTint = cell.tempAnomaly > 0 ? CURRENT_WARM_TINT : CURRENT_COOL_TINT;
+    return lerpColor(withSalinity, currentTint, currentFraction * 0.4);
   }
 
   function landColor(cell) {
