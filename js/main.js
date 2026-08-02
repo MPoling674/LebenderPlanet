@@ -261,6 +261,56 @@ const Game = (() => {
     UI.log("Eine neue Simulation beginnt.");
   }
 
+  // Startet statt eines fiktiven Zufallsplaneten eine Simulation mit den
+  // heutigen realen Erdwerten (CO2/O2/CH4, Achsneigung, Mond-/Planetenmasse)
+  // und einem bereits ausgereiften, besiedelten Planeten (siehe
+  // Planet.seedRealEarth() in planet.js — direkt geseedet statt ueber
+  // Jahrtausende simuliert, das waere langsam und wegen Zufallselementen nicht
+  // zuverlaessig "erdaehnlich"). Reale Referenzwerte: CO2 ~425ppm, CH4 ~1,9ppm,
+  // O2 ~20,9% (Stand ~2024).
+  function handleStartRealEarth() {
+    if (!window.confirm("Simulation mit dem heutigen Zustand der Erde starten? Der aktuelle Fortschritt geht dabei verloren.")) return;
+    localStorage.removeItem(SAVE_KEY);
+    year = 0;
+    Atmosphere.init();
+    Atmosphere.set("co2", 425);
+    Atmosphere.set("ch4", 1.9);
+    Atmosphere.set("o2", 20.9);
+    // Ueber Climate.restore() statt init(): init() wuerde primordialHeat/
+    // outgassedWaterReserve auf den "kochender Startplanet"-Ausgangszustand
+    // setzen (siehe PRIMORDIAL_HEAT_START-Kommentar in data.js) — die heutige
+    // Erde ist laengst abgekuehlt und vollstaendig ausgegast/kondensiert,
+    // gleiches Prinzip wie beim Migrations-Default fuer alte Spielstaende.
+    const realTemp = 15; // grobe Naeherung an das reale globale Mittel heute
+    Climate.restore({
+      temp: realTemp,
+      ice: clamp(BASE_ICE_COVERAGE - ICE_TEMP_SENSITIVITY * (realTemp - BASE_GLOBAL_TEMP), 0, 1),
+      orbitalYear: 0,
+      orbitalPhase: { obliquity: 0, precession: 0, eccentricity: 0 },
+      impactWinterIntensity: 0,
+      primordialHeat: 0,
+      outgassedWaterReserve: 1,
+      waterVolume: 1,
+      solarLuminosityFactor: 1,
+      fieldStrength: 1,
+      axialTilt: TILT_REFERENCE_DEGREES,
+      moonMass: MOON_MASS_DEFAULT,
+      planetMass: PLANET_MASS_DEFAULT,
+    });
+    Planet.init();
+    // Reihenfolge wichtig: forceLifeEstablished() VOR seedRealEarth(), da
+    // Fauna.suitability() sonst fuer alles ausser Prokaryoten 0 liefert.
+    Fauna.forceLifeEstablished();
+    Planet.seedRealEarth();
+    Civilization.init();
+    Charts.resetHistory();
+    UI.setYear(year);
+    renderAll();
+    saveGame();
+    UI.setSaveStatus("Simulation mit heutiger Erde gestartet.");
+    UI.log("Eine neue Simulation beginnt — mit dem heutigen Zustand der Erde.");
+  }
+
   // Laeuft dauerhaft im Hintergrund; ein einzelner fehlerhafter Simulationsschritt
   // soll die automatische Zeit nicht dauerhaft anhalten (Resilienz-Muster wie in
   // HanseSpiel).
@@ -302,6 +352,7 @@ const Game = (() => {
     UI.on("exportSave", handleExportSave);
     UI.on("importSave", handleImportSave);
     UI.on("newGame", handleNewGame);
+    UI.on("startRealEarth", handleStartRealEarth);
 
     UI.setYear(year);
     UI.setSpeedLabel(simSpeed);

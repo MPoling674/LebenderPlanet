@@ -65,6 +65,7 @@ const UI = (() => {
     el.saveImportInput = document.getElementById("save-import-input");
     el.saveStatus = document.getElementById("save-status");
     el.newGameBtn = document.getElementById("new-game-btn");
+    el.startRealEarthBtn = document.getElementById("start-real-earth-btn");
 
     el.eventsOverviewBtn = document.getElementById("events-overview-btn");
     el.eventsOverviewModal = document.getElementById("events-overview-modal");
@@ -99,6 +100,7 @@ const UI = (() => {
       el.saveImportInput.value = "";
     });
     el.newGameBtn.addEventListener("click", () => callbacks.newGame && callbacks.newGame());
+    el.startRealEarthBtn.addEventListener("click", () => callbacks.startRealEarth && callbacks.startRealEarth());
 
     el.eventsOverviewBtn.addEventListener("click", () => {
       el.eventsOverviewModal.classList.remove("hidden");

@@ -351,6 +351,56 @@ const Planet = (() => {
     return { ok: false, reason: "Unbekannte Aktion." };
   }
 
+  // "Heutige Erde"-Startpreset (siehe main.js handleStartRealEarth()): seedet
+  // direkt einen ausgereiften, besiedelten Planetenzustand, statt ihn ueber
+  // Jahrtausende zu simulieren (waere langsam UND wegen der Zufallselemente in
+  // tickCell()/tickCellVegetation() nicht zuverlaessig "erdaehnlich" im
+  // Ergebnis). Nutzt dieselbe Eignungslogik wie normales Terraforming
+  // (bestVegTypeFor/Fauna.suitability) — reine Startbelegung, keine neue Regel.
+  // Aufrufer muss VORHER Fauna.forceLifeEstablished() aufrufen, sonst liefert
+  // Fauna.suitability() fuer alles ausser Prokaryoten 0 (siehe dortiger
+  // cachedLifeEstablished-Guard).
+  const REAL_EARTH_LAND_FAUNA_PRIORITY = ["placentals", "reptiles", "arthropods"];
+  const REAL_EARTH_CITY_CHANCE = 0.18; // Anteil zivilisationsfaehiger Landzellen mit einer Stadt
+
+  function seedRealEarth() {
+    cells.forEach((cell) => {
+      const terrain = currentTerrain(cell);
+      const temp = localTemperature(cell);
+      if (terrain === "ocean") {
+        const fish = getFaunaType("fish");
+        if (Fauna.suitability(cell, terrain, temp, fish) > 0) {
+          cell.faunaType = "fish";
+          cell.fauna = 80 + Math.random() * 20;
+        } else {
+          cell.faunaType = "prokaryotes";
+          cell.fauna = 100;
+        }
+        return;
+      }
+      if (terrain !== "land") return; // Eis bleibt unbesiedelt
+
+      const vegType = bestVegTypeFor(temp);
+      if (vegType) {
+        cell.vegetationType = vegType.id;
+        cell.vegetation = 70 + Math.random() * 20;
+      }
+
+      for (const typeId of REAL_EARTH_LAND_FAUNA_PRIORITY) {
+        const type = getFaunaType(typeId);
+        if (Fauna.suitability(cell, terrain, temp, type) > 0) {
+          cell.faunaType = typeId;
+          cell.fauna = 70 + Math.random() * 25;
+          if (type.civilizationCapable && Math.random() < REAL_EARTH_CITY_CHANCE) {
+            cell.techLevel = 70 + Math.random() * 25;
+          }
+          break;
+        }
+      }
+    });
+    rebuildDiscoveries();
+  }
+
   // Zerstoert eine Hochtechnologie-Stadt per Atombombe (siehe Civilization.detonate).
   function detonate(x, y) {
     const cell = cellAt(x, y);
@@ -858,5 +908,5 @@ const Planet = (() => {
     rebuildDiscoveries();
   }
 
-  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, triggerVolcano, triggerEarthquake, triggerTsunami, triggerPlague, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, serialize, restore };
+  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, triggerVolcano, triggerEarthquake, triggerTsunami, triggerPlague, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, seedRealEarth, serialize, restore };
 })();

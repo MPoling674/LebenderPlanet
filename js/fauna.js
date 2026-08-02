@@ -102,6 +102,22 @@ const Fauna = (() => {
     return cachedEukaryotesEstablished;
   }
 
+  // Fuer das "Heutige Erde"-Startpreset (siehe Planet.seedRealEarth() in
+  // planet.js): auf einem bereits voll entwickelten Planeten sind Eukaryoten
+  // laengst etabliert, UNABHAENGIG vom aktuellen O2-Wert — der reale heutige
+  // O2-Gehalt (~20,9%) liegt sogar unter EUKARYOTE_O2_THRESHOLD (23%, siehe
+  // data.js), weil diese Schwelle den historischen URSPRUNG der Eukaryoten
+  // beschreibt (Great Oxidation Event), nicht den heutigen Gleichgewichtswert.
+  // Setzt direkt alle drei Gate-Variablen, statt auf computeGate() zu warten
+  // (das wuerde bei O2 < Schwelle canGrow=false berechnen und den Ratschen-
+  // Mechanismus fuer ein frisches Preset nie ausloesen).
+  function forceLifeEstablished() {
+    cachedEukaryotesCanGrow = true;
+    everEukaryotesEstablished = true;
+    cachedEukaryotesEstablished = true;
+    cachedLifeEstablished = true;
+  }
+
   // Eignung 0..1: Land braucht zusaetzlich zur Temperatur eine Mindest-
   // Vegetationsdeckung (Nahrungsgrundlage), Meer kombiniert Temperatur- und
   // Salzgehalt-Eignung (jeweils schlechtester Wert zaehlt). Praerequisiten-Gates
@@ -274,5 +290,5 @@ const Fauna = (() => {
     });
   }
 
-  return { computeGate, noteYearEnd, eukaryotesEstablished, suitability, tickCell, tickSpawns };
+  return { computeGate, noteYearEnd, eukaryotesEstablished, forceLifeEstablished, suitability, tickCell, tickSpawns };
 })();
