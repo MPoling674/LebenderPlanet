@@ -68,7 +68,14 @@ const MapViewport = (() => {
     const viewportWidth = viewport.clientWidth;
     displayWidth = viewportWidth * ZOOM;
     displayHeight = displayWidth / (GRID_WIDTH / GRID_HEIGHT);
-    viewport.style.height = displayHeight / ZOOM + "px";
+    // BUGFIX: hier stand faelschlich "displayHeight / ZOOM" — das machte den
+    // Viewport nur halb so hoch wie der (auf ZOOM-fache Breite gestreckte)
+    // Kartenstreifen tatsaechlich ist, wodurch overflow:hidden die komplette
+    // untere Haelfte der Karte abschnitt (weder sichtbar noch anklickbar,
+    // gemeldeter Fehler). Der Viewport muss die VOLLE Streifenhoehe zeigen,
+    // da vertikal (Breitengrad) bewusst NICHT gezoomt/gepannt wird (siehe
+    // Datei-Kommentar oben) — nur die Breite wird auf ZOOM gestreckt.
+    viewport.style.height = displayHeight + "px";
     [canvasA, canvasB].forEach((c) => {
       c.style.width = displayWidth + "px";
       c.style.height = displayHeight + "px";
