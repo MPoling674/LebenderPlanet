@@ -9,12 +9,23 @@ body {
 
 #hud {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 24px;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 20px;
   background: #10182a;
   border-bottom: 2px solid #2e6f4e;
 }
+
+/* #hud-pinned (immer sichtbar: Jahr/Temperatur) und die aktive .tab-panel
+   (siehe UI.initTabs() in js/ui.js) legen ihre eigenen hud-items als Zeile an
+   — #hud selbst ist jetzt nur noch eine Spalte aus Pinned-Zeile/Tab-Leiste/
+   Tab-Inhalt. */
+#hud-pinned, #hud .tab-panel.active {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+#hud-pinned { padding-bottom: 8px; border-bottom: 1px solid #223047; }
 
 .hud-item { display: flex; flex-direction: column; font-size: 13px; }
 .hud-item .label { color: #93a3b8; font-size: 11px; text-transform: uppercase; }
@@ -25,6 +36,25 @@ body {
   font-weight: normal;
   white-space: nowrap;
 }
+
+#intro-text {
+  margin: 0;
+  padding: 10px 20px;
+  color: #93a3b8;
+  font-size: 13px;
+  text-align: center;
+  background: #0d1420;
+  border-bottom: 1px solid #223047;
+}
+
+#quickstart {
+  padding: 10px 20px;
+  background: #0d1420;
+  border-bottom: 2px solid #2e6f4e;
+}
+#quickstart h2 { margin: 0 0 8px; font-size: 14px; color: #7fd6a3; }
+.quickstart-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.quickstart-buttons button { flex: 1 1 180px; }
 
 #game {
   display: flex;
@@ -116,13 +146,32 @@ body {
 #map-tooltip.hidden { display: none; }
 
 #sidebar {
-  flex: 0 0 340px;
+  flex: 0 0 390px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   max-height: calc(100vh - 90px);
   overflow-y: auto;
 }
+
+/* Tab-Muster aus HanseSpiel (G:\Meine Ablage\HanseSpiel\style.css) uebernommen,
+   fuer beide Tab-Gruppen (Sidebar + HUD) wiederverwendet — siehe UI.initTabs()
+   in js/ui.js. */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tab-btn {
+  flex: 1 1 auto;
+  padding: 8px;
+  background: #10182a;
+  border: 1px solid #223047;
+  color: #93a3b8;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.tab-btn:hover { background: #16233a; }
+.tab-btn.active { background: #2e6f4e; border-color: #7fd6a3; color: #fff; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 
 #sidebar section {
   background: #10182a;

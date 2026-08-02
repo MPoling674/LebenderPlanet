@@ -261,54 +261,146 @@ const Game = (() => {
     UI.log("Eine neue Simulation beginnt.");
   }
 
-  // Startet statt eines fiktiven Zufallsplaneten eine Simulation mit den
-  // heutigen realen Erdwerten (CO2/O2/CH4, Achsneigung, Mond-/Planetenmasse)
-  // und einem bereits ausgereiften, besiedelten Planeten (siehe
-  // Planet.seedRealEarth() in planet.js — direkt geseedet statt ueber
-  // Jahrtausende simuliert, das waere langsam und wegen Zufallselementen nicht
-  // zuverlaessig "erdaehnlich"). Reale Referenzwerte: CO2 ~425ppm, CH4 ~1,9ppm,
-  // O2 ~20,9% (Stand ~2024).
-  function handleStartRealEarth() {
-    if (!window.confirm("Simulation mit dem heutigen Zustand der Erde starten? Der aktuelle Fortschritt geht dabei verloren.")) return;
+  // Generalisierte Grundlage fuer alle Schnellstart-Presets (siehe PRESETS
+  // unten) — ersetzt vier fast identische Handler durch EINEN, konfigurierten
+  // Ablauf: Bestaetigung, Atmosphaere setzen, Klimazustand setzen, Planet neu
+  // erzeugen, optional sofort mit ausgereiftem Leben besiedeln (statt ueber
+  // Jahrtausende zu simulieren — das waere langsam UND wegen Zufallselementen
+  // nicht zuverlaessig "wie gewuenscht"), speichern.
+  function startPreset(preset) {
+    if (!window.confirm(preset.confirmMessage + " Der aktuelle Fortschritt geht dabei verloren.")) return;
     localStorage.removeItem(SAVE_KEY);
     year = 0;
     Atmosphere.init();
-    Atmosphere.set("co2", 425);
-    Atmosphere.set("ch4", 1.9);
-    Atmosphere.set("o2", 20.9);
+    Atmosphere.set("co2", preset.atmosphere.co2);
+    Atmosphere.set("ch4", preset.atmosphere.ch4);
+    Atmosphere.set("o2", preset.atmosphere.o2);
     // Ueber Climate.restore() statt init(): init() wuerde primordialHeat/
-    // outgassedWaterReserve auf den "kochender Startplanet"-Ausgangszustand
-    // setzen (siehe PRIMORDIAL_HEAT_START-Kommentar in data.js) — die heutige
-    // Erde ist laengst abgekuehlt und vollstaendig ausgegast/kondensiert,
-    // gleiches Prinzip wie beim Migrations-Default fuer alte Spielstaende.
-    const realTemp = 15; // grobe Naeherung an das reale globale Mittel heute
+    // outgassedWaterReserve immer auf den "kochender Startplanet"-Ausgangs-
+    // zustand setzen (siehe PRIMORDIAL_HEAT_START-Kommentar in data.js) — die
+    // Presets hier repraesentieren aber bereits abgekuehlte, ausgegaste
+    // Planeten mit je eigenem Zielklima, gleiches Prinzip wie beim
+    // Migrations-Default fuer alte Spielstaende.
     Climate.restore({
-      temp: realTemp,
-      ice: clamp(BASE_ICE_COVERAGE - ICE_TEMP_SENSITIVITY * (realTemp - BASE_GLOBAL_TEMP), 0, 1),
       orbitalYear: 0,
       orbitalPhase: { obliquity: 0, precession: 0, eccentricity: 0 },
       impactWinterIntensity: 0,
       primordialHeat: 0,
       outgassedWaterReserve: 1,
       waterVolume: 1,
-      solarLuminosityFactor: 1,
-      fieldStrength: 1,
-      axialTilt: TILT_REFERENCE_DEGREES,
-      moonMass: MOON_MASS_DEFAULT,
-      planetMass: PLANET_MASS_DEFAULT,
+      ...preset.climate,
     });
     Planet.init();
-    // Reihenfolge wichtig: forceLifeEstablished() VOR seedRealEarth(), da
-    // Fauna.suitability() sonst fuer alles ausser Prokaryoten 0 liefert.
-    Fauna.forceLifeEstablished();
-    Planet.seedRealEarth();
+    if (preset.seedLife) {
+      // Reihenfolge wichtig: forceLifeEstablished() VOR seedRealEarth(), da
+      // Fauna.suitability() sonst fuer alles ausser Prokaryoten 0 liefert.
+      Fauna.forceLifeEstablished();
+      Planet.seedRealEarth();
+    }
     Civilization.init();
     Charts.resetHistory();
     UI.setYear(year);
     renderAll();
     saveGame();
-    UI.setSaveStatus("Simulation mit heutiger Erde gestartet.");
-    UI.log("Eine neue Simulation beginnt — mit dem heutigen Zustand der Erde.");
+    UI.setSaveStatus(preset.statusMessage);
+    UI.log(preset.logMessage);
+  }
+
+  // Vier Schnellstart-Szenarien (siehe UI-Buttons in index.html) — bewusst
+  // unterschiedliche GAMEPLAY-Situationen, nicht nur andere Zahlen:
+  const PRESETS = {
+    // Reale Referenzwerte: CO2 ~425ppm, CH4 ~1,9ppm, O2 ~20,9% (Stand ~2024).
+    earth: {
+      confirmMessage: "Simulation mit dem heutigen Zustand der Erde starten?",
+      atmosphere: { co2: 425, ch4: 1.9, o2: 20.9 },
+      climate: {
+        temp: 15, // grobe Naeherung an das reale globale Mittel heute
+        ice: clamp(BASE_ICE_COVERAGE - ICE_TEMP_SENSITIVITY * (15 - BASE_GLOBAL_TEMP), 0, 1),
+        solarLuminosityFactor: 1,
+        fieldStrength: 1,
+        axialTilt: TILT_REFERENCE_DEGREES,
+        moonMass: MOON_MASS_DEFAULT,
+        planetMass: PLANET_MASS_DEFAULT,
+      },
+      seedLife: true,
+      statusMessage: "Simulation mit heutiger Erde gestartet.",
+      logMessage: "Eine neue Simulation beginnt — mit dem heutigen Zustand der Erde.",
+    },
+    // Klein (PLANET_MASS_MIN=0,3 ist der niedrigste ueber den Regler
+    // erreichbare Wert — der reale Mars liegt mit 0,107 Erdmassen darunter),
+    // kalt, CO2-arm, kaum O2, SCHWACHES Magnetfeld — knuepft direkt an den
+    // Atmosphaerenerosions-Mechanismus einer frueheren Session an: die
+    // Atmosphaere erodiert bereits spuerbar, waehrend der Spieler sie
+    // aufzubauen versucht. Achsneigung 25° = realer Marswert.
+    mars: {
+      confirmMessage: "Mars-artigen Planeten terraformen?",
+      // o2:4 ist der PRAKTISCHE Mindestwert: O2/N2 sind gekoppelt (Summe fix
+      // bei ATMOSPHERE_MAJOR_GAS_TOTAL=99, siehe atmosphere.js), N2 selbst hat
+      // sein eigenes Maximum (95, siehe GASES in data.js) — tiefer als
+      // 99-95=4 laesst sich O2 ueber Atmosphere.set() grundsaetzlich nicht
+      // druecken, ein niedrigerer Zahlenwert hier wuerde beim naechsten
+      // set()-Aufruf ohnehin still auf 4 angehoben.
+      atmosphere: { co2: 190, ch4: 0, o2: 4 },
+      climate: {
+        temp: -60,
+        ice: 0.35,
+        solarLuminosityFactor: 1,
+        fieldStrength: 0.15,
+        axialTilt: 25,
+        moonMass: 0.01,
+        planetMass: PLANET_MASS_MIN,
+      },
+      seedLife: false,
+      statusMessage: "Mars-Terraforming gestartet.",
+      logMessage: "Eine neue Simulation beginnt — ein kalter, leblose Planet mit schwachem Magnetfeld wartet auf Terraforming.",
+    },
+    // Schneeball-Szenario (reale Analogie: die "Snowball Earth"-Hypothese,
+    // bereits in den Albedo-Feedback-Kommentaren dieser Codebase referenziert)
+    // — sehr kalt, CO2 nahe Minimum, hohe Eisbedeckung, gedaempfte
+    // Sonnenleuchtkraft verschaerft die Herausforderung, den Planeten wieder
+    // aufzutauen.
+    ice: {
+      confirmMessage: "Eisplanet (Schneeball-Szenario) erschaffen?",
+      atmosphere: { co2: 160, ch4: 0.1, o2: 4 }, // siehe o2:4-Kommentar beim Mars-Preset oben
+      climate: {
+        temp: -40,
+        ice: 0.9,
+        solarLuminosityFactor: 0.85,
+        fieldStrength: 1,
+        axialTilt: TILT_REFERENCE_DEGREES,
+        moonMass: MOON_MASS_DEFAULT,
+        planetMass: PLANET_MASS_DEFAULT,
+      },
+      seedLife: false,
+      statusMessage: "Eisplanet gestartet.",
+      logMessage: "Eine neue Simulation beginnt — ein gefrorener Planet wartet darauf, aufgetaut zu werden.",
+    },
+    // Maximale Planetenmasse: staerkere Schwerkraft haelt die Atmosphaere
+    // besser (Bonus-Kopplung aus einer frueheren Session, hier direkt
+    // erlebbar), gemaessigtes Startklima nahe BASE_GLOBAL_TEMP — freundliche
+    // Ausgangsbedingungen fuer die Evolution.
+    superEarth: {
+      confirmMessage: "Supererde erschaffen?",
+      atmosphere: { co2: 320, ch4: 1, o2: 19 },
+      climate: {
+        temp: BASE_GLOBAL_TEMP,
+        ice: BASE_ICE_COVERAGE,
+        solarLuminosityFactor: 1,
+        fieldStrength: 1,
+        axialTilt: TILT_REFERENCE_DEGREES,
+        moonMass: MOON_MASS_DEFAULT,
+        planetMass: PLANET_MASS_MAX,
+      },
+      seedLife: false,
+      statusMessage: "Supererde gestartet.",
+      logMessage: "Eine neue Simulation beginnt — eine grosse, gastfreundliche Welt wartet auf ihre Evolution.",
+    },
+  };
+
+  function handleStartPreset(presetKey) {
+    const preset = PRESETS[presetKey];
+    if (!preset) return;
+    startPreset(preset);
   }
 
   // Laeuft dauerhaft im Hintergrund; ein einzelner fehlerhafter Simulationsschritt
@@ -352,7 +444,7 @@ const Game = (() => {
     UI.on("exportSave", handleExportSave);
     UI.on("importSave", handleImportSave);
     UI.on("newGame", handleNewGame);
-    UI.on("startRealEarth", handleStartRealEarth);
+    UI.on("startPreset", handleStartPreset);
 
     UI.setYear(year);
     UI.setSpeedLabel(simSpeed);

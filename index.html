@@ -8,30 +8,66 @@
 </head>
 <body>
 <header id="hud">
-  <div class="hud-item"><span class="label">Zeit</span><span id="hud-year">Jahrtausend 0</span></div>
-  <div class="hud-item"><span class="label">Ø-Temperatur</span><span id="hud-temp">0 °C</span></div>
-  <div class="hud-item"><span class="label">Meeresspiegel</span><span id="hud-sealevel">+0 m</span></div>
-  <div class="hud-item"><span class="label">Eisbedeckung</span><span id="hud-ice">0 %</span></div>
-  <div class="hud-item"><span class="label">Vegetation</span><span id="hud-vegetation">0 %</span></div>
-  <div class="hud-item hud-item-wide"><span class="label">Vegetationsarten (Landanteil)</span><span id="hud-vegtypes">–</span></div>
-  <div class="hud-item"><span class="label">Ø Salzgehalt</span><span id="hud-salinity">0 ‰</span></div>
-  <div class="hud-item"><span class="label">Fauna</span><span id="hud-fauna">0 %</span></div>
-  <div class="hud-item hud-item-wide"><span class="label">Fauna-Arten</span><span id="hud-faunatypes">–</span></div>
-  <div class="hud-item"><span class="label">Städte</span><span id="hud-cities">0</span></div>
-  <div class="hud-item"><span class="label">Weltbevölkerung</span><span id="hud-population">0</span></div>
-  <div class="hud-item"><span class="label">Sauerstoff</span><span id="hud-o2">0 %</span></div>
-  <div class="hud-item"><span class="label">Kohlendioxid</span><span id="hud-co2">0 ppm</span></div>
-  <div class="hud-item"><span class="label">Methan</span><span id="hud-ch4">0 ppm</span></div>
-  <div class="hud-item" title="Gesamter CO₂-Ausstoß durch Zivilisation seit Spielbeginn"><span class="label">CO₂ durch Zivilisation</span><span id="hud-civ-co2">0 ppm</span></div>
-  <div class="hud-item" title="Gesamter CH₄-Ausstoß durch Zivilisation seit Spielbeginn"><span class="label">CH₄ durch Zivilisation</span><span id="hud-civ-ch4">0 ppm</span></div>
-  <div class="hud-item" title="Ozeanversauerung: sinkt mit steigendem CO₂"><span class="label">Ozean-pH</span><span id="hud-ocean-ph">0</span></div>
-  <div class="hud-item" title="Gelöster Sauerstoff im Ozean: sinkt mit steigender Temperatur (anoxische Ereignisse)"><span class="label">Ozean-O₂</span><span id="hud-ocean-o2">0 %</span></div>
-  <div class="hud-item" title="Sonnenleuchtkraft relativ zum heutigen Wert (junge Sterne strahlen schwächer)"><span class="label">Sonnenleuchtkraft</span><span id="hud-solar">0 %</span></div>
-  <div class="hud-item" title="Planetenmagnetfeld: schützt die Atmosphäre vor Sonnenwind-Erosion"><span class="label">Magnetfeld</span><span id="hud-magnetfield">0 %</span></div>
-  <div class="hud-item" title="Neigung der Rotationsachse — beeinflusst das Breitengefälle und die Jahreszeiten-Stärke"><span class="label">Achsneigung</span><span id="hud-tilt">0 °</span></div>
-  <div class="hud-item" title="Mondmasse relativ zum heutigen Erdmond — stabilisiert die Achsneigung"><span class="label">Mondmasse</span><span id="hud-moonmass">0×</span></div>
-  <div class="hud-item" title="Planetenmasse relativ zur Erde — schützt zusammen mit dem Magnetfeld vor Atmosphärenerosion"><span class="label">Planetenmasse</span><span id="hud-planetmass">0×</span></div>
+  <div id="hud-pinned">
+    <div class="hud-item"><span class="label">Zeit</span><span id="hud-year">Jahrtausend 0</span></div>
+    <div class="hud-item"><span class="label">Ø-Temperatur</span><span id="hud-temp">0 °C</span></div>
+  </div>
+
+  <div class="tabs" id="hud-tabs">
+    <button class="tab-btn active" data-tab="hud-overview">Übersicht</button>
+    <button class="tab-btn" data-tab="hud-civilization">Zivilisation</button>
+    <button class="tab-btn" data-tab="hud-atmosphere">Atmosphäre</button>
+    <button class="tab-btn" data-tab="hud-ocean">Ozean</button>
+    <button class="tab-btn" data-tab="hud-orbit">Orbit</button>
+  </div>
+
+  <div id="tab-hud-overview" class="tab-panel active">
+    <div class="hud-item"><span class="label">Meeresspiegel</span><span id="hud-sealevel">+0 m</span></div>
+    <div class="hud-item"><span class="label">Eisbedeckung</span><span id="hud-ice">0 %</span></div>
+    <div class="hud-item"><span class="label">Vegetation</span><span id="hud-vegetation">0 %</span></div>
+    <div class="hud-item hud-item-wide"><span class="label">Vegetationsarten (Landanteil)</span><span id="hud-vegtypes">–</span></div>
+    <div class="hud-item"><span class="label">Ø Salzgehalt</span><span id="hud-salinity">0 ‰</span></div>
+    <div class="hud-item"><span class="label">Fauna</span><span id="hud-fauna">0 %</span></div>
+    <div class="hud-item hud-item-wide"><span class="label">Fauna-Arten</span><span id="hud-faunatypes">–</span></div>
+  </div>
+
+  <div id="tab-hud-civilization" class="tab-panel">
+    <div class="hud-item"><span class="label">Städte</span><span id="hud-cities">0</span></div>
+    <div class="hud-item"><span class="label">Weltbevölkerung</span><span id="hud-population">0</span></div>
+    <div class="hud-item" title="Gesamter CO₂-Ausstoß durch Zivilisation seit Spielbeginn"><span class="label">CO₂ durch Zivilisation</span><span id="hud-civ-co2">0 ppm</span></div>
+    <div class="hud-item" title="Gesamter CH₄-Ausstoß durch Zivilisation seit Spielbeginn"><span class="label">CH₄ durch Zivilisation</span><span id="hud-civ-ch4">0 ppm</span></div>
+  </div>
+
+  <div id="tab-hud-atmosphere" class="tab-panel">
+    <div class="hud-item"><span class="label">Sauerstoff</span><span id="hud-o2">0 %</span></div>
+    <div class="hud-item"><span class="label">Kohlendioxid</span><span id="hud-co2">0 ppm</span></div>
+    <div class="hud-item"><span class="label">Methan</span><span id="hud-ch4">0 ppm</span></div>
+  </div>
+
+  <div id="tab-hud-ocean" class="tab-panel">
+    <div class="hud-item" title="Ozeanversauerung: sinkt mit steigendem CO₂"><span class="label">Ozean-pH</span><span id="hud-ocean-ph">0</span></div>
+    <div class="hud-item" title="Gelöster Sauerstoff im Ozean: sinkt mit steigender Temperatur (anoxische Ereignisse)"><span class="label">Ozean-O₂</span><span id="hud-ocean-o2">0 %</span></div>
+  </div>
+
+  <div id="tab-hud-orbit" class="tab-panel">
+    <div class="hud-item" title="Sonnenleuchtkraft relativ zum heutigen Wert (junge Sterne strahlen schwächer)"><span class="label">Sonnenleuchtkraft</span><span id="hud-solar">0 %</span></div>
+    <div class="hud-item" title="Planetenmagnetfeld: schützt die Atmosphäre vor Sonnenwind-Erosion"><span class="label">Magnetfeld</span><span id="hud-magnetfield">0 %</span></div>
+    <div class="hud-item" title="Neigung der Rotationsachse — beeinflusst das Breitengefälle und die Jahreszeiten-Stärke"><span class="label">Achsneigung</span><span id="hud-tilt">0 °</span></div>
+    <div class="hud-item" title="Mondmasse relativ zum heutigen Erdmond — stabilisiert die Achsneigung"><span class="label">Mondmasse</span><span id="hud-moonmass">0×</span></div>
+    <div class="hud-item" title="Planetenmasse relativ zur Erde — schützt zusammen mit dem Magnetfeld vor Atmosphärenerosion"><span class="label">Planetenmasse</span><span id="hud-planetmass">0×</span></div>
+  </div>
 </header>
+
+<p id="intro-text">Erschaffe einen lebensfähigen Planeten und begleite seine Entwicklung über Jahrtausende.</p>
+<section id="quickstart">
+  <h2>Schnellstart</h2>
+  <div class="quickstart-buttons">
+    <button data-preset="earth" title="Heutiger CO₂-/O₂-Wert, Achsneigung 23,5°, bereits besiedelt mit Vegetation, Fauna und Städten.">🌍 Heutige Erde</button>
+    <button data-preset="mars" title="Kleiner, kalter, CO₂-armer Planet mit schwachem Magnetfeld — die Atmosphäre erodiert bereits, während du sie aufbaust.">🔴 Mars terraformen</button>
+    <button data-preset="ice" title="Schneeball-Szenario: sehr kalt, hohe Eisbedeckung, gedämpfte Sonnenleuchtkraft — taue den Planeten auf.">❄️ Eisplanet erschaffen</button>
+    <button data-preset="superEarth" title="Dreifache Erdmasse, gemäßigtes Klima, freundliche Startbedingungen für die Evolution.">🪐 Supererde erschaffen</button>
+  </div>
+</section>
 
 <main id="game">
   <div id="map-wrap">
@@ -54,13 +90,24 @@
       </div>
     </section>
 
-    <section id="panel-atmosphere">
+    <div class="tabs" id="sidebar-tabs">
+      <button class="tab-btn active" data-tab="atmosphere">Atmosphäre</button>
+      <button class="tab-btn" data-tab="orbit">Orbit &amp; Masse</button>
+      <button class="tab-btn" data-tab="charts">Grafiken</button>
+      <button class="tab-btn" data-tab="tools">Terraforming</button>
+      <button class="tab-btn" data-tab="species">Artenlexikon</button>
+      <button class="tab-btn" data-tab="log">Ereignisse</button>
+      <button class="tab-btn" data-tab="debug">Debug</button>
+      <button class="tab-btn" data-tab="save">Spielstand</button>
+    </div>
+
+    <section id="tab-atmosphere" class="tab-panel active">
       <h2>Atmosphäre</h2>
       <p class="hint">Verändere die Gaszusammensetzung und beobachte die Auswirkungen auf Klima und Leben.</p>
       <div id="gas-controls"></div>
     </section>
 
-    <section id="panel-orbit">
+    <section id="tab-orbit" class="tab-panel">
       <h2>Orbit &amp; Masse</h2>
       <p class="hint">Achsneigung, Mondmasse und Planetenmasse einstellen. Ohne ausreichende Mondmasse im Verhältnis zur Planetenmasse driftet die Achsneigung mit der Zeit von selbst weiter (siehe Magnetfeld-Analogie im HUD).</p>
       <div id="orbit-controls"></div>
@@ -76,7 +123,7 @@
       <canvas id="orbit-view" width="240" height="200"></canvas>
     </section>
 
-    <section id="panel-charts">
+    <section id="tab-charts" class="tab-panel">
       <h2>Grafiken</h2>
       <p class="hint">Temperaturverlauf und aktuelle Atmosphärenzusammensetzung.</p>
       <div class="chart-title">Temperaturverlauf</div>
@@ -104,25 +151,25 @@
       <canvas id="tilt-chart" width="300" height="140"></canvas>
     </section>
 
-    <section id="panel-tools">
+    <section id="tab-tools" class="tab-panel">
       <h2>Terraforming</h2>
       <p class="hint">Vegetationsart wählen, "Pflanzen" aktivieren, dann auf eine Landzelle der Karte klicken. Komplexere Arten gedeihen nur in einem schmalen Temperaturband (siehe Legende unter der Karte).</p>
       <div id="tool-buttons"></div>
     </section>
 
-    <section id="panel-species">
+    <section id="tab-species" class="tab-panel">
       <h2>Artenlexikon</h2>
       <p class="hint">Unter welchen Umweltbedingungen die jeweilige Lebensform entsteht.</p>
       <ul id="species-list"></ul>
     </section>
 
-    <section id="panel-log">
+    <section id="tab-log" class="tab-panel">
       <h2>Ereignisse</h2>
       <button id="events-overview-btn">Alle Ereignisse anzeigen</button>
       <ul id="event-log"></ul>
     </section>
 
-    <section id="panel-debug">
+    <section id="tab-debug" class="tab-panel">
       <h2>Debug</h2>
       <p class="hint">Prüft die Simulation laufend auf interne Konsistenz und zeigt die Rohdaten der Zelle unter dem Mauszeiger — hilft, die Korrektheit der Simulation nachzuvollziehen.</p>
       <label class="debug-toggle"><input type="checkbox" id="debug-enabled"> Konsistenzprüfung aktiv</label>
@@ -131,7 +178,7 @@
       <pre id="debug-cell-dump">Keine Zelle unter dem Mauszeiger.</pre>
     </section>
 
-    <section id="panel-save">
+    <section id="tab-save" class="tab-panel">
       <h2>Spielstand</h2>
       <p id="save-status" class="hint"></p>
       <div class="save-actions">
@@ -141,9 +188,9 @@
         <input type="file" id="save-import-input" accept="application/json" class="hidden-input">
       </div>
       <div class="save-actions">
-        <button id="new-game-btn" class="danger-btn">Neue Simulation</button>
-        <button id="start-real-earth-btn" class="danger-btn" title="Startet eine neue Simulation mit den heutigen realen Erdwerten (CO₂, O₂, Achsneigung, Mond-/Planetenmasse) und einem bereits entwickelten, besiedelten Planeten.">🌍 Heutige Erde starten</button>
+        <button id="new-game-btn" class="danger-btn">Neue Simulation (Zufallsplanet)</button>
       </div>
+      <p class="hint">Fertig konfigurierte Startszenarien gibt es oben im Schnellstart-Bereich.</p>
     </section>
   </aside>
 </main>

@@ -9,6 +9,27 @@ const UI = (() => {
   let selectedVegType = VEGETATION_TYPES[0].id;
   let selectedFaunaType = FAUNA_TYPES[0].id;
 
+  // Tab-Umschaltung (Muster aus HanseSpiel uebernommen, siehe style.css-
+  // Kommentar) — gescoped auf den jeweiligen Container statt global, damit ZWEI
+  // unabhaengige Tab-Gruppen (Sidebar + HUD) nicht gegenseitig ihre Panels
+  // umschalten. Erwartet, dass die `.tab-panel`-Elemente direkte Geschwister
+  // der `.tabs`-Leiste sind (gleicher Elternknoten) — `data-tab="x"` auf dem
+  // Button muss zu `id="tab-x"` auf dem zugehoerigen Panel passen.
+  function initTabs(tabsEl) {
+    if (!tabsEl || !tabsEl.parentElement) return;
+    const scope = tabsEl.parentElement;
+    const buttons = tabsEl.querySelectorAll(".tab-btn");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        scope.querySelectorAll(":scope > .tab-panel").forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        const panel = document.getElementById("tab-" + btn.dataset.tab);
+        if (panel) panel.classList.add("active");
+      });
+    });
+  }
+
   function init() {
     el.hudYear = document.getElementById("hud-year");
     el.hudTemp = document.getElementById("hud-temp");
@@ -65,7 +86,7 @@ const UI = (() => {
     el.saveImportInput = document.getElementById("save-import-input");
     el.saveStatus = document.getElementById("save-status");
     el.newGameBtn = document.getElementById("new-game-btn");
-    el.startRealEarthBtn = document.getElementById("start-real-earth-btn");
+    el.quickstartButtons = document.querySelectorAll(".quickstart-buttons button[data-preset]");
 
     el.eventsOverviewBtn = document.getElementById("events-overview-btn");
     el.eventsOverviewModal = document.getElementById("events-overview-modal");
@@ -79,6 +100,8 @@ const UI = (() => {
     renderToolButtons();
     renderVegLegend();
     renderSpeciesList();
+    initTabs(document.getElementById("sidebar-tabs"));
+    initTabs(document.getElementById("hud-tabs"));
 
     el.speedSlider.addEventListener("input", () => {
       const idx = parseInt(el.speedSlider.value, 10);
@@ -100,7 +123,9 @@ const UI = (() => {
       el.saveImportInput.value = "";
     });
     el.newGameBtn.addEventListener("click", () => callbacks.newGame && callbacks.newGame());
-    el.startRealEarthBtn.addEventListener("click", () => callbacks.startRealEarth && callbacks.startRealEarth());
+    el.quickstartButtons.forEach((btn) => {
+      btn.addEventListener("click", () => callbacks.startPreset && callbacks.startPreset(btn.dataset.preset));
+    });
 
     el.eventsOverviewBtn.addEventListener("click", () => {
       el.eventsOverviewModal.classList.remove("hidden");
