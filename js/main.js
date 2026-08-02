@@ -85,9 +85,36 @@ const Game = (() => {
     UI.renderAll();
     try {
       PlanetMap.render();
+      // Aktualisiert nur die Textur-Flagge der 3D-Kugel (billig, siehe
+      // Planet3D.render()-Kommentar) — das eigentliche WebGL-Rendering laeuft
+      // separat und nur, waehrend die 3D-Ansicht sichtbar ist.
+      Planet3D.render();
     } catch (e) {
       console.error("Fehler beim Kartenrendern:", e);
     }
+  }
+
+  // Umschalter zwischen 2D-Karte und 3D-Globus (siehe #view-toggle in
+  // index.html) — steuert nur Sichtbarkeit/aktiven Render-Loop, beide Ansichten
+  // teilen sich dieselben Terraforming-Handler (siehe init() oben).
+  function initViewToggle() {
+    const btn2d = document.getElementById("view-toggle-2d");
+    const btn3d = document.getElementById("view-toggle-3d");
+    const canvas2d = document.getElementById("planet-canvas");
+    const canvas3d = document.getElementById("planet-3d-canvas");
+    if (!btn2d || !btn3d || !canvas2d || !canvas3d) return;
+
+    function setView(view) {
+      const is3d = view === "3d";
+      canvas2d.classList.toggle("hidden", is3d);
+      canvas3d.classList.toggle("hidden", !is3d);
+      btn2d.classList.toggle("tool-active", !is3d);
+      btn3d.classList.toggle("tool-active", is3d);
+      Planet3D.setActive(is3d);
+    }
+
+    btn2d.addEventListener("click", () => setView("2d"));
+    btn3d.addEventListener("click", () => setView("3d"));
   }
 
   function tick(years) {
@@ -278,11 +305,18 @@ const Game = (() => {
     loadGame();
 
     PlanetMap.init(document.getElementById("planet-canvas"));
+    Planet3D.init(document.getElementById("planet-3d-canvas"));
     UI.init();
     OrbitView.init(document.getElementById("orbit-view"));
 
     PlanetMap.onCellClick(handleCellClick);
     PlanetMap.onCellHover(handleCellHover);
+    // Identische Handler wie fuer die 2D-Karte (siehe handleCellClick/
+    // handleCellHover oben) — dadurch funktionieren alle Terraforming-
+    // Werkzeuge auf dem 3D-Globus ohne jede Aenderung an der Werkzeug-Logik.
+    Planet3D.onCellClick(handleCellClick);
+    Planet3D.onCellHover(handleCellHover);
+    initViewToggle();
     UI.on("setGas", handleSetGas);
     UI.on("setOrbit", handleSetOrbit);
     UI.on("setSpeed", handleSetSpeed);
