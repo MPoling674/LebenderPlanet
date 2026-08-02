@@ -1,16 +1,20 @@
-// 3D-Globus als kleines, rein dekoratives Sidebar-Widget (Three.js r128, siehe
-// CDN-Kommentar in index.html) — analog zu js/orbitview.js: reine Auto-Rotation,
-// KEIN OrbitControls-Drag, KEINE Klick-Interaktivitaet mehr (Terraforming bleibt
-// exklusiv auf der 2D-Karte, siehe js/mapviewport.js). Wiederverwendet den
-// bereits fertig gerenderten 2D-Canvas (#planet-canvas) DIREKT als Kugeltextur
-// — GRID_WIDTH:GRID_HEIGHT ist 60:30 = 2:1, exakt das Seitenverhaeltnis einer
+// 3D-Globus als kleines Sidebar-Widget (Three.js r128, siehe CDN-Kommentar in
+// index.html) — dreht sich staendig von selbst, laesst sich aber zusaetzlich
+// per Maus-/Touch-Drag manuell weiterdrehen (direkt auf sphere.rotation.y,
+// bewusst KEIN OrbitControls: das wuerde die KAMERA um die Kugel drehen statt
+// die Kugel selbst, was currentLongitudeFraction() unten verkomplizieren
+// wuerde — hier gibt es nur EINEN Rotationswert, egal ob er vom Auto-Spin oder
+// vom Ziehen kommt). Kein Raycasting-Klick mehr (Terraforming bleibt exklusiv
+// auf der 2D-Karte, siehe js/mapviewport.js). Wiederverwendet den bereits
+// fertig gerenderten 2D-Canvas (#planet-canvas) DIREKT als Kugeltextur —
+// GRID_WIDTH:GRID_HEIGHT ist 60:30 = 2:1, exakt das Seitenverhaeltnis einer
 // equirektangularen Kugelprojektion, keine zweite Terrain-Farblogik noetig.
 //
 // currentLongitudeFraction() ist die Bruecke zu js/mapviewport.js: die grosse
-// 2D-Karte liest diesen Wert jeden Frame und pannt sich passend dazu — die
+// 2D-Karte liest diesen Wert jeden Frame und pannt sich passend dazu (egal ob
+// die aktuelle Rotation gerade vom Auto-Spin oder vom Ziehen kommt) — die
 // eigentlich teure Arbeit (PlanetMap.render()) bleibt dabei UNVERAENDERT nur
-// ereignisgesteuert (siehe Kontext-Abschnitt im Plan), hier wird nur ein
-// billiger Rotationswinkel berechnet.
+// ereignisgesteuert, hier wird nur ein billiger Rotationswinkel berechnet.
 
 const Planet3D = (() => {
   let canvas = null;
@@ -21,12 +25,18 @@ const Planet3D = (() => {
   let texture = null;
   let sunLight = null;
   let rafId = null;
+  let lastFrameTime = null;
+  let autoRotation = 0;
+  let dragging = false;
+  let lastPointerX = 0;
 
-  // Volle Umdrehung in ~40s — langsam und ruhig, aehnliche Groessenordnung wie
-  // PLANET_ORBIT_PERIOD_MS in js/orbitview.js, aber bewusst deutlich langsamer
-  // als der dortige Planetenumlauf (das hier ist die Ansicht des Planeten
-  // SELBST, nicht seine Bahn um den Stern).
+  // Volle Umdrehung in ~40s ohne Zutun — langsam und ruhig, aehnliche
+  // Groessenordnung wie PLANET_ORBIT_PERIOD_MS in js/orbitview.js, aber
+  // bewusst deutlich langsamer als der dortige Planetenumlauf (das hier ist
+  // die Ansicht des Planeten SELBST, nicht seine Bahn um den Stern).
   const ROTATION_PERIOD_MS = 40000;
+  // Bogenmass Drehung pro Pixel Mausbewegung beim Ziehen.
+  const DRAG_SENSITIVITY = 0.01;
 
   function init(canvasEl) {
     canvas = canvasEl;
@@ -53,12 +63,47 @@ const Planet3D = (() => {
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0xffffff, 0.35));
 
+    canvas.style.touchAction = "none"; // sonst scrollt eine Touch-Drag-Geste die Seite statt die Kugel zu drehen
+    canvas.style.cursor = "grab";
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointerleave", handlePointerUp);
+
     rafId = requestAnimationFrame(frame);
+  }
+
+  function handlePointerDown(evt) {
+    dragging = true;
+    lastPointerX = evt.clientX;
+    canvas.style.cursor = "grabbing";
+    canvas.setPointerCapture(evt.pointerId);
+  }
+
+  function handlePointerMove(evt) {
+    if (!dragging) return;
+    const dx = evt.clientX - lastPointerX;
+    lastPointerX = evt.clientX;
+    // Nach rechts ziehen laesst die Kugel wie einen Globus unter der Hand nach
+    // rechts/oestlich weiterdrehen.
+    autoRotation -= dx * DRAG_SENSITIVITY;
+  }
+
+  function handlePointerUp() {
+    dragging = false;
+    canvas.style.cursor = "grab";
   }
 
   function frame(now) {
     if (!renderer) return;
-    sphere.rotation.y = (now / ROTATION_PERIOD_MS) * Math.PI * 2;
+    if (lastFrameTime === null) lastFrameTime = now;
+    const dtMs = now - lastFrameTime;
+    lastFrameTime = now;
+    // Auto-Spin laeuft immer weiter, auch waehrend/nach dem Ziehen — kein
+    // separates Pausieren noetig, das Ziehen "ueberholt" die langsame
+    // automatische Drehung einfach kurzzeitig.
+    autoRotation += (dtMs / ROTATION_PERIOD_MS) * Math.PI * 2;
+    sphere.rotation.y = autoRotation;
     const solar = Climate.solarLuminosity();
     sunLight.intensity = 0.6 + 0.8 * solar;
     sunLight.color.setHSL(0.13, 0.5, 0.4 + 0.3 * solar);
