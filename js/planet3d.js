@@ -29,14 +29,26 @@ const Planet3D = (() => {
   let autoRotation = 0;
   let dragging = false;
   let lastPointerX = 0;
+  let lastPointerY = 0;
+  // Vertikaler Kamera-Blickwinkel (Bogenmass, 0 = Aequatorhoehe) — steuert NUR
+  // die Kamera, nicht die Kugel selbst, damit currentLongitudeFraction() unten
+  // unveraendert bleibt (die Kamera bleibt dabei immer in derselben Meridian-
+  // ebene wie ihre Ausgangsposition, ein vertikales Kippen aendert also nur die
+  // sichtbare Breite, nicht den Laengengrad).
+  let cameraTilt = 0;
 
   // Volle Umdrehung in ~40s ohne Zutun — langsam und ruhig, aehnliche
   // Groessenordnung wie PLANET_ORBIT_PERIOD_MS in js/orbitview.js, aber
   // bewusst deutlich langsamer als der dortige Planetenumlauf (das hier ist
   // die Ansicht des Planeten SELBST, nicht seine Bahn um den Stern).
   const ROTATION_PERIOD_MS = 40000;
-  // Bogenmass Drehung pro Pixel Mausbewegung beim Ziehen.
+  // Bogenmass Drehung/Kippung pro Pixel Mausbewegung beim Ziehen.
   const DRAG_SENSITIVITY = 0.01;
+  const CAMERA_DISTANCE = 6;
+  // Knapp unter 90°, damit die Kamera nie exakt ueber/unter dem Pol steht
+  // (dort waere "oben" nicht mehr eindeutig definiert — ein ploetzliches
+  // Umklappen der Ansicht).
+  const CAMERA_TILT_MAX = 1.4;
 
   function init(canvasEl) {
     canvas = canvasEl;
@@ -76,6 +88,7 @@ const Planet3D = (() => {
   function handlePointerDown(evt) {
     dragging = true;
     lastPointerX = evt.clientX;
+    lastPointerY = evt.clientY;
     canvas.style.cursor = "grabbing";
     canvas.setPointerCapture(evt.pointerId);
   }
@@ -83,10 +96,15 @@ const Planet3D = (() => {
   function handlePointerMove(evt) {
     if (!dragging) return;
     const dx = evt.clientX - lastPointerX;
+    const dy = evt.clientY - lastPointerY;
     lastPointerX = evt.clientX;
+    lastPointerY = evt.clientY;
     // Nach rechts ziehen laesst die Kugel wie einen Globus unter der Hand nach
     // rechts/oestlich weiterdrehen.
     autoRotation -= dx * DRAG_SENSITIVITY;
+    // Nach oben ziehen kippt die Kamera nach oben (man blickt mehr von oben
+    // auf den Pol) — reine Kamerabewegung, siehe cameraTilt-Kommentar oben.
+    cameraTilt = clamp(cameraTilt + dy * DRAG_SENSITIVITY, -CAMERA_TILT_MAX, CAMERA_TILT_MAX);
   }
 
   function handlePointerUp() {
@@ -104,6 +122,10 @@ const Planet3D = (() => {
     // automatische Drehung einfach kurzzeitig.
     autoRotation += (dtMs / ROTATION_PERIOD_MS) * Math.PI * 2;
     sphere.rotation.y = autoRotation;
+    // Kamera orbitet vertikal um die Kugel (siehe cameraTilt-Kommentar oben) —
+    // bleibt dabei immer in derselben Meridianebene, nur die Hoehe aendert sich.
+    camera.position.set(0, CAMERA_DISTANCE * Math.sin(cameraTilt), CAMERA_DISTANCE * Math.cos(cameraTilt));
+    camera.lookAt(0, 0, 0);
     const solar = Climate.solarLuminosity();
     sunLight.intensity = 0.6 + 0.8 * solar;
     sunLight.color.setHSL(0.13, 0.5, 0.4 + 0.3 * solar);

@@ -45,6 +45,15 @@
   <div id="map-tooltip" class="hidden"></div>
 
   <aside id="sidebar">
+    <section id="panel-time">
+      <h2>Zeit</h2>
+      <p class="hint">Geschwindigkeit einstellen — die Simulation läuft dann automatisch weiter.</p>
+      <div class="time-controls">
+        <input type="range" id="speed-slider" min="0" max="5" step="1" value="0">
+        <span id="speed-label">Pausiert</span>
+      </div>
+    </section>
+
     <section id="panel-atmosphere">
       <h2>Atmosphäre</h2>
       <p class="hint">Verändere die Gaszusammensetzung und beobachte die Auswirkungen auf Klima und Leben.</p>
@@ -105,15 +114,6 @@
       <h2>Artenlexikon</h2>
       <p class="hint">Unter welchen Umweltbedingungen die jeweilige Lebensform entsteht.</p>
       <ul id="species-list"></ul>
-    </section>
-
-    <section id="panel-time">
-      <h2>Zeit</h2>
-      <p class="hint">Geschwindigkeit einstellen — die Simulation läuft dann automatisch weiter.</p>
-      <div class="time-controls">
-        <input type="range" id="speed-slider" min="0" max="5" step="1" value="0">
-        <span id="speed-label">Pausiert</span>
-      </div>
     </section>
 
     <section id="panel-log">
