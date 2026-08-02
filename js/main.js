@@ -60,6 +60,7 @@ const Game = (() => {
       seaLevel: Climate.seaLevelRise(),
       co2: Atmosphere.get("co2"),
       population: stats.totalPopulation,
+      moonPlanetMassRatio: Climate.moonMassValue() / Climate.planetMassValue(),
     };
   }
 
@@ -71,6 +72,9 @@ const Game = (() => {
     checkThreshold(before.temp, after.temp, 20, "Die globale Durchschnittstemperatur übersteigt 20°C — deutliche Erwärmung, Ökosysteme geraten unter Druck.", "Die globale Durchschnittstemperatur sinkt wieder unter 20°C.");
     checkThreshold(before.ice, after.ice, 5, null, "Die Polkappen schrumpfen auf unter 5% der Planetenoberfläche.");
     checkThreshold(before.seaLevel, after.seaLevel, 5, "Der Meeresspiegel ist um über 5m gestiegen — tief liegendes Land wird überflutet.", null);
+    checkThreshold(before.moonPlanetMassRatio, after.moonPlanetMassRatio, 1,
+      "Die Mondmasse reicht wieder aus, um die Achsneigung zu stabilisieren.",
+      "Die Mondmasse reicht nicht mehr aus, um die Achsneigung zu stabilisieren — sie driftet ab jetzt langsam von selbst.");
   }
 
   // Rendert Dashboard UND Karte. Die Karte wird bewusst nur hier aufgerufen (bei
@@ -103,6 +107,7 @@ const Game = (() => {
         oceanPH: Ocean.pH(),
         oceanO2: Ocean.dissolvedOxygenFraction() * 100,
         solar: Climate.solarLuminosity() * 100,
+        tilt: Climate.axialTiltDegrees(),
       });
       // Nur wenn eingeschaltet (siehe Debug.setEnabled) — kein Overhead im
       // normalen Spielbetrieb, da Debug.runChecks() bei jedem Aufruf einen
@@ -117,6 +122,19 @@ const Game = (() => {
   function handleSetGas(gasId, value) {
     const before = snapshot();
     Atmosphere.set(gasId, value);
+    checkMilestones(before, snapshot());
+    renderAll();
+    saveGame();
+  }
+
+  // Gleiches Muster wie handleSetGas() oben, aber fuer Achsneigung/Mond-/
+  // Planetenmasse (siehe ORBIT_CONTROLS in ui.js) — ein gemeinsamer Callback
+  // statt drei, analog zu Atmosphere.set(gasId, value).
+  function handleSetOrbit(orbitId, value) {
+    const before = snapshot();
+    if (orbitId === "tilt") Climate.setAxialTilt(value);
+    else if (orbitId === "moonMass") Climate.setMoonMass(value);
+    else if (orbitId === "planetMass") Climate.setPlanetMass(value);
     checkMilestones(before, snapshot());
     renderAll();
     saveGame();
@@ -265,6 +283,7 @@ const Game = (() => {
     PlanetMap.onCellClick(handleCellClick);
     PlanetMap.onCellHover(handleCellHover);
     UI.on("setGas", handleSetGas);
+    UI.on("setOrbit", handleSetOrbit);
     UI.on("setSpeed", handleSetSpeed);
     UI.on("saveNow", handleSaveNow);
     UI.on("exportSave", handleExportSave);

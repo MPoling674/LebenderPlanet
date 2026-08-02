@@ -30,6 +30,10 @@ const UI = (() => {
     el.hudOceanO2 = document.getElementById("hud-ocean-o2");
     el.hudSolar = document.getElementById("hud-solar");
     el.hudMagneticField = document.getElementById("hud-magnetfield");
+    el.hudTilt = document.getElementById("hud-tilt");
+    el.hudMoonMass = document.getElementById("hud-moonmass");
+    el.hudPlanetMass = document.getElementById("hud-planetmass");
+    el.orbitControls = document.getElementById("orbit-controls");
     el.vegLegend = document.getElementById("veg-legend");
     el.speciesList = document.getElementById("species-list");
     el.mapTooltip = document.getElementById("map-tooltip");
@@ -43,6 +47,7 @@ const UI = (() => {
     el.oceanPhChart = document.getElementById("ocean-ph-chart");
     el.oceanO2Chart = document.getElementById("ocean-o2-chart");
     el.solarChart = document.getElementById("solar-chart");
+    el.tiltChart = document.getElementById("tilt-chart");
     el.debugEnabled = document.getElementById("debug-enabled");
     el.debugWarnings = document.getElementById("debug-warnings");
     el.debugCellDump = document.getElementById("debug-cell-dump");
@@ -67,6 +72,7 @@ const UI = (() => {
     el.eventsOverviewDetail = document.getElementById("events-overview-detail");
 
     renderGasControls();
+    renderOrbitControls();
     renderToolButtons();
     renderVegLegend();
     renderSpeciesList();
@@ -109,6 +115,48 @@ const UI = (() => {
 
   function decimalsFor(gas) {
     return gas.unit === "%" ? 1 : 0;
+  }
+
+  // Orbit-/Massenregler (Achsneigung, Mondmasse, Planetenmasse): gleiches
+  // Regler-Wertanzeige-Muster wie GASES/renderGasControls(), aber als eigene
+  // UI-lokale Liste statt eines data.js-Arrays, da diese Werte (anders als
+  // GASES) nur von der UI gebraucht werden, nicht von der Simulationslogik
+  // selbst iteriert werden.
+  const ORBIT_CONTROLS = [
+    { id: "tilt", name: "Achsneigung", unit: "°", min: AXIAL_TILT_MIN, max: AXIAL_TILT_MAX, step: 0.5, decimals: 1, getValue: () => Climate.axialTiltDegrees() },
+    { id: "moonMass", name: "Mondmasse", unit: "×", min: MOON_MASS_MIN, max: MOON_MASS_MAX, step: 0.05, decimals: 2, getValue: () => Climate.moonMassValue() },
+    { id: "planetMass", name: "Planetenmasse", unit: "×", min: PLANET_MASS_MIN, max: PLANET_MASS_MAX, step: 0.05, decimals: 2, getValue: () => Climate.planetMassValue() },
+  ];
+
+  function renderOrbitControls() {
+    let html = "";
+    ORBIT_CONTROLS.forEach((c) => {
+      const value = c.getValue();
+      html += `<div class="gas-control">
+        <label>${c.name}</label>
+        <input type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${value}" data-orbit="${c.id}">
+        <span class="gas-value" data-orbit-value="${c.id}">${value.toFixed(c.decimals)} ${c.unit}</span>
+      </div>`;
+    });
+    el.orbitControls.innerHTML = html;
+    el.orbitControls.querySelectorAll("input[type=range]").forEach((input) => {
+      input.addEventListener("input", () => {
+        const value = parseFloat(input.value);
+        callbacks.setOrbit && callbacks.setOrbit(input.dataset.orbit, value);
+      });
+      // Gleicher Grund wie bei den Gas-Reglern (siehe renderGasControls()
+      // unten): "change" feuert erst beim Loslassen, danach Fokus abgeben.
+      input.addEventListener("change", () => input.blur());
+    });
+  }
+
+  function renderOrbitValues() {
+    ORBIT_CONTROLS.forEach((c) => {
+      const span = el.orbitControls.querySelector(`[data-orbit-value="${c.id}"]`);
+      if (span) span.textContent = `${c.getValue().toFixed(c.decimals)} ${c.unit}`;
+      const input = el.orbitControls.querySelector(`input[data-orbit="${c.id}"]`);
+      if (input && document.activeElement !== input) input.value = c.getValue();
+    });
   }
 
   function renderGasControls() {
@@ -378,7 +426,11 @@ const UI = (() => {
     el.hudOceanO2.textContent = (Ocean.dissolvedOxygenFraction() * 100).toFixed(0) + " %";
     el.hudSolar.textContent = (Climate.solarLuminosity() * 100).toFixed(0) + " %";
     el.hudMagneticField.textContent = (Climate.magneticFieldStrength() * 100).toFixed(0) + " %";
+    el.hudTilt.textContent = Climate.axialTiltDegrees().toFixed(1) + " °";
+    el.hudMoonMass.textContent = Climate.moonMassValue().toFixed(2) + "×";
+    el.hudPlanetMass.textContent = Climate.planetMassValue().toFixed(2) + "×";
     renderGasValues();
+    renderOrbitValues();
     Charts.renderTemperatureChart(el.tempChart);
     Charts.renderCo2Chart(el.co2Chart);
     Charts.renderPopulationChart(el.populationChart);
@@ -387,6 +439,7 @@ const UI = (() => {
     Charts.renderOceanPhChart(el.oceanPhChart);
     Charts.renderOceanO2Chart(el.oceanO2Chart);
     Charts.renderSolarChart(el.solarChart);
+    Charts.renderTiltChart(el.tiltChart);
     renderDebugWarnings();
   }
 

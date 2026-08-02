@@ -279,6 +279,7 @@ const Charts = (() => {
   // weiter unten) — gleiche Bedeutung (Sauerstoff), nur ein anderer Kontext.
   const OCEAN_O2_LINE_COLOR = "#3987e5";
   const SOLAR_LINE_COLOR = "#e0a030"; // warmes Gold, Sonnen-Assoziation, von den uebrigen Farben klar abgesetzt
+  const TILT_LINE_COLOR = "#5fb8b0"; // Tuerkis, von allen bisherigen Linienfarben klar abgesetzt
 
   function renderOceanPhChart(canvas) {
     renderSeriesChart(canvas, {
@@ -303,6 +304,17 @@ const Charts = (() => {
       getValue: (p) => p.solar,
       color: SOLAR_LINE_COLOR,
       format: (v) => v.toFixed(0) + " %",
+      emptyText: "Noch nicht genug Daten…",
+    });
+  }
+
+  // Macht den chaotischen Achsneigungs-Drift bei unzureichender Mondmasse
+  // (siehe TILT_CHAOTIC_DRIFT_RATE-Kommentar in data.js) sichtbar nachvollziehbar.
+  function renderTiltChart(canvas) {
+    renderSeriesChart(canvas, {
+      getValue: (p) => p.tilt,
+      color: TILT_LINE_COLOR,
+      format: (v) => v.toFixed(1) + "°",
       emptyText: "Noch nicht genug Daten…",
     });
   }
@@ -375,5 +387,6 @@ const Charts = (() => {
     renderOceanPhChart,
     renderOceanO2Chart,
     renderSolarChart,
+    renderTiltChart,
   };
 })();

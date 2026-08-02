@@ -215,7 +215,11 @@ const ICE_RELAXATION_RATE = 1 / 500; // ~63% Annaeherung in ~500 Jahren
 // Orbitalanteil, als zusaetzliche natuerliche Schwankung ueber die vom Spieler
 // gesteuerten Treibhausgase hinweg.
 const MILANKOVITCH_OBLIQUITY_PERIOD_YEARS = 41000; // Achsneigung, staerkster Eiszeit-Treiber
-const MILANKOVITCH_OBLIQUITY_AMPLITUDE = 0.7; // °C
+// Skaliert mit der spielergesteuerten Achsneigung (siehe TILT_REFERENCE_DEGREES-
+// Kommentar unten) — bei 0° Neigung gibt es keinen Wobble-Effekt, bei staerkerer
+// Neigung als heute einen groesseren. Bei TILT_REFERENCE_DEGREES (23,5°, heutiger
+// Wert) exakt dieser Fixwert.
+const MILANKOVITCH_OBLIQUITY_AMPLITUDE = 0.7; // °C, bei Referenz-Achsneigung
 const MILANKOVITCH_PRECESSION_PERIOD_YEARS = 23000; // Praezession der Rotationsachse
 const MILANKOVITCH_PRECESSION_AMPLITUDE = 0.5; // °C, durch Exzentrizitaet moduliert (siehe orbitalForcing())
 const MILANKOVITCH_ECCENTRICITY_PERIOD_YEARS = 100000; // Exzentrizitaet der Erdbahn
@@ -230,6 +234,42 @@ const SPEED_STEPS = [0, 1, 5, 20, 100, 500];
 // Pole ~-13°C im Schnitt, bei einem globalen Mittel von ~14°C).
 const EQUATOR_TEMP_BONUS = 13;
 const POLE_TEMP_RANGE = 40;
+
+// Spielergesteuerte Achsneigung (js/climate.js: axialTilt, Planet.localTemperature()):
+// TILT_REFERENCE_DEGREES ist die reale heutige Erdachsneigung — bei diesem Wert
+// bleibt JEDE hier abgeleitete Groesse exakt beim bisherigen Verhalten (Null-
+// Effekt-Prinzip, siehe GEOLOGICAL_CO2_EQUILIBRIUM-Kommentar-Stil oben).
+const TILT_REFERENCE_DEGREES = 23.5;
+const AXIAL_TILT_MIN = 0;
+const AXIAL_TILT_MAX = 90;
+// Breitengradient-Skalierung (Climate.tiltGradientFactor(), genutzt in
+// Planet.localTemperature()): bei 0° Neigung gibt es keine Jahreszeiten und Pole
+// bekommen nie hohen Sonnenstand -> STEILERER Gradient (Faktor > 1). Real kehrt
+// sich der Jahresmittel-Gradient bei sehr hoher Neigung (>50-60°, Williams &
+// Pollard 2003) sogar um (Pole waermer als Aequator) — bewusst NICHT bis zur
+// Umkehr simuliert (Risiko fuer die Vegetations-/Fauna-Zonierung), sondern nur
+// stark abgeflacht (MIN_FACTOR statt negativ).
+const TILT_GRADIENT_SENSITIVITY = 0.012; // Anteil/° Abweichung von TILT_REFERENCE_DEGREES
+const TILT_GRADIENT_MIN_FACTOR = 0.2;
+const TILT_GRADIENT_MAX_FACTOR = 1.4;
+// Chaotischer Achsneigungs-Drift ohne ausreichende Mondmasse (Laskar & Robutel
+// 1993: ohne stabilisierenden Mond kann die Achsneigung eines Planeten ueber
+// geologische Zeitraeume chaotisch zwischen ~0° und ~85° wandern). Bei
+// heutigem Massenverhaeltnis (Mondmasse=1, Planetenmasse=1) ist die
+// Instabilitaet exakt 0 -> kein Drift. Kalibrierung im Browser verifiziert:
+// der urspruengliche Wert (0.004) war um etwa Faktor 1000 zu klein — bei einem
+// Random Walk (Schrittweite RATE/sqrt(3)) betrug die Streuung nach 39 Millionen
+// Jahren nur ~0,1-0,4°, praktisch unsichtbar innerhalb eines realistischen
+// Spieldurchlaufs (hunderttausende Jahre). 5/EVOLUTION_TIME_FACTOR ergibt eine
+// erwartete Streuung von rund 35-40° nach ~100.000 Jahren — spuerbar, aber
+// nicht sofort/absurd schnell.
+const TILT_CHAOTIC_DRIFT_RATE = 5 / EVOLUTION_TIME_FACTOR;
+const MOON_MASS_DEFAULT = 1; // heutiger Erdmond
+const MOON_MASS_MIN = 0;
+const MOON_MASS_MAX = 2;
+const PLANET_MASS_DEFAULT = 1; // Erdmasse
+const PLANET_MASS_MIN = 0.3;
+const PLANET_MASS_MAX = 3;
 
 const SEA_LEVEL_THRESHOLD = 0.58; // Hoehen-Schwelle (0..1): darunter Ozean, darueber Land
 

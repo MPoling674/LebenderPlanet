@@ -28,6 +28,9 @@
   <div class="hud-item" title="Gelöster Sauerstoff im Ozean: sinkt mit steigender Temperatur (anoxische Ereignisse)"><span class="label">Ozean-O₂</span><span id="hud-ocean-o2">0 %</span></div>
   <div class="hud-item" title="Sonnenleuchtkraft relativ zum heutigen Wert (junge Sterne strahlen schwächer)"><span class="label">Sonnenleuchtkraft</span><span id="hud-solar">0 %</span></div>
   <div class="hud-item" title="Planetenmagnetfeld: schützt die Atmosphäre vor Sonnenwind-Erosion"><span class="label">Magnetfeld</span><span id="hud-magnetfield">0 %</span></div>
+  <div class="hud-item" title="Neigung der Rotationsachse — beeinflusst das Breitengefälle und die Jahreszeiten-Stärke"><span class="label">Achsneigung</span><span id="hud-tilt">0 °</span></div>
+  <div class="hud-item" title="Mondmasse relativ zum heutigen Erdmond — stabilisiert die Achsneigung"><span class="label">Mondmasse</span><span id="hud-moonmass">0×</span></div>
+  <div class="hud-item" title="Planetenmasse relativ zur Erde — schützt zusammen mit dem Magnetfeld vor Atmosphärenerosion"><span class="label">Planetenmasse</span><span id="hud-planetmass">0×</span></div>
 </header>
 
 <main id="game">
@@ -42,6 +45,12 @@
       <h2>Atmosphäre</h2>
       <p class="hint">Verändere die Gaszusammensetzung und beobachte die Auswirkungen auf Klima und Leben.</p>
       <div id="gas-controls"></div>
+    </section>
+
+    <section id="panel-orbit">
+      <h2>Orbit &amp; Masse</h2>
+      <p class="hint">Achsneigung, Mondmasse und Planetenmasse einstellen. Ohne ausreichende Mondmasse im Verhältnis zur Planetenmasse driftet die Achsneigung mit der Zeit von selbst weiter (siehe Magnetfeld-Analogie im HUD).</p>
+      <div id="orbit-controls"></div>
     </section>
 
     <section id="panel-charts">
@@ -68,6 +77,8 @@
       <canvas id="ocean-o2-chart" width="300" height="140"></canvas>
       <div class="chart-title">Sonnenleuchtkraft</div>
       <canvas id="solar-chart" width="300" height="140"></canvas>
+      <div class="chart-title">Achsneigungsverlauf</div>
+      <canvas id="tilt-chart" width="300" height="140"></canvas>
     </section>
 
     <section id="panel-tools">

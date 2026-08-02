@@ -180,7 +180,11 @@ const Planet = (() => {
   // Durchschnitt) — grobe, aber realitätsnahe Näherung.
   function localTemperature(cell) {
     const globalTemp = Climate.globalTemperature();
-    return globalTemp + EQUATOR_TEMP_BONUS - cell.latitude * (EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE) + cell.tempAnomaly;
+    // Skaliert mit der spielergesteuerten Achsneigung (siehe tiltGradientFactor()-
+    // Kommentar in climate.js/data.js) — bei TILT_REFERENCE_DEGREES exakt der
+    // bisherige Gradient.
+    const factor = Climate.tiltGradientFactor();
+    return globalTemp + EQUATOR_TEMP_BONUS * factor - cell.latitude * ((EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE) * factor) + cell.tempAnomaly;
   }
 
   // Lokaler Niederschlag (0-100) — siehe PRECIPITATION_*-Kommentar in data.js.
@@ -620,7 +624,11 @@ const Planet = (() => {
     const fieldStrength = Climate.magneticFieldStrength();
     if (fieldStrength < MAGNETIC_FIELD_EROSION_THRESHOLD) {
       const erosionIntensity = (MAGNETIC_FIELD_EROSION_THRESHOLD - fieldStrength) / MAGNETIC_FIELD_EROSION_THRESHOLD;
-      Atmosphere.erode(erosionIntensity * ATMOSPHERIC_EROSION_MAX_FRACTION_PER_YEAR);
+      // Ein massereicherer Planet haelt seine Atmosphaere trotz schwachem Feld
+      // besser (reale Analogie: Venus haelt dank ausreichender Masse/Schwerkraft
+      // eine dichte Atmosphaere ganz ohne nennenswertes Magnetfeld). Bei
+      // PLANET_MASS_DEFAULT (1) exakt die bisherige Erosionsrate.
+      Atmosphere.erode(erosionIntensity * ATMOSPHERIC_EROSION_MAX_FRACTION_PER_YEAR / Climate.planetMassValue());
     }
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-

@@ -37,6 +37,52 @@ const Climate = (() => {
   // data.js): startet voll intakt, klingt rein monoton ab.
   let fieldStrength = 1;
 
+  // Spielergesteuerte Achsneigung + Mond-/Planetenmasse (siehe
+  // TILT_REFERENCE_DEGREES-Kommentar in data.js): axialTilt ist wie die
+  // Gas-Werte in Atmosphere jederzeit direkt vom Spieler setzbar, driftet aber
+  // OHNE ausreichende Mondmasse zusaetzlich von selbst weiter (siehe tick()).
+  let axialTilt = TILT_REFERENCE_DEGREES;
+  let moonMass = MOON_MASS_DEFAULT;
+  let planetMass = PLANET_MASS_DEFAULT;
+
+  function setAxialTilt(degrees) {
+    axialTilt = clamp(degrees, AXIAL_TILT_MIN, AXIAL_TILT_MAX);
+  }
+
+  function setMoonMass(value) {
+    moonMass = clamp(value, MOON_MASS_MIN, MOON_MASS_MAX);
+  }
+
+  function setPlanetMass(value) {
+    planetMass = clamp(value, PLANET_MASS_MIN, PLANET_MASS_MAX);
+  }
+
+  function axialTiltDegrees() {
+    return axialTilt;
+  }
+
+  function moonMassValue() {
+    return moonMass;
+  }
+
+  function planetMassValue() {
+    return planetMass;
+  }
+
+  // 0 (stabil, heutiges oder staerkeres Massenverhaeltnis) .. 1 (voellig
+  // chaotisch, kein Mond). Exakt 0 beim heutigen realen Verhaeltnis
+  // (moonMass===planetMass===1) — Null-Effekt-Prinzip.
+  function tiltInstability() {
+    return clamp(1 - moonMass / planetMass, 0, 1);
+  }
+
+  // Breitengradient-Skalierung fuer Planet.localTemperature() (siehe
+  // TILT_GRADIENT_SENSITIVITY-Kommentar in data.js).
+  function tiltGradientFactor() {
+    const raw = 1 - TILT_GRADIENT_SENSITIVITY * (axialTilt - TILT_REFERENCE_DEGREES);
+    return clamp(raw, TILT_GRADIENT_MIN_FACTOR, TILT_GRADIENT_MAX_FACTOR);
+  }
+
   function triggerImpactWinter(intensity) {
     impactWinterIntensity += intensity;
   }
@@ -54,7 +100,10 @@ const Climate = (() => {
   function orbitalForcing() {
     const t = orbitalYear;
     const eccentricitySignal = Math.sin((2 * Math.PI * t) / MILANKOVITCH_ECCENTRICITY_PERIOD_YEARS + orbitalPhase.eccentricity);
-    const obliquityTerm = MILANKOVITCH_OBLIQUITY_AMPLITUDE
+    // Skaliert mit der spielergesteuerten Achsneigung (siehe axialTilt oben) —
+    // bei 0° Neigung kein Wobble, bei TILT_REFERENCE_DEGREES exakt der Fixwert.
+    const obliquityAmplitude = MILANKOVITCH_OBLIQUITY_AMPLITUDE * (axialTilt / TILT_REFERENCE_DEGREES);
+    const obliquityTerm = obliquityAmplitude
       * Math.sin((2 * Math.PI * t) / MILANKOVITCH_OBLIQUITY_PERIOD_YEARS + orbitalPhase.obliquity);
     const eccentricityStrength = (eccentricitySignal + 1) / 2;
     const precessionTerm = MILANKOVITCH_PRECESSION_AMPLITUDE * eccentricityStrength
@@ -125,6 +174,9 @@ const Climate = (() => {
     waterVolume = 0;
     solarLuminosityFactor = SOLAR_LUMINOSITY_START;
     fieldStrength = 1;
+    axialTilt = TILT_REFERENCE_DEGREES;
+    moonMass = MOON_MASS_DEFAULT;
+    planetMass = PLANET_MASS_DEFAULT;
     currentTemp = equilibriumTemperature();
     currentIce = equilibriumIceCoverage(currentTemp);
   }
@@ -139,6 +191,11 @@ const Climate = (() => {
     if (primordialHeat < 0.5) primordialHeat = 0;
     solarLuminosityFactor += (1 - solarLuminosityFactor) * SOLAR_LUMINOSITY_RAMP_RATE;
     fieldStrength -= fieldStrength * MAGNETIC_FIELD_DECAY_RATE;
+    // Chaotischer Achsneigungs-Drift (siehe tiltInstability()-Kommentar oben) —
+    // der Regler bleibt jederzeit bedienbar, aber ohne ausreichende Mondmasse
+    // "laeuft" der Wert danach von selbst weiter weg.
+    axialTilt += (Math.random() * 2 - 1) * TILT_CHAOTIC_DRIFT_RATE * tiltInstability();
+    axialTilt = clamp(axialTilt, AXIAL_TILT_MIN, AXIAL_TILT_MAX);
     const tempTarget = equilibriumTemperature();
     currentTemp += (tempTarget - currentTemp) * TEMP_RELAXATION_RATE;
     const iceTarget = equilibriumIceCoverage(currentTemp);
@@ -196,7 +253,7 @@ const Climate = (() => {
   }
 
   function serialize() {
-    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase, impactWinterIntensity, primordialHeat, outgassedWaterReserve, waterVolume, solarLuminosityFactor, fieldStrength };
+    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase, impactWinterIntensity, primordialHeat, outgassedWaterReserve, waterVolume, solarLuminosityFactor, fieldStrength, axialTilt, moonMass, planetMass };
   }
 
   function restore(saved) {
@@ -224,10 +281,21 @@ const Climate = (() => {
       // wie bei primordialHeat/waterVolume oben.
       solarLuminosityFactor = typeof saved.solarLuminosityFactor === "number" ? saved.solarLuminosityFactor : 1;
       fieldStrength = typeof saved.fieldStrength === "number" ? saved.fieldStrength : 1;
+      // Aeltere Spielstaende kennen weder Achsneigung noch Mond-/Planetenmasse —
+      // auf die Referenzwerte defaulten (identisch zum bisherigen impliziten
+      // Verhalten, kein rueckwirkender Nachteil), gleiches Prinzip wie oben.
+      axialTilt = typeof saved.axialTilt === "number" ? saved.axialTilt : TILT_REFERENCE_DEGREES;
+      moonMass = typeof saved.moonMass === "number" ? saved.moonMass : MOON_MASS_DEFAULT;
+      planetMass = typeof saved.planetMass === "number" ? saved.planetMass : PLANET_MASS_DEFAULT;
     } else {
       init();
     }
   }
 
-  return { init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage, vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength, serialize, restore };
+  return {
+    init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage,
+    vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength,
+    setAxialTilt, setMoonMass, setPlanetMass, axialTiltDegrees, moonMassValue, planetMassValue,
+    tiltGradientFactor, serialize, restore,
+  };
 })();
