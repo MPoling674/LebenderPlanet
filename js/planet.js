@@ -598,8 +598,13 @@ const Planet = (() => {
     // genug Spieljahren (Zivilisations-Emissionen, siehe civilization.js) fuer
     // immer am Anschlag (2000 ppm) haengen, selbst wenn Vegetation laengst durch
     // die Hitze abgestorben war und keinen Ausgleich mehr liefern konnte
-    // (gemeldeter Fehler: "CO2 geht nicht mehr zurueck").
-    Atmosphere.adjust("co2", -(Atmosphere.get("co2") - GEOLOGICAL_CO2_EQUILIBRIUM) * GEOLOGICAL_CO2_RELAXATION_RATE);
+    // (gemeldeter Fehler: "CO2 geht nicht mehr zurueck"). Die RATE wird
+    // zusaetzlich mit Climate.weatheringFactor() moduliert (dynamische
+    // Silikatverwitterung, siehe SILICATE_WEATHERING_TEMP_SENSITIVITY-Kommentar
+    // in data.js) — NUR hier, NICHT bei den Scrubber-/Emitter-Konstanten unten,
+    // deren Kalibrierung dadurch unangetastet bleibt.
+    const co2 = Atmosphere.get("co2");
+    Atmosphere.adjust("co2", -(co2 - GEOLOGICAL_CO2_EQUILIBRIUM) * GEOLOGICAL_CO2_RELAXATION_RATE * Climate.weatheringFactor(Climate.globalTemperature()));
 
     // Chemische CH4-Senke (troposphaerische OH-Oxidation, siehe GEOLOGICAL_CH4_
     // RELAXATION_RATE-Kommentar in data.js) — deutlich schneller als die CO2-Senke
@@ -607,6 +612,16 @@ const Planet = (() => {
     // Jahrtausende. Ohne diesen Term blieb CH4 bei jeder laufenden Quelle
     // (Zivilisation, Emitter, Vulkane) permanent am Anschlag (50 ppm) haengen.
     Atmosphere.adjust("ch4", -(Atmosphere.get("ch4") - GEOLOGICAL_CH4_EQUILIBRIUM) * GEOLOGICAL_CH4_RELAXATION_RATE);
+
+    // Magnetfeld-Erosion (siehe MAGNETIC_FIELD_DECAY_RATE-Kommentar in data.js):
+    // erst spuerbar, wenn die Feldstaerke unter den Schwellenwert gefallen ist,
+    // dann proportional zur Unterschreitung — ein echtes Spaetspiel-Risiko statt
+    // eines abrupten Kollapses.
+    const fieldStrength = Climate.magneticFieldStrength();
+    if (fieldStrength < MAGNETIC_FIELD_EROSION_THRESHOLD) {
+      const erosionIntensity = (MAGNETIC_FIELD_EROSION_THRESHOLD - fieldStrength) / MAGNETIC_FIELD_EROSION_THRESHOLD;
+      Atmosphere.erode(erosionIntensity * ATMOSPHERIC_EROSION_MAX_FRACTION_PER_YEAR);
+    }
 
     // Cross-Habitat-Uebergaenge (z.B. Fische -> Amphibien) NACH der Haupt-
     // Sukzession, damit sie den diesjaehrigen Reifegrad der Zellen sehen.

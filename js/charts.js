@@ -17,10 +17,14 @@ const Charts = (() => {
   // Groessen desselben Jahres zusammen, damit sie in der Korrelationsgrafik
   // punktgenau nebeneinander liegen.
   const MAX_HISTORY_POINTS = 400;
-  let history = []; // [{year, temp, co2, population}]
+  let history = []; // [{year, temp, co2, population, oceanPH, oceanO2, solar}]
 
-  function recordSample(year, temp, co2, population) {
-    history.push({ year, temp, co2, population });
+  // Options-Objekt statt positionaler Parameter (urspruenglich nur year/temp/
+  // co2/population) — mit den drei neuen Feedback-Groessen (Ozean-pH/-O2,
+  // Sonnenleuchtkraft) waeren positionale Parameter an dieser Stelle nicht mehr
+  // lesbar gewesen.
+  function recordSample(sample) {
+    history.push({ ...sample });
     if (history.length > MAX_HISTORY_POINTS) {
       history = history.filter((_, i) => i % 2 === 0);
     }
@@ -268,6 +272,41 @@ const Charts = (() => {
     }
   }
 
+  // Ozean-pH: Violett (gleicher Slot wie N2 im Kuchendiagramm — beides
+  // "chemische" Groessen, siehe dataviz-Skill "color follows the entity").
+  const OCEAN_PH_LINE_COLOR = "#9085e9";
+  // Ozean-O2: dieselbe Farbe wie O2 im Kuchendiagramm (GAS_CHART_COLORS.o2
+  // weiter unten) — gleiche Bedeutung (Sauerstoff), nur ein anderer Kontext.
+  const OCEAN_O2_LINE_COLOR = "#3987e5";
+  const SOLAR_LINE_COLOR = "#e0a030"; // warmes Gold, Sonnen-Assoziation, von den uebrigen Farben klar abgesetzt
+
+  function renderOceanPhChart(canvas) {
+    renderSeriesChart(canvas, {
+      getValue: (p) => p.oceanPH,
+      color: OCEAN_PH_LINE_COLOR,
+      format: (v) => v.toFixed(2),
+      emptyText: "Noch nicht genug Daten…",
+    });
+  }
+
+  function renderOceanO2Chart(canvas) {
+    renderSeriesChart(canvas, {
+      getValue: (p) => p.oceanO2,
+      color: OCEAN_O2_LINE_COLOR,
+      format: (v) => v.toFixed(0) + " %",
+      emptyText: "Noch nicht genug Daten…",
+    });
+  }
+
+  function renderSolarChart(canvas) {
+    renderSeriesChart(canvas, {
+      getValue: (p) => p.solar,
+      color: SOLAR_LINE_COLOR,
+      format: (v) => v.toFixed(0) + " %",
+      emptyText: "Noch nicht genug Daten…",
+    });
+  }
+
   const GAS_CHART_COLORS = { o2: "#3987e5", n2: "#9085e9", co2: "#e66767", ch4: "#199e70" };
 
   // CO2/CH4 sind in ppm gespeichert, O2/N2 in %-Volumenanteilen (siehe GASES in
@@ -333,5 +372,8 @@ const Charts = (() => {
     renderCo2Chart,
     renderPopulationChart,
     renderCorrelationChart,
+    renderOceanPhChart,
+    renderOceanO2Chart,
+    renderSolarChart,
   };
 })();

@@ -28,6 +28,15 @@ const Climate = (() => {
   let outgassedWaterReserve = 0;
   let waterVolume = 0;
 
+  // Junge-schwache-Sonne (siehe SOLAR_LUMINOSITY_START-Kommentar in data.js):
+  // startet gedaempft, naehert sich ueber die Spielzeit der modernen Helligkeit
+  // (1.0) an.
+  let solarLuminosityFactor = SOLAR_LUMINOSITY_START;
+
+  // Magnetfeld-/Dynamo-Staerke (siehe MAGNETIC_FIELD_DECAY_RATE-Kommentar in
+  // data.js): startet voll intakt, klingt rein monoton ab.
+  let fieldStrength = 1;
+
   function triggerImpactWinter(intensity) {
     impactWinterIntensity += intensity;
   }
@@ -54,13 +63,52 @@ const Climate = (() => {
     return obliquityTerm + precessionTerm + eccentricityTerm;
   }
 
+  // Eis-Albedo-Rueckkopplung (siehe ALBEDO_FORCING_PER_ICE_FRACTION-Kommentar in
+  // data.js): nutzt den TRAEGEN currentIce-State (nicht das sofortige
+  // Gleichgewicht equilibriumIceCoverage()) — dadurch reagiert die
+  // Rueckkopplung mit derselben realistischen Verzoegerung wie echtes Eis, statt
+  // instantan auf jede Temperaturaenderung. Bei currentIce === BASE_ICE_COVERAGE
+  // exakt 0, damit die Ausgangskalibrierung erhalten bleibt.
+  function albedoForcing() {
+    return -ALBEDO_FORCING_PER_ICE_FRACTION * (currentIce - BASE_ICE_COVERAGE);
+  }
+
+  // Junge-schwache-Sonne (siehe SOLAR_LUMINOSITY_START-Kommentar in data.js):
+  // negativ, solange der Stern noch nicht seine volle (moderne) Helligkeit
+  // erreicht hat, bei Faktor 1 exakt 0.
+  function solarForcing() {
+    return SOLAR_FORCING_PER_LUMINOSITY_UNIT * (solarLuminosityFactor - 1);
+  }
+
+  // Dynamische Wasserdampf-Verstaerkung (siehe WATER_VAPOR_BASE_AMPLIFICATION-
+  // Kommentar in data.js) — nutzt den TRAEGEN currentTemp-Vorjahreswert (kein
+  // Selbstbezug auf das gerade erst berechnete Gleichgewicht dieses Jahres,
+  // gleiches Prinzip wie albedoForcing() oben) und skaliert zusaetzlich mit
+  // outgassedWaterReserve: ohne ausgegastes Wasser (ganz fruehe Planetenphase)
+  // gibt es noch keine nennenswerte Atmosphaerenfeuchte, die verstaerken koennte.
+  function waterVaporAmplification() {
+    const raw = WATER_VAPOR_BASE_AMPLIFICATION * Math.exp(WATER_VAPOR_CC_COEFF * (currentTemp - BASE_GLOBAL_TEMP));
+    return clamp(raw, WATER_VAPOR_MIN_AMPLIFICATION, WATER_VAPOR_MAX_AMPLIFICATION) * outgassedWaterReserve;
+  }
+
+  // Dynamische Silikatverwitterung (siehe SILICATE_WEATHERING_TEMP_SENSITIVITY-
+  // Kommentar in data.js) — Multiplikator auf GEOLOGICAL_CO2_RELAXATION_RATE,
+  // angewendet in planet.js NUR auf die natuerliche geologische Senke, nicht auf
+  // die Scrubber-/Emitter-Konstanten. Bei BASE_GLOBAL_TEMP exakt 1.
+  function weatheringFactor(temp) {
+    const raw = 1 + SILICATE_WEATHERING_TEMP_SENSITIVITY * (temp - BASE_GLOBAL_TEMP);
+    return clamp(raw, SILICATE_WEATHERING_MIN_FACTOR, SILICATE_WEATHERING_MAX_FACTOR);
+  }
+
   // Zielwerte, denen sich currentTemp/currentIce jedes Jahr annähern — das sind
   // die ehemaligen (sofortigen) Formeln aus Phase 1, jetzt nur noch als Gleichgewicht.
   function equilibriumTemperature() {
     const forcing = Atmosphere.radiativeForcing();
     const deltaGhg = CLIMATE_SENSITIVITY * forcing;
-    const deltaTotal = deltaGhg * (1 + WATER_VAPOR_AMPLIFICATION);
-    return BASE_GLOBAL_TEMP + deltaTotal + orbitalForcing() - impactWinterIntensity + primordialHeat;
+    const deltaTotal = deltaGhg * (1 + waterVaporAmplification());
+    const deltaAlbedo = CLIMATE_SENSITIVITY * albedoForcing();
+    const deltaSolar = CLIMATE_SENSITIVITY * solarForcing();
+    return BASE_GLOBAL_TEMP + deltaTotal + deltaAlbedo + deltaSolar + orbitalForcing() - impactWinterIntensity + primordialHeat;
   }
 
   function equilibriumIceCoverage(temp) {
@@ -75,6 +123,8 @@ const Climate = (() => {
     primordialHeat = PRIMORDIAL_HEAT_START;
     outgassedWaterReserve = 0;
     waterVolume = 0;
+    solarLuminosityFactor = SOLAR_LUMINOSITY_START;
+    fieldStrength = 1;
     currentTemp = equilibriumTemperature();
     currentIce = equilibriumIceCoverage(currentTemp);
   }
@@ -87,6 +137,8 @@ const Climate = (() => {
     if (impactWinterIntensity < 0.01) impactWinterIntensity = 0;
     primordialHeat -= primordialHeat * PRIMORDIAL_HEAT_RELAXATION_RATE;
     if (primordialHeat < 0.5) primordialHeat = 0;
+    solarLuminosityFactor += (1 - solarLuminosityFactor) * SOLAR_LUMINOSITY_RAMP_RATE;
+    fieldStrength -= fieldStrength * MAGNETIC_FIELD_DECAY_RATE;
     const tempTarget = equilibriumTemperature();
     currentTemp += (tempTarget - currentTemp) * TEMP_RELAXATION_RATE;
     const iceTarget = equilibriumIceCoverage(currentTemp);
@@ -113,6 +165,14 @@ const Climate = (() => {
     return waterVolume;
   }
 
+  function solarLuminosity() {
+    return solarLuminosityFactor;
+  }
+
+  function magneticFieldStrength() {
+    return fieldStrength;
+  }
+
   function meltedIcePercent() {
     return Math.max(0, BASE_ICE_COVERAGE - currentIce) * 100;
   }
@@ -136,7 +196,7 @@ const Climate = (() => {
   }
 
   function serialize() {
-    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase, impactWinterIntensity, primordialHeat, outgassedWaterReserve, waterVolume };
+    return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase, impactWinterIntensity, primordialHeat, outgassedWaterReserve, waterVolume, solarLuminosityFactor, fieldStrength };
   }
 
   function restore(saved) {
@@ -158,10 +218,16 @@ const Climate = (() => {
       primordialHeat = typeof saved.primordialHeat === "number" ? saved.primordialHeat : 0;
       outgassedWaterReserve = typeof saved.outgassedWaterReserve === "number" ? saved.outgassedWaterReserve : 1;
       waterVolume = typeof saved.waterVolume === "number" ? saved.waterVolume : 1;
+      // Aeltere Spielstaende kennen weder Sonnenleuchtkraft noch Magnetfeld —
+      // beide auf den "unbedenklichen" Wert 1 (ausgereifter Stern, volle
+      // Feldstaerke) defaulten statt rueckwirkend zu bestrafen, gleiches Prinzip
+      // wie bei primordialHeat/waterVolume oben.
+      solarLuminosityFactor = typeof saved.solarLuminosityFactor === "number" ? saved.solarLuminosityFactor : 1;
+      fieldStrength = typeof saved.fieldStrength === "number" ? saved.fieldStrength : 1;
     } else {
       init();
     }
   }
 
-  return { init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage, vegetationSuitability, triggerImpactWinter, serialize, restore };
+  return { init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage, vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength, serialize, restore };
 })();

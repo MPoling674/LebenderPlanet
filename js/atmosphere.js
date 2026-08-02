@@ -62,6 +62,20 @@ const Atmosphere = (() => {
     set(gasId, get(gasId) + delta);
   }
 
+  // Atmosphaerenerosion durch Sonnenwind bei schwachem Magnetfeld (siehe
+  // MAGNETIC_FIELD_DECAY_RATE-Kommentar in data.js, Aufruf aus planet.js).
+  // Reduziert ALLE Hauptgase GEMEINSAM um denselben Anteil — bewusst NICHT ueber
+  // set()/adjust(): die GAS_PAIRS-Kopplung dort haelt O2+N2 als Summe konstant
+  // (eine Umverteilung zwischen den beiden), wuerde bei sinkendem N2 also
+  // faelschlich O2 ANHEBEN. Atmosphaerenerosion ist aber ein echter Verlust
+  // beider Gase ins All, keine Umverteilung.
+  function erode(fraction) {
+    ["o2", "n2", "co2", "ch4"].forEach((id) => {
+      const g = getGas(id);
+      gases[id] = clamp(gases[id] * (1 - fraction), g.min, gases[id]);
+    });
+  }
+
   // CO2-Äquivalent in ppm: CO2 plus andere Treibhausgase, gewichtet mit ihrer
   // relativen Treibhauspotenz (CH4-potency=25 ⇒ 1 ppm CH4 zählt wie 25 ppm CO2).
   // O2 hat potency=0 und trägt nicht bei (real ist Sauerstoff kein Treibhausgas).
@@ -89,5 +103,5 @@ const Atmosphere = (() => {
     if (saved) Object.assign(gases, saved);
   }
 
-  return { init, get, set, adjust, co2Equivalent, radiativeForcing, serialize, restore };
+  return { init, get, set, adjust, erode, co2Equivalent, radiativeForcing, serialize, restore };
 })();

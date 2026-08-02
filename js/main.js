@@ -95,7 +95,15 @@ const Game = (() => {
       const after = snapshot();
       checkMilestones(before, after);
       result.events.forEach((event) => UI.log(event.message, event.category, event));
-      Charts.recordSample(year, after.temp, after.co2, after.population);
+      Charts.recordSample({
+        year,
+        temp: after.temp,
+        co2: after.co2,
+        population: after.population,
+        oceanPH: Ocean.pH(),
+        oceanO2: Ocean.dissolvedOxygenFraction() * 100,
+        solar: Climate.solarLuminosity() * 100,
+      });
       // Nur wenn eingeschaltet (siehe Debug.setEnabled) — kein Overhead im
       // normalen Spielbetrieb, da Debug.runChecks() bei jedem Aufruf einen
       // vollen Planet.stats()-Scan macht.

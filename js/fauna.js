@@ -136,7 +136,17 @@ const Fauna = (() => {
     }
     const [sMin, sMax] = faunaSalinityRange(type);
     const salinitySuit = Climate.vegetationSuitability(cell.salinity, sMin, sMax);
-    return Math.min(tempSuit, salinitySuit);
+    // Gelöster Sauerstoff (siehe OXYGEN_SOLUBILITY_TEMP_COEFF-Kommentar in
+    // data.js): gilt fuer ALLE Meeresarten (reale anoxische Ereignisse treffen
+    // die gesamte marine Fauna, nicht nur Kalkschaler).
+    const doSuit = clamp(Ocean.dissolvedOxygenFraction(), 0, 1);
+    // Ozeanversauerung (siehe OCEAN_PH_SENSITIVITY-Kommentar in data.js): nur
+    // fuer phSensitive-Arten (aktuell Mollusken) — andere Meeresarten bekommen
+    // keinen kuenstlichen pH-Malus.
+    const phSuit = type.phSensitive
+      ? clamp(1 - OCEAN_PH_SENSITIVITY * Math.max(0, OCEAN_PH_PREINDUSTRIAL - Ocean.pH()), 0, 1)
+      : 1;
+    return Math.min(tempSuit, salinitySuit, doSuit, phSuit);
   }
 
   // Fuer eine LEERE Zelle: nur "Wurzel"-Taxa (successorOnly:false) koennen spontan

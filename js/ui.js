@@ -26,6 +26,10 @@ const UI = (() => {
     el.hudCh4 = document.getElementById("hud-ch4");
     el.hudCivCo2 = document.getElementById("hud-civ-co2");
     el.hudCivCh4 = document.getElementById("hud-civ-ch4");
+    el.hudOceanPh = document.getElementById("hud-ocean-ph");
+    el.hudOceanO2 = document.getElementById("hud-ocean-o2");
+    el.hudSolar = document.getElementById("hud-solar");
+    el.hudMagneticField = document.getElementById("hud-magnetfield");
     el.vegLegend = document.getElementById("veg-legend");
     el.speciesList = document.getElementById("species-list");
     el.mapTooltip = document.getElementById("map-tooltip");
@@ -36,6 +40,9 @@ const UI = (() => {
     el.correlationLegend = document.getElementById("correlation-legend");
     el.compositionChart = document.getElementById("composition-chart");
     el.compositionLegend = document.getElementById("composition-legend");
+    el.oceanPhChart = document.getElementById("ocean-ph-chart");
+    el.oceanO2Chart = document.getElementById("ocean-o2-chart");
+    el.solarChart = document.getElementById("solar-chart");
     el.debugEnabled = document.getElementById("debug-enabled");
     el.debugWarnings = document.getElementById("debug-warnings");
     el.debugCellDump = document.getElementById("debug-cell-dump");
@@ -367,12 +374,19 @@ const UI = (() => {
     const civEmissions = Civilization.cumulativeEmissions();
     el.hudCivCo2.textContent = civEmissions.co2.toFixed(1) + " ppm";
     el.hudCivCh4.textContent = civEmissions.ch4.toFixed(2) + " ppm";
+    el.hudOceanPh.textContent = Ocean.pH().toFixed(2);
+    el.hudOceanO2.textContent = (Ocean.dissolvedOxygenFraction() * 100).toFixed(0) + " %";
+    el.hudSolar.textContent = (Climate.solarLuminosity() * 100).toFixed(0) + " %";
+    el.hudMagneticField.textContent = (Climate.magneticFieldStrength() * 100).toFixed(0) + " %";
     renderGasValues();
     Charts.renderTemperatureChart(el.tempChart);
     Charts.renderCo2Chart(el.co2Chart);
     Charts.renderPopulationChart(el.populationChart);
     Charts.renderCorrelationChart(el.correlationChart, el.correlationLegend);
     Charts.renderCompositionChart(el.compositionChart, el.compositionLegend);
+    Charts.renderOceanPhChart(el.oceanPhChart);
+    Charts.renderOceanO2Chart(el.oceanO2Chart);
+    Charts.renderSolarChart(el.solarChart);
     renderDebugWarnings();
   }
 

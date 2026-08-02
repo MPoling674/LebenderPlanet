@@ -96,6 +96,21 @@ const GEOLOGICAL_O2_RELAXATION_RATE = 0.01 / EVOLUTION_TIME_FACTOR;
 const GEOLOGICAL_CO2_EQUILIBRIUM = 280; // ppm, entspricht CO2_PREINDUSTRIAL_PPM
 const GEOLOGICAL_CO2_RELAXATION_RATE = (1 / 1000) / EVOLUTION_TIME_FACTOR;
 
+// Dynamische Silikatverwitterung (Carbonat-Silikat-Kreislauf als echter
+// Thermostat, Walker/Hays/Kasting 1981): waermer (und damit real auch
+// niederschlagsreicher, hier ohne eigene globale Niederschlags-Aggregation
+// vereinfacht direkt an die Temperatur gekoppelt) verwittert Silikatgestein
+// schneller und zieht dadurch schneller CO2 aus der Atmosphaere — ein
+// stabilisierender Gegenkopplungseffekt, anders als die destabilisierenden
+// Rueckkopplungen (Albedo/Wasserdampf) oben. Modifiziert NUR die RATE der
+// bestehenden GEOLOGICAL_CO2_RELAXATION_RATE (siehe Climate.weatheringFactor()
+// in climate.js, angewendet in planet.js), NICHT die Scrubber-/Emitter-
+// Konstanten unten — bei BASE_GLOBAL_TEMP ist der Faktor exakt 1, die
+// bestehende Terraforming-Kalibrierung bleibt dadurch unangetastet.
+const SILICATE_WEATHERING_TEMP_SENSITIVITY = 0.05; // Anteil/°C Abweichung von BASE_GLOBAL_TEMP
+const SILICATE_WEATHERING_MIN_FACTOR = 0.2;
+const SILICATE_WEATHERING_MAX_FACTOR = 3;
+
 const CO2_PREINDUSTRIAL_PPM = 280; // realer vorindustrieller Referenzwert
 
 // Chemische CH4-Senke (troposphaerische Oxidation durch OH-Radikale zu CO2/H2O) —
@@ -111,12 +126,49 @@ const GEOLOGICAL_CH4_EQUILIBRIUM = CH4_PREINDUSTRIAL_PPM;
 const GEOLOGICAL_CH4_RELAXATION_RATE = (1 / 10) / EVOLUTION_TIME_FACTOR;
 const CO2_FORCING_COEFFICIENT = 5.35; // W/m² pro ln(CO2eq/CO2_ref) — vereinfachte reale IPCC-Formel
 const CLIMATE_SENSITIVITY = 0.8; // °C pro W/m² Strahlungsantrieb (~3°C pro CO2-Verdopplung)
-const WATER_VAPOR_AMPLIFICATION = 0.4; // Wasserdampf-Rückkopplung verstärkt die GHG-Erwärmung zusätzlich
+// Wasserdampf-Rueckkopplung: real das staerkste Treibhausgas, aber KEIN vom
+// Spieler regelbares Gas — die Luft haelt bei hoeherer Temperatur exponentiell
+// mehr Wasserdampf (Clausius-Clapeyron, ~7%/°C), was die GHG-Erwaermung
+// zusaetzlich verstaerkt. Ersetzt die alte statische Konstante durch
+// Climate.waterVaporAmplification() (climate.js) — BASE bleibt der alte Fixwert
+// 0.4, damit die Kalibrierung bei BASE_GLOBAL_TEMP exakt erhalten bleibt, nur
+// die Abweichung reagiert jetzt dynamisch. Skaliert zusaetzlich mit
+// outgassedWaterReserve (nicht waterCoverage()!): ein kochender Planet VOR der
+// Ozean-Kondensation hat bereits eine Dampfatmosphaere mit maximalem
+// Wasserdampf-Treibhauseffekt (realer Grund, warum die fruehe Erde so lange
+// zum Abkuehlen brauchte) — waterCoverage() waere hier faelschlich 0.
+const WATER_VAPOR_BASE_AMPLIFICATION = 0.4;
+const WATER_VAPOR_CC_COEFF = 0.07; // Anteil/°C, reale Clausius-Clapeyron-Groessenordnung
+const WATER_VAPOR_MIN_AMPLIFICATION = 0.1;
+const WATER_VAPOR_MAX_AMPLIFICATION = 1.0; // Deckel gegen Runaway-Zusammenspiel mit der Albedo-Rueckkopplung unten
 const BASE_GLOBAL_TEMP = 14; // °C, realer vorindustrieller globaler Durchschnitt
 
 const BASE_ICE_COVERAGE = 0.12; // Anteil der Planetenoberfläche bei Basistemperatur
 const ICE_TEMP_SENSITIVITY = 0.018; // Aenderung des Eisanteils je °C Abweichung von BASE_GLOBAL_TEMP
 const SEA_LEVEL_PER_ICE_PERCENT = 0.4; // m Meeresspiegelanstieg je 1 Prozentpunkt geschmolzenes Eis
+
+// Eis-Albedo-Rueckkopplung (Budyko 1969/Sellers 1969): Eis reflektiert ca.
+// 60-80% des Sonnenlichts, Ozean/Land deutlich weniger — waechst die Eisdecke,
+// wird mehr Sonnenlicht reflektiert, was weiter abkuehlt (Gefahr einer
+// "Schneeball-Erde"), und umgekehrt schmilzt weniger Eis die Rueckstrahlung
+// weiter. Real waere das ueber S0/4*Albedo-Differenz ~170 W/m² pro 100%
+// Eisanteil-Anomalie — das wuerde die CO2-Kraft (max. ~10 W/m²) komplett
+// dominieren und zu einem im Spiel unkontrollierbaren Runaway fuehren, daher
+// bewusst stark gedaempft (gleiches Vorgehen wie bei den MILANKOVITCH_*_
+// AMPLITUDE-Werten oben). Siehe Climate.albedoForcing() — bei currentIce ===
+// BASE_ICE_COVERAGE (Spielstart) ist der Term exakt 0.
+const ALBEDO_FORCING_PER_ICE_FRACTION = 40; // W/m² pro 100 Prozentpunkte Eisanteil-Abweichung, gedaempft
+
+// Junge-schwache-Sonne (Gough 1981): junge Sterne strahlen schwaecher — die
+// fruehe Sonne hatte real ca. 30% weniger Leuchtkraft als heute. Real braucht
+// diese Aufhellung Milliarden Jahre, das waere im Spielverlauf nie sichtbar;
+// SOLAR_LUMINOSITY_RAMP_RATE ist daher (wie EVOLUTION_TIME_FACTOR generell)
+// bewusst auf die Spiel-Zeitskala komprimiert statt den realen Wert zu nutzen.
+// Siehe Climate.solarLuminosityFactor — bei Faktor 1 (ausgereifter Stern) ist
+// der Forcing-Term exakt 0.
+const SOLAR_LUMINOSITY_START = 0.7;
+const SOLAR_LUMINOSITY_RAMP_RATE = 0.02 / EVOLUTION_TIME_FACTOR;
+const SOLAR_FORCING_PER_LUMINOSITY_UNIT = 40; // W/m² pro vollen Leuchtkraft-Anteilspunkt, gedaempft wie ALBEDO_FORCING_PER_ICE_FRACTION
 
 // Planetenentstehung: der Spielstart ist ein "kochender" Planet OHNE Ozeane
 // (Restwaerme aus Akkretion/Kernbildung), der erst abkuehlen muss, bevor
@@ -187,6 +239,49 @@ const SEA_LEVEL_THRESHOLD = 0.58; // Hoehen-Schwelle (0..1): darunter Ozean, dar
 // am Aequator (viel Niederschlag) und an den Polen (Suesswasser aus Eisschmelze,
 // wenig Verdunstung) darunter — daher eine eigene Kurvenform statt der linearen
 // Breiten-Rampe wie bei der Temperatur.
+// Ozeanchemie (js/ocean.js): beide Werte reine Ableitungen des aktuellen
+// Atmosphaerenzustands (Chemie/Loeslichkeit stellen sich schnell genug ein,
+// dass keine eigene Traegheit noetig ist) — kein eigener Save-State.
+// Ozeanversauerung (Zeebe & Wolf-Gladrow 2001): hoeheres CO2 bildet mehr
+// Kohlensaeure im Wasser, senkt den pH-Wert — realer Referenzwert ~0.3-0.4
+// pH-Abfall pro CO2-Verdopplung.
+const OCEAN_PH_PREINDUSTRIAL = 8.1;
+const OCEAN_PH_CO2_SENSITIVITY = 0.3; // pH-Punkte pro Verdopplung von CO2 (log2)
+const OCEAN_PH_MIN = 6.5;
+// Wirkung auf pH-empfindliche Meeresarten (siehe FAUNA_TYPES phSensitive-Flag,
+// bisher nur Mollusken/Kalkschaler): Eignung faellt linear mit dem pH-Abfall
+// unter den vorindustriellen Referenzwert.
+const OCEAN_PH_SENSITIVITY = 0.6;
+
+// Gelöster Sauerstoff im Ozean (Keeling et al. 2010, "ocean deoxygenation"):
+// waermeres Wasser kann weniger Gas loesen — bei steigender Temperatur sinkt
+// der Sauerstoffgehalt, was zu anoxischen Ereignissen und Massenaussterben
+// mariner Fauna fuehrt. Gilt fuer ALLE Meeresarten (nicht nur pH-empfindliche),
+// siehe Fauna.suitability().
+const OXYGEN_SOLUBILITY_TEMP_COEFF = 0.03; // Anteil/°C Abweichung von BASE_GLOBAL_TEMP
+const OXYGEN_SOLUBILITY_MIN_FRACTION = 0.05;
+
+// Magnetfeld & Atmosphaerenerosion (Lammer et al. 2008): ohne intaktes
+// Magnetfeld blaest der Sonnenwind die Atmosphaere allmaehlich ab (siehe Mars).
+// fieldStrength (Climate) klingt rein monoton ab wie RADIATION_DECAY_RATE
+// (ein Dynamo erholt sich nicht von selbst) — bewusst MIT EVOLUTION_TIME_FACTOR
+// skaliert (anders als PRIMORDIAL_HEAT_RELAXATION_RATE!): real bleibt ein
+// Planetenmagnetfeld Milliarden Jahre stabil, das waere im Spiel nie sichtbar;
+// an die Evolutions-Zeitskala gekoppelt wird es zu einem Spaetspiel-Ereignis
+// (Hochtechnologie-Aera), nicht zu einer Bedrohung der fruehen mikrobiellen
+// Phase. Unterhalb MAGNETIC_FIELD_EROSION_THRESHOLD erodiert Atmosphere.erode()
+// (siehe atmosphere.js) alle Hauptgase gemeinsam proportional zur Unterschreitung.
+// Kalibrierung im Browser verifiziert (siehe Verifikations-Session): 0.03 war
+// um GROESSENORDNUNGEN zu schnell — das Feld brach bereits nach ~1000-2500
+// Jahren zusammen (noch in der fruehen mikrobiellen Phase) und erodierte die
+// Atmosphaere daraufhin ueber hunderttausende Jahre permanent auf ihre
+// Minimalwerte (O2 blieb bei 0% haengen, Eukaryoten konnten nie entstehen).
+// 0.00006 verschiebt die Schwellenwert-Unterschreitung auf ~500.000 Jahre —
+// weit nach der mikrobiellen Fruehphase, ein echtes Spaetspiel-Ereignis.
+const MAGNETIC_FIELD_DECAY_RATE = 0.00006 / EVOLUTION_TIME_FACTOR;
+const MAGNETIC_FIELD_EROSION_THRESHOLD = 0.3;
+const ATMOSPHERIC_EROSION_MAX_FRACTION_PER_YEAR = 0.004 / EVOLUTION_TIME_FACTOR;
+
 const OCEAN_SALINITY_BASE = 35;
 const OCEAN_SALINITY_MIN = 0;
 const OCEAN_SALINITY_MAX = 45;
@@ -318,7 +413,12 @@ const FAUNA_TYPES = [
   // Die Nachfolgelinie an Land (Amphibien etc., siehe successors bei "fish") bleibt
   // civilizationCapable, sobald sie das Wasser verlaesst.
   { id: "radiata", name: "Radiata", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 20, salinityTolerance: 15, color: [150, 110, 168], successors: [] },
-  { id: "mollusks", name: "Mollusken", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 18, salinityTolerance: 14, color: [176, 132, 104], successors: [] },
+  // phSensitive: reale Kalkschaler (Muscheln/Schnecken) sind besonders
+  // empfindlich gegenueber Ozeanversauerung (Zeebe & Wolf-Gladrow 2001) — siehe
+  // OCEAN_PH_SENSITIVITY-Kommentar oben und Fauna.suitability(). Andere
+  // Meeresarten bekommen keinen kuenstlichen pH-Malus, nur den allgemeinen
+  // gelöst-O2-Effekt (gilt fuer alle Meeresarten).
+  { id: "mollusks", name: "Mollusken", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 18, salinityTolerance: 14, phSensitive: true, color: [176, 132, 104], successors: [] },
   { id: "trichordates", name: "Trichordaten", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 16, salinityTolerance: 12, color: [120, 132, 176], successors: [] },
   { id: "fish", name: "Fische", habitat: "ocean", civilizationCapable: false, manualPlacement: true, successorOnly: false, tolerance: 14, salinityTolerance: 12, color: [90, 140, 168], successors: [{ id: "amphibians", crossHabitat: true }] },
 
