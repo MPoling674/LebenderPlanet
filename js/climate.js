@@ -112,6 +112,26 @@ const Climate = (() => {
     return obliquityTerm + precessionTerm + eccentricityTerm;
   }
 
+  // Fuer die Achsneigungs-Visualisierung des 3D-Widgets (js/planet3d.js) —
+  // die reale Bedeutung von Obliquitaet (der Neigungswinkel selbst schwankt
+  // periodisch, siehe MILANKOVITCH_OBLIQUITY_PERIOD_YEARS) als tatsaechlicher
+  // Grad-Wert statt als Temperatur-Term wie in orbitalForcing() oben. Eigene
+  // (kleine) Amplitude in Grad statt der dortigen °C-kalibrierten
+  // MILANKOVITCH_OBLIQUITY_AMPLITUDE — beide leiten sich aus demselben
+  // Phasenwinkel ab, daher bleiben sie synchron zueinander.
+  function obliquityWobbleDegrees() {
+    const amplitude = OBLIQUITY_WOBBLE_AMPLITUDE_DEGREES * (axialTilt / TILT_REFERENCE_DEGREES);
+    return amplitude * Math.sin((2 * Math.PI * orbitalYear) / MILANKOVITCH_OBLIQUITY_PERIOD_YEARS + orbitalPhase.obliquity);
+  }
+
+  // Praezession: die NEIGUNGSRICHTUNG (nicht der -winkel) der Achse wandert
+  // langsam im Kreis (realer Kreisel-Effekt, Periode MILANKOVITCH_
+  // PRECESSION_PERIOD_YEARS) — im Widget als langsame Rotation der gesamten
+  // Neigungsachse um die Vertikale sichtbar.
+  function precessionAngleRadians() {
+    return (2 * Math.PI * orbitalYear) / MILANKOVITCH_PRECESSION_PERIOD_YEARS + orbitalPhase.precession;
+  }
+
   // Eis-Albedo-Rueckkopplung (siehe ALBEDO_FORCING_PER_ICE_FRACTION-Kommentar in
   // data.js): nutzt den TRAEGEN currentIce-State (nicht das sofortige
   // Gleichgewicht equilibriumIceCoverage()) — dadurch reagiert die
@@ -296,6 +316,6 @@ const Climate = (() => {
     init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage,
     vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength,
     setAxialTilt, setMoonMass, setPlanetMass, axialTiltDegrees, moonMassValue, planetMassValue,
-    tiltGradientFactor, serialize, restore,
+    tiltGradientFactor, obliquityWobbleDegrees, precessionAngleRadians, serialize, restore,
   };
 })();

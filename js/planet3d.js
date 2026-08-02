@@ -1,29 +1,35 @@
 // 3D-Globus als kleines Sidebar-Widget (Three.js r128, siehe CDN-Kommentar in
-// index.html) — dreht sich staendig von selbst, laesst sich aber zusaetzlich
-// per Maus-/Touch-Drag manuell weiterdrehen (direkt auf sphere.rotation.y,
-// bewusst KEIN OrbitControls: das wuerde die KAMERA um die Kugel drehen statt
-// die Kugel selbst, was currentLongitudeFraction() unten verkomplizieren
-// wuerde — hier gibt es nur EINEN Rotationswert, egal ob er vom Auto-Spin oder
-// vom Ziehen kommt). Kein Raycasting-Klick mehr (Terraforming bleibt exklusiv
-// auf der 2D-Karte, siehe js/mapviewport.js). Wiederverwendet den bereits
-// fertig gerenderten 2D-Canvas (#planet-canvas) DIREKT als Kugeltextur —
-// GRID_WIDTH:GRID_HEIGHT ist 60:30 = 2:1, exakt das Seitenverhaeltnis einer
-// equirektangularen Kugelprojektion, keine zweite Terrain-Farblogik noetig.
+// index.html) — dreht sich staendig von selbst, laesst sich per Maus-/Touch-
+// Drag manuell weiterdrehen/-kippen, UND zeigt die spielergesteuerte
+// Achsneigung (Climate.axialTiltDegrees()) inkl. der Milankovitch-Zyklen
+// (Obliquitaets-Wobble + Praezession, siehe climate.js) als echte geometrische
+// Neigung/Rotation der Achse. Kein Raycasting-Klick fuer Terraforming mehr
+// (bleibt exklusiv auf der 2D-Karte, siehe js/mapviewport.js) — Raycasting
+// wird hier ausschliesslich intern genutzt, um zu ermitteln, welcher
+// Laengengrad gerade der Kamera zugewandt ist (siehe currentLongitudeFraction()
+// unten: robust gegenueber JEDER Kombination aus Spin/Neigung/Praezession/
+// Kamerawinkel, da es die tatsaechliche Geometrie abfragt statt eine Formel zu
+// pflegen, die bei jeder neuen Sichttransformation neu hergeleitet werden
+// muesste). Wiederverwendet den bereits fertig gerenderten 2D-Canvas
+// (#planet-canvas) DIREKT als Kugeltextur — GRID_WIDTH:GRID_HEIGHT ist 60:30 =
+// 2:1, exakt das Seitenverhaeltnis einer equirektangularen Kugelprojektion.
 //
-// currentLongitudeFraction() ist die Bruecke zu js/mapviewport.js: die grosse
-// 2D-Karte liest diesen Wert jeden Frame und pannt sich passend dazu (egal ob
-// die aktuelle Rotation gerade vom Auto-Spin oder vom Ziehen kommt) — die
-// eigentlich teure Arbeit (PlanetMap.render()) bleibt dabei UNVERAENDERT nur
-// ereignisgesteuert, hier wird nur ein billiger Rotationswinkel berechnet.
+// Szenengraph-Hierarchie (aussen nach innen), entspricht der realen Physik:
+// precessionGroup (rotiert langsam um die Vertikale = Praezession)
+//   -> tiltGroup (geneigt um axialTilt + Obliquitaets-Wobble)
+//     -> sphere (spinnt um ihre eigene, jetzt geneigte Achse)
 
 const Planet3D = (() => {
   let canvas = null;
   let renderer = null;
   let scene = null;
   let camera = null;
+  let precessionGroup = null;
+  let tiltGroup = null;
   let sphere = null;
   let texture = null;
   let sunLight = null;
+  let raycaster = null;
   let rafId = null;
   let lastFrameTime = null;
   let autoRotation = 0;
@@ -31,10 +37,7 @@ const Planet3D = (() => {
   let lastPointerX = 0;
   let lastPointerY = 0;
   // Vertikaler Kamera-Blickwinkel (Bogenmass, 0 = Aequatorhoehe) — steuert NUR
-  // die Kamera, nicht die Kugel selbst, damit currentLongitudeFraction() unten
-  // unveraendert bleibt (die Kamera bleibt dabei immer in derselben Meridian-
-  // ebene wie ihre Ausgangsposition, ein vertikales Kippen aendert also nur die
-  // sichtbare Breite, nicht den Laengengrad).
+  // die Kamera, keine Simulationsgroesse.
   let cameraTilt = 0;
 
   // Volle Umdrehung in ~40s ohne Zutun — langsam und ruhig, aehnliche
@@ -59,13 +62,18 @@ const Planet3D = (() => {
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 100);
-    camera.position.set(0, 0, 6);
+    camera.position.set(0, 0, CAMERA_DISTANCE);
+
+    precessionGroup = new THREE.Group();
+    tiltGroup = new THREE.Group();
+    precessionGroup.add(tiltGroup);
+    scene.add(precessionGroup);
 
     const geometry = new THREE.SphereGeometry(2.2, 48, 48);
     texture = new THREE.CanvasTexture(document.getElementById("planet-canvas"));
     const material = new THREE.MeshStandardMaterial({ map: texture });
     sphere = new THREE.Mesh(geometry, material);
-    scene.add(sphere);
+    tiltGroup.add(sphere);
 
     // "Sonne" — Farbe/Intensitaet an Climate.solarLuminosity() gekoppelt (siehe
     // SOLAR_LUMINOSITY_START-Kommentar in data.js): bei geringerer Leuchtkraft
@@ -74,6 +82,8 @@ const Planet3D = (() => {
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+
+    raycaster = new THREE.Raycaster();
 
     canvas.style.touchAction = "none"; // sonst scrollt eine Touch-Drag-Geste die Seite statt die Kugel zu drehen
     canvas.style.cursor = "grab";
@@ -103,7 +113,7 @@ const Planet3D = (() => {
     // rechts/oestlich weiterdrehen.
     autoRotation -= dx * DRAG_SENSITIVITY;
     // Nach oben ziehen kippt die Kamera nach oben (man blickt mehr von oben
-    // auf den Pol) — reine Kamerabewegung, siehe cameraTilt-Kommentar oben.
+    // auf den Pol) — reine Kamerabewegung.
     cameraTilt = clamp(cameraTilt + dy * DRAG_SENSITIVITY, -CAMERA_TILT_MAX, CAMERA_TILT_MAX);
   }
 
@@ -122,10 +132,19 @@ const Planet3D = (() => {
     // automatische Drehung einfach kurzzeitig.
     autoRotation += (dtMs / ROTATION_PERIOD_MS) * Math.PI * 2;
     sphere.rotation.y = autoRotation;
-    // Kamera orbitet vertikal um die Kugel (siehe cameraTilt-Kommentar oben) —
-    // bleibt dabei immer in derselben Meridianebene, nur die Hoehe aendert sich.
+
+    // Achsneigung (Climate.axialTiltDegrees()) + Obliquitaets-Wobble als
+    // Winkel der Neigungs-Gruppe; Praezession als langsame Rotation der
+    // GESAMTEN Neigungsachse um die Vertikale (siehe Datei-Kommentar oben).
+    const tiltDeg = Climate.axialTiltDegrees() + Climate.obliquityWobbleDegrees();
+    tiltGroup.rotation.z = -(tiltDeg / 180) * Math.PI;
+    precessionGroup.rotation.y = Climate.precessionAngleRadians();
+
+    // Kamera orbitet vertikal um die Kugel (bleibt dabei immer in derselben
+    // Meridianebene, nur die Hoehe aendert sich).
     camera.position.set(0, CAMERA_DISTANCE * Math.sin(cameraTilt), CAMERA_DISTANCE * Math.cos(cameraTilt));
     camera.lookAt(0, 0, 0);
+
     const solar = Climate.solarLuminosity();
     sunLight.intensity = 0.6 + 0.8 * solar;
     sunLight.color.setHSL(0.13, 0.5, 0.4 + 0.3 * solar);
@@ -140,16 +159,16 @@ const Planet3D = (() => {
   }
 
   // 0..1 — welcher Laengengrad-Anteil der Karte gerade auf dem Widget "vorne"
-  // (der Kamera zugewandt) sichtbar ist. Per Raycast auf die Bildschirmmitte
-  // empirisch kalibriert (Three.js SphereGeometry: der Punkt phi=pi/2, also
-  // u=0.25 bei rotation.y=0, zeigt bei Kamera auf +Z nach vorne; steigendes
-  // rotation.y verschiebt den sichtbaren Punkt zu KLEINEREM u) — exakte
-  // Uebereinstimmung mehrerer Messpunkte im Browser bestaetigt: u = 0.25 -
-  // rotation.y/(2*pi).
+  // (der Kamera zugewandt) sichtbar ist, per Raycast durch die Bildschirmmitte
+  // ermittelt (siehe Datei-Kommentar oben zur Begruendung). u ist NICHT
+  // gespiegelt (nur v, per CanvasTexture-Default flipY — hier irrelevant), das
+  // entspricht direkt px/Breite auf dem Quell-Canvas, siehe js/mapviewport.js.
   function currentLongitudeFraction() {
-    if (!sphere) return 0.5;
-    const raw = 0.25 - sphere.rotation.y / (Math.PI * 2);
-    return ((raw % 1) + 1) % 1;
+    if (!sphere || !camera) return 0.5;
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const hits = raycaster.intersectObject(sphere);
+    if (!hits.length || !hits[0].uv) return 0.5;
+    return hits[0].uv.x;
   }
 
   return { init, render, currentLongitudeFraction };

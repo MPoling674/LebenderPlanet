@@ -220,6 +220,12 @@ const MILANKOVITCH_OBLIQUITY_PERIOD_YEARS = 41000; // Achsneigung, staerkster Ei
 // Neigung als heute einen groesseren. Bei TILT_REFERENCE_DEGREES (23,5°, heutiger
 // Wert) exakt dieser Fixwert.
 const MILANKOVITCH_OBLIQUITY_AMPLITUDE = 0.7; // °C, bei Referenz-Achsneigung
+// Fuer die 3D-Widget-Visualisierung (js/planet3d.js, Climate.obliquityWobbleDegrees()):
+// echter Winkel-Wert statt des obigen °C-Terms — real schwankt die
+// Erdachsneigung nur um ca. ±1,3°, hier etwas verstaerkt (Faktor ~2), damit
+// die Schwankung auf dem kleinen Widget sichtbar bleibt (gleiches Prinzip wie
+// die uebrigen bewusst gedaempften/verstaerkten Visualisierungskonstanten).
+const OBLIQUITY_WOBBLE_AMPLITUDE_DEGREES = 3;
 const MILANKOVITCH_PRECESSION_PERIOD_YEARS = 23000; // Praezession der Rotationsachse
 const MILANKOVITCH_PRECESSION_AMPLITUDE = 0.5; // °C, durch Exzentrizitaet moduliert (siehe orbitalForcing())
 const MILANKOVITCH_ECCENTRICITY_PERIOD_YEARS = 100000; // Exzentrizitaet der Erdbahn
