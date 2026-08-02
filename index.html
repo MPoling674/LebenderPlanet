@@ -34,13 +34,12 @@
 </header>
 
 <main id="game">
-  <div id="view-toggle">
-    <button id="view-toggle-2d" class="tool-active" data-view="2d">🗺️ 2D-Karte</button>
-    <button id="view-toggle-3d" data-view="3d">🌐 3D-Globus</button>
-  </div>
   <div id="map-wrap">
-    <canvas id="planet-canvas" width="1200" height="600"></canvas>
-    <canvas id="planet-3d-canvas" width="1200" height="600" class="hidden"></canvas>
+    <!-- Reine Bildquelle fuer PlanetMap.render() (js/map.js, unveraendert) —
+         nicht mehr direkt sichtbar/interaktiv, siehe #map-viewport darunter
+         (js/mapviewport.js), das dieses Bild live gepannt/gezoomt anzeigt. -->
+    <canvas id="planet-canvas" width="1200" height="600" class="source-only"></canvas>
+    <div id="map-viewport"></div>
     <div id="veg-legend"></div>
   </div>
   <div id="map-tooltip" class="hidden"></div>
@@ -60,6 +59,9 @@
       <p class="hint">Radius des eigenen Planeten grob aus der Planetenmasse geschätzt (gleichbleibende Dichte angenommen) — reale Sonnensystem-Radien zum Vergleich, eine gemeinsame Skala inklusive Gasriesen.</p>
       <canvas id="size-comparison-chart" width="480" height="150"></canvas>
       <ul id="size-comparison-legend" class="chart-legend"></ul>
+      <div class="chart-title">3D-Ansicht</div>
+      <p class="hint">Dreht sich kontinuierlich — die große Karte links folgt live dem gerade sichtbaren Längengrad.</p>
+      <canvas id="planet-3d-widget" width="220" height="220"></canvas>
       <div class="chart-title">Umlaufbahnen (schematisch)</div>
       <p class="hint">Nicht maßstabsgetreu — Planeten- und Mondgröße sowie die Achsneigungslinie reagieren live auf die Regler oben.</p>
       <canvas id="orbit-view" width="240" height="200"></canvas>
@@ -184,8 +186,8 @@
      Three.js-Releases den globalen Build + die klassischen (nicht-modularen)
      Beispiel-Controls zugunsten von ES-Modulen abgekuendigt haben. -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="js/planet3d.js"></script>
+<script src="js/mapviewport.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

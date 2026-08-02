@@ -1,33 +1,32 @@
-// 3D-Globus-Ansicht (Three.js r128, siehe CDN-Kommentar in index.html): spiegelt
-// die PlanetMap-API (init/onCellClick/onCellHover/render), damit main.js beide
-// Ansichten identisch verkabeln kann. Wiederverwendet den bereits fertig
-// gerenderten 2D-Canvas (#planet-canvas) DIREKT als Kugeltextur — GRID_WIDTH:
-// GRID_HEIGHT ist 60:30 = 2:1, exakt das Seitenverhaeltnis einer equirektangularen
-// Kugelprojektion, keine zweite Terrain-Farblogik noetig.
+// 3D-Globus als kleines, rein dekoratives Sidebar-Widget (Three.js r128, siehe
+// CDN-Kommentar in index.html) — analog zu js/orbitview.js: reine Auto-Rotation,
+// KEIN OrbitControls-Drag, KEINE Klick-Interaktivitaet mehr (Terraforming bleibt
+// exklusiv auf der 2D-Karte, siehe js/mapviewport.js). Wiederverwendet den
+// bereits fertig gerenderten 2D-Canvas (#planet-canvas) DIREKT als Kugeltextur
+// — GRID_WIDTH:GRID_HEIGHT ist 60:30 = 2:1, exakt das Seitenverhaeltnis einer
+// equirektangularen Kugelprojektion, keine zweite Terrain-Farblogik noetig.
+//
+// currentLongitudeFraction() ist die Bruecke zu js/mapviewport.js: die grosse
+// 2D-Karte liest diesen Wert jeden Frame und pannt sich passend dazu — die
+// eigentlich teure Arbeit (PlanetMap.render()) bleibt dabei UNVERAENDERT nur
+// ereignisgesteuert (siehe Kontext-Abschnitt im Plan), hier wird nur ein
+// billiger Rotationswinkel berechnet.
 
 const Planet3D = (() => {
   let canvas = null;
   let renderer = null;
   let scene = null;
   let camera = null;
-  let controls = null;
   let sphere = null;
   let texture = null;
-  let raycaster = null;
   let sunLight = null;
-  let active = false;
   let rafId = null;
-  let onCellClickCallback = null;
-  let onCellHoverCallback = null;
-  let pointerDownPos = null;
 
-  // Mehr Bewegung zwischen Pointerdown/-up als dieser Schwellenwert (px) zaehlt
-  // als Kamerarotation (OrbitControls), nicht als Klick — sonst wuerde jedes
-  // Drehen der Kugel versehentlich ein Terraforming-Werkzeug ausloesen.
-  const CLICK_DRAG_THRESHOLD = 5;
-  // Ausrichtung der Kugel-UVs gegen die Canvas-Textur: im Browser empirisch
-  // abgeglichen (Klick auf eine bekannte Zelle mit dem 2D-Ergebnis verglichen).
-  const UV_FLIP_V = true;
+  // Volle Umdrehung in ~40s — langsam und ruhig, aehnliche Groessenordnung wie
+  // PLANET_ORBIT_PERIOD_MS in js/orbitview.js, aber bewusst deutlich langsamer
+  // als der dortige Planetenumlauf (das hier ist die Ansicht des Planeten
+  // SELBST, nicht seine Bahn um den Stern).
+  const ROTATION_PERIOD_MS = 40000;
 
   function init(canvasEl) {
     canvas = canvasEl;
@@ -40,7 +39,7 @@ const Planet3D = (() => {
     camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 100);
     camera.position.set(0, 0, 6);
 
-    const geometry = new THREE.SphereGeometry(2.2, 64, 64);
+    const geometry = new THREE.SphereGeometry(2.2, 48, 48);
     texture = new THREE.CanvasTexture(document.getElementById("planet-canvas"));
     const material = new THREE.MeshStandardMaterial({ map: texture });
     sphere = new THREE.Mesh(geometry, material);
@@ -48,88 +47,18 @@ const Planet3D = (() => {
 
     // "Sonne" — Farbe/Intensitaet an Climate.solarLuminosity() gekoppelt (siehe
     // SOLAR_LUMINOSITY_START-Kommentar in data.js): bei geringerer Leuchtkraft
-    // (z.B. waehrend der "jungen schwachen Sonne"-Fruehphase) etwas gedaempfter
-    // und waermer/roetlicher — rein optisch, keine Simulationswirkung.
+    // etwas gedaempfter und waermer/roetlicher — rein optisch.
     sunLight = new THREE.DirectionalLight(0xffffff, 1.4);
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0xffffff, 0.35));
 
-    controls = new THREE.OrbitControls(camera, canvas);
-    controls.enableDamping = true;
-    controls.minDistance = 3.2;
-    controls.maxDistance = 12;
-
-    raycaster = new THREE.Raycaster();
-
-    canvas.addEventListener("pointerdown", handlePointerDown);
-    canvas.addEventListener("pointerup", handlePointerUp);
-    canvas.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("mouseleave", handleMouseLeave);
+    rafId = requestAnimationFrame(frame);
   }
 
-  function onCellClick(cb) {
-    onCellClickCallback = cb;
-  }
-
-  // cb(x, y, clientX, clientY) — gleiche Signatur wie PlanetMap.onCellHover().
-  function onCellHover(cb) {
-    onCellHoverCallback = cb;
-  }
-
-  function handlePointerDown(evt) {
-    pointerDownPos = { x: evt.clientX, y: evt.clientY };
-  }
-
-  function handlePointerUp(evt) {
-    if (!pointerDownPos) return;
-    const dx = evt.clientX - pointerDownPos.x;
-    const dy = evt.clientY - pointerDownPos.y;
-    pointerDownPos = null;
-    if (Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD) return;
-    const cell = cellAtEvent(evt);
-    if (cell && onCellClickCallback) onCellClickCallback(cell.x, cell.y);
-  }
-
-  function handleMouseMove(evt) {
-    if (!onCellHoverCallback) return;
-    const cell = cellAtEvent(evt);
-    onCellHoverCallback(cell ? cell.x : null, cell ? cell.y : null, evt.clientX, evt.clientY);
-  }
-
-  function handleMouseLeave() {
-    if (onCellHoverCallback) onCellHoverCallback(null, null, 0, 0);
-  }
-
-  function cellAtEvent(evt) {
-    const rect = canvas.getBoundingClientRect();
-    const ndcX = ((evt.clientX - rect.left) / rect.width) * 2 - 1;
-    const ndcY = -((evt.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
-    const hits = raycaster.intersectObject(sphere);
-    if (hits.length === 0 || !hits[0].uv) return null;
-    return uvToGridCell(hits[0].uv.x, hits[0].uv.y);
-  }
-
-  function uvToGridCell(u, v) {
-    const gx = clamp(Math.floor(u * GRID_WIDTH), 0, GRID_WIDTH - 1);
-    const vv = UV_FLIP_V ? 1 - v : v;
-    const gy = clamp(Math.floor(vv * GRID_HEIGHT), 0, GRID_HEIGHT - 1);
-    return { x: gx, y: gy };
-  }
-
-  // Von main.js beim Umschalten zwischen 2D/3D aufgerufen — der Render-Loop
-  // laeuft NUR, waehrend die 3D-Ansicht tatsaechlich sichtbar ist (anders als
-  // das kleine, dekorative OrbitView, ist ein volles WebGL-Rendering hier
-  // teuer genug, um das Pausieren im Hintergrund zu verdienen).
-  function setActive(isActive) {
-    active = isActive;
-    if (active && !rafId) rafId = requestAnimationFrame(frame);
-  }
-
-  function frame() {
-    if (!active) { rafId = null; return; }
-    controls.update();
+  function frame(now) {
+    if (!renderer) return;
+    sphere.rotation.y = (now / ROTATION_PERIOD_MS) * Math.PI * 2;
     const solar = Climate.solarLuminosity();
     sunLight.intensity = 0.6 + 0.8 * solar;
     sunLight.color.setHSL(0.13, 0.5, 0.4 + 0.3 * solar);
@@ -138,11 +67,23 @@ const Planet3D = (() => {
   }
 
   // Von main.js nach JEDEM PlanetMap.render() aufgerufen — markiert nur die
-  // Textur als veraltet, keine eigene Terrain-Berechnung. Das eigentlich teure
-  // WebGL-Rendering passiert ausschliesslich im frame()-Loop oben.
+  // Textur als veraltet, keine eigene Terrain-Berechnung.
   function render() {
     if (texture) texture.needsUpdate = true;
   }
 
-  return { init, onCellClick, onCellHover, render, setActive };
+  // 0..1 — welcher Laengengrad-Anteil der Karte gerade auf dem Widget "vorne"
+  // (der Kamera zugewandt) sichtbar ist. Per Raycast auf die Bildschirmmitte
+  // empirisch kalibriert (Three.js SphereGeometry: der Punkt phi=pi/2, also
+  // u=0.25 bei rotation.y=0, zeigt bei Kamera auf +Z nach vorne; steigendes
+  // rotation.y verschiebt den sichtbaren Punkt zu KLEINEREM u) — exakte
+  // Uebereinstimmung mehrerer Messpunkte im Browser bestaetigt: u = 0.25 -
+  // rotation.y/(2*pi).
+  function currentLongitudeFraction() {
+    if (!sphere) return 0.5;
+    const raw = 0.25 - sphere.rotation.y / (Math.PI * 2);
+    return ((raw % 1) + 1) % 1;
+  }
+
+  return { init, render, currentLongitudeFraction };
 })();
