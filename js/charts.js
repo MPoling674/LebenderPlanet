@@ -376,6 +376,71 @@ const Charts = (() => {
     }
   }
 
+  // Groessenvergleich mit den Sonnensystem-Planeten (siehe SOLAR_SYSTEM_PLANETS/
+  // estimatedPlanetRadiusKm() in data.js). Bewusst EINE lineare Skala fuer alle
+  // Planeten inkl. Gasriesen statt einer verzerrenden Wurzel-/Log-Skala — das
+  // ist ehrlich (Jupiter ist real ~11x so gross wie die Erde) statt beschoenigend;
+  // die Legende listet zusaetzlich die exakten km-Werte, damit die Information
+  // auch bei winzig dargestellten terrestrischen Planeten ablesbar bleibt
+  // (gleiches Prinzip wie bei renderCompositionChart's CO2/CH4-Segmenten).
+  const SIZE_COMPARISON_OWN_COLOR = [230, 103, 103];
+
+  function renderSizeComparisonChart(canvas, legendEl) {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const ownRadiusKm = estimatedPlanetRadiusKm(Climate.planetMassValue());
+    const entries = SOLAR_SYSTEM_PLANETS
+      .map((p) => ({ name: p.name, radiusKm: p.radiusKm, color: p.color, own: false }))
+      .concat([{ name: "Eigener Planet", radiusKm: ownRadiusKm, color: SIZE_COMPARISON_OWN_COLOR, own: true }])
+      .sort((a, b) => a.radiusKm - b.radiusKm);
+
+    const maxRadiusKm = Math.max(...entries.map((e) => e.radiusKm));
+    const padding = 10;
+    const maxPixelRadius = h / 2 - padding;
+    const pxPerKm = maxPixelRadius / maxRadiusKm;
+    const gap = 8;
+    const baselineY = h - padding;
+
+    let x = padding;
+    ctx.lineWidth = 2;
+    entries.forEach((e) => {
+      const r = Math.max(2, e.radiusKm * pxPerKm);
+      const cx = x + r;
+      const cy = baselineY - r;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${e.color.join(",")})`;
+      ctx.fill();
+      // Eigener Planet zusaetzlich umrandet, damit er in der Reihe der echten
+      // Planeten trotz aehnlicher Groesse eindeutig erkennbar bleibt.
+      if (e.own) {
+        ctx.strokeStyle = CHART_TEXT_STRONG;
+        ctx.stroke();
+      }
+      x += r * 2 + gap;
+    });
+
+    // Gemeinsame "Bodenlinie", an der alle Kreise ausgerichtet sind.
+    ctx.strokeStyle = CHART_GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, baselineY);
+    ctx.lineTo(w, baselineY);
+    ctx.stroke();
+
+    if (legendEl) {
+      legendEl.innerHTML = entries.map((e) => `
+        <li class="chart-legend-item">
+          <span class="chart-swatch" style="background:rgb(${e.color.join(",")})${e.own ? `;outline:2px solid ${CHART_TEXT_STRONG}` : ""}"></span>
+          <span>${e.name}${e.own ? " (eigener)" : ""}: <strong>${Math.round(e.radiusKm).toLocaleString("de-DE")} km</strong></span>
+        </li>
+      `).join("");
+    }
+  }
+
   return {
     recordSample,
     resetHistory,
@@ -388,5 +453,6 @@ const Charts = (() => {
     renderOceanO2Chart,
     renderSolarChart,
     renderTiltChart,
+    renderSizeComparisonChart,
   };
 })();

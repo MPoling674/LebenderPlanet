@@ -48,6 +48,8 @@ const UI = (() => {
     el.oceanO2Chart = document.getElementById("ocean-o2-chart");
     el.solarChart = document.getElementById("solar-chart");
     el.tiltChart = document.getElementById("tilt-chart");
+    el.sizeComparisonChart = document.getElementById("size-comparison-chart");
+    el.sizeComparisonLegend = document.getElementById("size-comparison-legend");
     el.debugEnabled = document.getElementById("debug-enabled");
     el.debugWarnings = document.getElementById("debug-warnings");
     el.debugCellDump = document.getElementById("debug-cell-dump");
@@ -440,6 +442,7 @@ const UI = (() => {
     Charts.renderOceanO2Chart(el.oceanO2Chart);
     Charts.renderSolarChart(el.solarChart);
     Charts.renderTiltChart(el.tiltChart);
+    Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
     renderDebugWarnings();
   }
 

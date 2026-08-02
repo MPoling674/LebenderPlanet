@@ -271,6 +271,29 @@ const PLANET_MASS_DEFAULT = 1; // Erdmasse
 const PLANET_MASS_MIN = 0.3;
 const PLANET_MASS_MAX = 3;
 
+// Groessenvergleich (js/charts.js: renderSizeComparisonChart()): reale
+// Aequatorradien der Sonnensystem-Planeten in km (NASA Planetary Fact Sheet).
+// Der eigene Planet hat im Spiel keinen eigenen Radius-Wert — er wird ueber
+// eine vereinfachte Masse-Radius-Beziehung geschaetzt (radius ~ masse^(1/3),
+// entspricht gleichbleibender mittlerer Dichte — eine grobe, aber fuer
+// terrestrische Planeten im PLANET_MASS_MIN/_MAX-Bereich plausible Naeherung;
+// echte Gesteinsplaneten komprimieren bei hoeherer Masse leicht staerker, das
+// wird hier bewusst vernachlaessigt).
+const EARTH_RADIUS_KM = 6371;
+const SOLAR_SYSTEM_PLANETS = [
+  { name: "Merkur", radiusKm: 2440, color: [154, 140, 128] },
+  { name: "Venus", radiusKm: 6052, color: [216, 178, 122] },
+  { name: "Erde", radiusKm: EARTH_RADIUS_KM, color: [70, 130, 180] },
+  { name: "Mars", radiusKm: 3390, color: [193, 96, 66] },
+  { name: "Jupiter", radiusKm: 69911, color: [200, 168, 128] },
+  { name: "Saturn", radiusKm: 58232, color: [212, 192, 140] },
+  { name: "Uranus", radiusKm: 25362, color: [150, 210, 220] },
+  { name: "Neptun", radiusKm: 24622, color: [80, 110, 210] },
+];
+function estimatedPlanetRadiusKm(planetMass) {
+  return EARTH_RADIUS_KM * Math.cbrt(planetMass);
+}
+
 const SEA_LEVEL_THRESHOLD = 0.58; // Hoehen-Schwelle (0..1): darunter Ozean, darueber Land
 
 // Salzgehalt des Ozeans in PSU (Practical Salinity Units, ~g/kg) — realer globaler

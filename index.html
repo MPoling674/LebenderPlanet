@@ -51,6 +51,13 @@
       <h2>Orbit &amp; Masse</h2>
       <p class="hint">Achsneigung, Mondmasse und Planetenmasse einstellen. Ohne ausreichende Mondmasse im Verhältnis zur Planetenmasse driftet die Achsneigung mit der Zeit von selbst weiter (siehe Magnetfeld-Analogie im HUD).</p>
       <div id="orbit-controls"></div>
+      <div class="chart-title">Größenvergleich mit dem Sonnensystem</div>
+      <p class="hint">Radius des eigenen Planeten grob aus der Planetenmasse geschätzt (gleichbleibende Dichte angenommen) — reale Sonnensystem-Radien zum Vergleich, eine gemeinsame Skala inklusive Gasriesen.</p>
+      <canvas id="size-comparison-chart" width="480" height="150"></canvas>
+      <ul id="size-comparison-legend" class="chart-legend"></ul>
+      <div class="chart-title">Umlaufbahnen (schematisch)</div>
+      <p class="hint">Nicht maßstabsgetreu — Planeten- und Mondgröße sowie die Achsneigungslinie reagieren live auf die Regler oben.</p>
+      <canvas id="orbit-view" width="240" height="200"></canvas>
     </section>
 
     <section id="panel-charts">
@@ -163,6 +170,7 @@
 <script src="js/events.js"></script>
 <script src="js/debug.js"></script>
 <script src="js/charts.js"></script>
+<script src="js/orbitview.js"></script>
 <script src="js/planet.js"></script>
 <script src="js/map.js"></script>
 <script src="js/ui.js"></script>
