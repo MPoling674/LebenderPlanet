@@ -105,34 +105,39 @@ const Planet = (() => {
 
   // Scannt nach jedem tick() auf neu hinzugekommene Taxa/Zivilisationsmeilensteine
   // und liefert die zugehoerigen Ereignis-Log-Meldungen — jede Meldung erscheint
-  // ueber die Laufzeit eines Spielstands nur EIN einziges Mal.
+  // ueber die Laufzeit eines Spielstands nur EIN einziges Mal. Alle hier
+  // erzeugten Events sind mit milestone:true markiert (siehe UI.log()/
+  // showEventPopup() in ui.js) — das sind genau die "Entwicklungsstufen", die
+  // zusaetzlich zum Ereignis-Log als Popup erscheinen sollen, da sie (anders
+  // als z.B. Temperaturschwellen) einmalig und unumkehrbar sind statt hin und
+  // her zu oszillieren.
   function scanForDiscoveries() {
     const events = [];
     if (!oceansFormed && cells.some((c) => currentTerrain(c) === "ocean")) {
       oceansFormed = true;
-      events.push({ category: "climate", message: "🌊 Die Oberflächentemperatur ist unter den Siedepunkt gefallen — die ersten Ozeane kondensieren aus der Dampfatmosphäre." });
+      events.push({ category: "climate", message: "🌊 Die Oberflächentemperatur ist unter den Siedepunkt gefallen — die ersten Ozeane kondensieren aus der Dampfatmosphäre.", milestone: true });
     }
     cells.forEach((cell) => {
       if (cell.vegetationType && !discoveredVeg.has(cell.vegetationType)) {
         discoveredVeg.add(cell.vegetationType);
         const type = getVegType(cell.vegetationType);
         const message = type.radiationOnly ? `${type.name} sind durch Strahlung mutiert.` : `${type.name} sind entstanden.`;
-        events.push({ category: "evolution", message, kind: "vegetation", typeId: type.id });
+        events.push({ category: "evolution", message, kind: "vegetation", typeId: type.id, milestone: true });
       }
       if (cell.faunaType && !discoveredFauna.has(cell.faunaType)) {
         discoveredFauna.add(cell.faunaType);
         const type = getFaunaType(cell.faunaType);
         const message = type.id === "nanobots" ? `${type.name} sind aus den Trümmern entstanden.` : `${type.name} sind entstanden.`;
-        events.push({ category: "evolution", message, kind: "fauna", typeId: type.id });
+        events.push({ category: "evolution", message, kind: "fauna", typeId: type.id, milestone: true });
       }
     });
     if (!cityFounded && cells.some((c) => Civilization.hasCity(c))) {
       cityFounded = true;
-      events.push({ category: "civilization", message: "Die erste Stadt ist entstanden." });
+      events.push({ category: "civilization", message: "Die erste Stadt ist entstanden.", milestone: true });
     }
     if (!highTechReached && cells.some((c) => Civilization.isHighTech(c))) {
       highTechReached = true;
-      events.push({ category: "civilization", message: "Eine Stadt hat Hochtechnologie erreicht." });
+      events.push({ category: "civilization", message: "Eine Stadt hat Hochtechnologie erreicht.", milestone: true });
     }
     return events;
   }

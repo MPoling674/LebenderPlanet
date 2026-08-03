@@ -78,6 +78,7 @@ const UI = (() => {
     el.gasControls = document.getElementById("gas-controls");
     el.toolButtons = document.getElementById("tool-buttons");
     el.eventLog = document.getElementById("event-log");
+    el.eventPopups = document.getElementById("event-popups");
     el.speedSlider = document.getElementById("speed-slider");
     el.speedLabel = document.getElementById("speed-label");
     el.saveNowBtn = document.getElementById("save-now-btn");
@@ -526,6 +527,47 @@ const UI = (() => {
     civilization: "Zivilisation",
     system: "System",
   };
+  const EVENT_CATEGORY_ICONS = {
+    evolution: "🧬",
+    disaster: "⚠️",
+    climate: "🌍",
+    civilization: "🏙️",
+    system: "ℹ️",
+  };
+
+  const EVENT_POPUP_DURATION_MS = 8000;
+  const EVENT_POPUP_FADE_MS = 300; // muss zur CSS-Transition von .event-popup-closing passen
+
+  // Meilenstein-Ereignisse (milestone:true, siehe scanForDiscoveries() in
+  // planet.js) erscheinen zusaetzlich zum Ereignis-Log als vergaengliches
+  // Popup — sie sind einmalig/unumkehrbar ("Entwicklungsstufen"), im
+  // Gegensatz zu z.B. oszillierenden Temperaturschwellen, die deshalb bewusst
+  // NICHT hier landen (staendige Popups waeren sonst nur Laerm).
+  function showEventPopup(entry) {
+    if (!el.eventPopups) return;
+    const div = document.createElement("div");
+    div.className = `event-popup event-popup-${entry.category}`;
+    const icon = EVENT_CATEGORY_ICONS[entry.category] || "";
+    const label = EVENT_CATEGORY_LABELS[entry.category] || entry.category;
+    div.innerHTML = `
+      <button class="event-popup-close" aria-label="Schließen">&times;</button>
+      <div class="event-popup-header">${icon} ${label}</div>
+      <div class="event-popup-body"></div>
+    `;
+    // textContent statt innerHTML fuer die Meldung: entry.message stammt zwar
+    // aus dem eigenen Code (kein XSS-Risiko hier), aber so bleibt die Stelle
+    // robust, falls kuenftig mal Artennamen mit Sonderzeichen durchgereicht werden.
+    div.querySelector(".event-popup-body").textContent = entry.message;
+    let dismissTimer = null;
+    const remove = () => {
+      if (dismissTimer) clearTimeout(dismissTimer);
+      div.classList.add("event-popup-closing");
+      setTimeout(() => div.remove(), EVENT_POPUP_FADE_MS);
+    };
+    div.querySelector(".event-popup-close").addEventListener("click", remove);
+    el.eventPopups.appendChild(div);
+    dismissTimer = setTimeout(remove, EVENT_POPUP_DURATION_MS);
+  }
 
   function log(message, category, meta) {
     const cat = category || "system";
@@ -538,6 +580,7 @@ const UI = (() => {
     while (el.eventLog.children.length > 60) el.eventLog.removeChild(el.eventLog.lastChild);
 
     if (el.eventsOverviewModal && !el.eventsOverviewModal.classList.contains("hidden")) renderEventsOverview();
+    if (entry.milestone) showEventPopup(entry);
   }
 
   function activeEventCategories() {
