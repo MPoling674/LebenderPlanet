@@ -3,16 +3,12 @@
 // Drag manuell weiterdrehen/-kippen, UND zeigt die spielergesteuerte
 // Achsneigung (Climate.axialTiltDegrees()) inkl. der Milankovitch-Zyklen
 // (Obliquitaets-Wobble + Praezession, siehe climate.js) als echte geometrische
-// Neigung/Rotation der Achse. Kein Raycasting-Klick fuer Terraforming mehr
-// (bleibt exklusiv auf der 2D-Karte, siehe js/mapviewport.js) — Raycasting
-// wird hier ausschliesslich intern genutzt, um zu ermitteln, welcher
-// Laengengrad gerade der Kamera zugewandt ist (siehe currentLongitudeFraction()
-// unten: robust gegenueber JEDER Kombination aus Spin/Neigung/Praezession/
-// Kamerawinkel, da es die tatsaechliche Geometrie abfragt statt eine Formel zu
-// pflegen, die bei jeder neuen Sichttransformation neu hergeleitet werden
-// muesste). Wiederverwendet den bereits fertig gerenderten 2D-Canvas
-// (#planet-canvas) DIREKT als Kugeltextur — GRID_WIDTH:GRID_HEIGHT ist 60:30 =
-// 2:1, exakt das Seitenverhaeltnis einer equirektangularen Kugelprojektion.
+// Neigung/Rotation der Achse. Rein informativ/dekorativ — kein Klick-Handling,
+// keine Kopplung an die 2D-Karte (die zeigt unabhaengig davon immer den
+// kompletten Planeten, siehe #planet-canvas-Kommentar in index.html).
+// Wiederverwendet den bereits fertig gerenderten 2D-Canvas (#planet-canvas)
+// DIREKT als Kugeltextur — GRID_WIDTH:GRID_HEIGHT ist 60:30 = 2:1, exakt das
+// Seitenverhaeltnis einer equirektangularen Kugelprojektion.
 //
 // Szenengraph-Hierarchie (aussen nach innen), entspricht der realen Physik:
 // precessionGroup (rotiert langsam um die Vertikale = Praezession)
@@ -29,7 +25,6 @@ const Planet3D = (() => {
   let sphere = null;
   let texture = null;
   let sunLight = null;
-  let raycaster = null;
   let rafId = null;
   let lastFrameTime = null;
   let autoRotation = 0;
@@ -82,8 +77,6 @@ const Planet3D = (() => {
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-
-    raycaster = new THREE.Raycaster();
 
     canvas.style.touchAction = "none"; // sonst scrollt eine Touch-Drag-Geste die Seite statt die Kugel zu drehen
     canvas.style.cursor = "grab";
@@ -158,18 +151,5 @@ const Planet3D = (() => {
     if (texture) texture.needsUpdate = true;
   }
 
-  // 0..1 — welcher Laengengrad-Anteil der Karte gerade auf dem Widget "vorne"
-  // (der Kamera zugewandt) sichtbar ist, per Raycast durch die Bildschirmmitte
-  // ermittelt (siehe Datei-Kommentar oben zur Begruendung). u ist NICHT
-  // gespiegelt (nur v, per CanvasTexture-Default flipY — hier irrelevant), das
-  // entspricht direkt px/Breite auf dem Quell-Canvas, siehe js/mapviewport.js.
-  function currentLongitudeFraction() {
-    if (!sphere || !camera) return 0.5;
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-    const hits = raycaster.intersectObject(sphere);
-    if (!hits.length || !hits[0].uv) return 0.5;
-    return hits[0].uv.x;
-  }
-
-  return { init, render, currentLongitudeFraction };
+  return { init, render };
 })();

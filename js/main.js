@@ -86,12 +86,12 @@ const Game = (() => {
     try {
       PlanetMap.render();
       // Aktualisiert nur die Textur-Flagge des 3D-Widgets (billig, siehe
-      // Planet3D.render()-Kommentar) und blittet das fertige Bild auf die
-      // beiden Karten-Viewport-Kopien (ebenfalls billig, siehe
-      // MapViewport.syncFromSource()-Kommentar) — keine der beiden Operationen
-      // wiederholt PlanetMaps teuren Neuaufbau.
+      // Planet3D.render()-Kommentar) — wiederholt NICHT PlanetMaps teuren
+      // Neuaufbau. Die 2D-Karte und der 3D-Globus teilen sich denselben
+      // Quell-Canvas nur als Texturquelle, sind aber unabhaengige, nicht
+      // synchronisierte Ansichten (siehe #planet-canvas-Kommentar in
+      // index.html).
       Planet3D.render();
-      MapViewport.syncFromSource();
     } catch (e) {
       console.error("Fehler beim Kartenrendern:", e);
     }
@@ -426,17 +426,16 @@ const Game = (() => {
     year = 0;
     loadGame();
 
-    // PlanetMap bleibt die Bildquelle (unveraendert, siehe map.js-Kommentar),
-    // ist aber nicht mehr direkt sichtbar/interaktiv — MapViewport zeigt ihr
-    // Ergebnis live gepannt/gezoomt an und uebernimmt Klick-/Hover-Handling.
+    // PlanetMap zeigt direkt die komplette Karte (siehe map.js) und
+    // uebernimmt Klick-/Hover-Handling selbst — unabhaengig vom 3D-Globus-
+    // Widget, das denselben Canvas nur als Textur wiederverwendet.
     PlanetMap.init(document.getElementById("planet-canvas"));
     Planet3D.init(document.getElementById("planet-3d-widget"));
     UI.init();
     OrbitView.init(document.getElementById("orbit-view"));
-    MapViewport.init(document.getElementById("map-viewport"), document.getElementById("planet-canvas"));
 
-    MapViewport.onCellClick(handleCellClick);
-    MapViewport.onCellHover(handleCellHover);
+    PlanetMap.onCellClick(handleCellClick);
+    PlanetMap.onCellHover(handleCellHover);
     UI.on("setGas", handleSetGas);
     UI.on("setOrbit", handleSetOrbit);
     UI.on("setSpeed", handleSetSpeed);

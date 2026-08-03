@@ -71,11 +71,10 @@
 
 <main id="game">
   <div id="map-wrap">
-    <!-- Reine Bildquelle fuer PlanetMap.render() (js/map.js, unveraendert) —
-         nicht mehr direkt sichtbar/interaktiv, siehe #map-viewport darunter
-         (js/mapviewport.js), das dieses Bild live gepannt/gezoomt anzeigt. -->
-    <canvas id="planet-canvas" width="1200" height="600" class="source-only"></canvas>
-    <div id="map-viewport"></div>
+    <!-- Zeigt den kompletten Planeten auf einen Blick (js/map.js) — passt sich
+         per CSS (width:100%, siehe style.css) an die verfuegbare Breite an,
+         unabhaengig von der Drehung des 3D-Globus-Widgets (js/planet3d.js). -->
+    <canvas id="planet-canvas" width="1200" height="600"></canvas>
     <div id="veg-legend"></div>
   </div>
   <div id="map-tooltip" class="hidden"></div>
@@ -237,7 +236,6 @@
      Beispiel-Controls zugunsten von ES-Modulen abgekuendigt haben. -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="js/planet3d.js"></script>
-<script src="js/mapviewport.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>
