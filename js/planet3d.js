@@ -54,6 +54,12 @@ const Planet3D = (() => {
 
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(canvas.width, canvas.height, false);
+    // Ohne sRGB-Ausgabekodierung rechnet Three.js die Beleuchtung im linearen
+    // Farbraum, gibt das Ergebnis aber ungewandelt aus — dadurch wirkte die
+    // sonnenzugewandte Seite ueberstrahlt/flach (Gamma-Fehlkorrektur druecht
+    // Mitteltoene zu hell), waehrend die Nachtseite (nur Umgebungslicht)
+    // kaum betroffen war. Betraf gemeldeten "unpassenden Uebergang".
+    renderer.outputEncoding = THREE.sRGBEncoding;
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 100);
@@ -66,7 +72,16 @@ const Planet3D = (() => {
 
     const geometry = new THREE.SphereGeometry(2.2, 48, 48);
     texture = new THREE.CanvasTexture(document.getElementById("planet-canvas"));
-    const material = new THREE.MeshStandardMaterial({ map: texture });
+    // Muss zur renderer.outputEncoding-Einstellung oben passen, sonst wird die
+    // Kartenfarbe falsch interpretiert.
+    texture.encoding = THREE.sRGBEncoding;
+    // MeshStandardMaterial ist ohne explizite Werte halb metallisch
+    // (Default metalness 0.5) — ohne Environment-Map liefert das bei einem
+    // einzelnen Richtungslicht einen unnatuerlich harten, teils ueberstrahlten
+    // Glanz statt einer ruhigen, matten Planetenoberflaeche. metalness:0 macht
+    // die Kugel rein diffus (Lambert-artig), der Tag/Nacht-Uebergang wird
+    // dadurch gleichmaessig statt fleckig.
+    const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0 });
     sphere = new THREE.Mesh(geometry, material);
     tiltGroup.add(sphere);
 
