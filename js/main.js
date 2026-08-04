@@ -183,7 +183,7 @@ const Game = (() => {
       return;
     }
     if (tool === "detonate") UI.log("Eine Atombombe hat eine Hochtechnologie-Stadt zerstört — Nanotech-Roboter entstehen aus den Trümmern.", "civilization", { x, y });
-    else if (tool === "trigger_volcano") UI.log("🌋 Ein ausgelöster Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", "disaster", { x, y, popup: true });
+    else if (tool === "trigger_volcano") UI.log("🌋 Ein ausgelöster Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", "disaster", { x, y });
     else if (tool === "trigger_earthquake") UI.log("🌍 Ein ausgelöstes Erdbeben hat die Region erschüttert.", "disaster", { x, y });
     else if (tool === "trigger_tsunami") UI.log("🌊 Ein ausgelöster Tsunami hat die Küste überflutet.", "disaster", { x, y });
     else if (tool === "trigger_plague") UI.log("☣️ Eine ausgelöste Seuche breitet sich aus.", "disaster", { x, y });

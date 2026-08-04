@@ -111,7 +111,7 @@ const Events = (() => {
       const target = findRandomCell(getCell, currentTerrainFn, ["land"]);
       if (target) {
         applyVolcano(target.x, target.y, getCell);
-        events.push({ category: "disaster", popup: true, message: "🌋 Ein Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", x: target.x, y: target.y });
+        events.push({ category: "disaster", message: "🌋 Ein Vulkanausbruch hat die Umgebung verwüstet und CO₂/CH₄ in die Atmosphäre geschleudert.", x: target.x, y: target.y });
       }
     }
 
