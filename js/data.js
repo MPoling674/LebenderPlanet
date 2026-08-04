@@ -1,4 +1,4 @@
-// Konstanten für "Der lebende Planet" — Planetenraster, Gase, Klimaformeln.
+﻿// Konstanten für "Der lebende Planet" — Planetenraster, Gase, Klimaformeln.
 // Alle Ausgangswerte orientieren sich an realen Referenzgrößen (vorindustrielle Erde),
 // damit die Wirkungsrichtungen und -größenordnungen glaubwürdig bleiben, auch wenn
 // das Modell stark vereinfacht ist.
@@ -21,17 +21,16 @@ const GRID_HEIGHT = 30;
 // so und bleibt es).
 const EVOLUTION_TIME_FACTOR = 25;
 
-// Anzeige-Zeiteinheit: durch die Streckung oben laeuft ein voller Durchlauf jetzt
-// ueber mehrere hunderttausend Simulationsjahre — als "Jahr" angezeigt waeren das
-// unhandliche sechsstellige Zahlen. formatSimTime() rechnet die interne Jahreszahl
-// fuer die Anzeige in TIME_UNIT_LABEL um; intern (Speicherstand, Ticks) bleibt es
-// bei rohen Jahren, das betrifft ausschliesslich die UI-Darstellung.
-const TIME_UNIT_DIVISOR = 1000;
-const TIME_UNIT_LABEL = "Jahrtausend";
+// Anzeige-Zeiteinheit: Geologische Skala in Mio. Jahren — intuitiver als
+// "Jahrtausend", weil die Schluessel-Ereignisse (Magnetfeld-Erosion ~0,5 Mio.,
+// Halbwertszeit ~0,29 Mio.) direkt als Dezimalbrueche lesbar sind.
+// Intern (Speicherstand, Ticks) bleibt es bei rohen Jahren.
+// Nachkommastellen adaptiv: < 0,1 Mio. → 3 Stellen, < 1 Mio. → 2, sonst 1.
 function formatSimTime(rawYear) {
-  const value = rawYear / TIME_UNIT_DIVISOR;
-  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
-  return `${TIME_UNIT_LABEL} ${rounded}`;
+  if (rawYear === 0) return "0 Mio. Jahre";
+  const mio = rawYear / 1_000_000;
+  const dec = mio >= 1 ? 1 : mio >= 0.1 ? 2 : 3;
+  return mio.toLocaleString("de-DE", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + " Mio. Jahre";
 }
 
 // Gase, die der Spieler direkt regeln kann. potency = Treibhauswirkung relativ zu CO2
