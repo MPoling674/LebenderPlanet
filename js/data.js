@@ -331,22 +331,29 @@ const OXYGEN_SOLUBILITY_MIN_FRACTION = 0.05;
 
 // Magnetfeld & Atmosphaerenerosion (Lammer et al. 2008): ohne intaktes
 // Magnetfeld blaest der Sonnenwind die Atmosphaere allmaehlich ab (siehe Mars).
-// fieldStrength (Climate) klingt rein monoton ab wie RADIATION_DECAY_RATE
-// (ein Dynamo erholt sich nicht von selbst) — bewusst MIT EVOLUTION_TIME_FACTOR
-// skaliert (anders als PRIMORDIAL_HEAT_RELAXATION_RATE!): real bleibt ein
-// Planetenmagnetfeld Milliarden Jahre stabil, das waere im Spiel nie sichtbar;
-// an die Evolutions-Zeitskala gekoppelt wird es zu einem Spaetspiel-Ereignis
-// (Hochtechnologie-Aera), nicht zu einer Bedrohung der fruehen mikrobiellen
-// Phase. Unterhalb MAGNETIC_FIELD_EROSION_THRESHOLD erodiert Atmosphere.erode()
-// (siehe atmosphere.js) alle Hauptgase gemeinsam proportional zur Unterschreitung.
-// Kalibrierung im Browser verifiziert (siehe Verifikations-Session): 0.03 war
-// um GROESSENORDNUNGEN zu schnell — das Feld brach bereits nach ~1000-2500
-// Jahren zusammen (noch in der fruehen mikrobiellen Phase) und erodierte die
-// Atmosphaere daraufhin ueber hunderttausende Jahre permanent auf ihre
-// Minimalwerte (O2 blieb bei 0% haengen, Eukaryoten konnten nie entstehen).
-// 0.00006 verschiebt die Schwellenwert-Unterschreitung auf ~500.000 Jahre —
-// weit nach der mikrobiellen Fruehphase, ein echtes Spaetspiel-Ereignis.
-const MAGNETIC_FIELD_DECAY_RATE = 0.00006 / EVOLUTION_TIME_FACTOR;
+// Modell: Gleichgewicht + Dynamo-Fluktuation + seltene Umpolungen.
+//
+// fieldStrength naehert sich pro Tick dem masseabhaengigen Gleichgewicht
+// (groessere Planeten = staerkerer Kern-Dynamo = hoehere Gleichgewichtsfeldstaerke)
+// mit der Rate MAGNETIC_FIELD_DRIFT_RATE. Dazu addiert sich ein kleines
+// Zufallsrauschen (MAGNETIC_FIELD_FLUCTUATION) als geologische Variation.
+//
+// MAGNETIC_FIELD_REVERSAL_CHANCE: Wahrscheinlichkeit einer Polumkehrung pro Jahr.
+// Real ~1/250.000 Jahre (geomagnetischer Mittelwert, Brunhes-Matuyama-Chronologie).
+// Waehrend einer Umpolung faellt das Feld auf MAGNETIC_FIELD_REVERSAL_LOW,
+// erholt sich dann selbst ueber MAGNETIC_FIELD_DRIFT_RATE.
+//
+// Gleichgewicht = clamp(1.07 * planetMass - 0.22, 0.02, 1.0):
+//   Mars-aehnlich (0.3 M⊕): ~10 %  (schwacher/toter Dynamo — wie realer Mars)
+//   Erde       (1.0 M⊕): ~85 %  (stabiles Dynamo-Gleichgewicht)
+//   Supererde  (3.0 M⊕): 100 %  (starkes Feld, Kappe bei 1)
+//
+// Unterhalb MAGNETIC_FIELD_EROSION_THRESHOLD erodiert Atmosphere.erode()
+// alle Hauptgase proportional zur Unterschreitung.
+const MAGNETIC_FIELD_DRIFT_RATE = 0.00005;           // geologisch, kein ETF
+const MAGNETIC_FIELD_FLUCTUATION = 0.00015;          // Rauschen pro Jahr
+const MAGNETIC_FIELD_REVERSAL_CHANCE = 1 / 250000;  // ~1 Umpolung/250.000 Jahre
+const MAGNETIC_FIELD_REVERSAL_LOW = 0.15;           // Feldnadir waehrend Umpolung
 const MAGNETIC_FIELD_EROSION_THRESHOLD = 0.3;
 const ATMOSPHERIC_EROSION_MAX_FRACTION_PER_YEAR = 0.004 / EVOLUTION_TIME_FACTOR;
 

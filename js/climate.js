@@ -33,9 +33,11 @@ const Climate = (() => {
   // (1.0) an.
   let solarLuminosityFactor = SOLAR_LUMINOSITY_START;
 
-  // Magnetfeld-/Dynamo-Staerke (siehe MAGNETIC_FIELD_DECAY_RATE-Kommentar in
-  // data.js): startet voll intakt, klingt rein monoton ab.
+  // Magnetfeld-/Dynamo-Staerke (siehe MAGNETIC_FIELD_DRIFT_RATE-Kommentar in
+  // data.js): naehert sich dem masseabhaengigen Gleichgewicht an, gelegentliche
+  // Polumkehrungen fallen kurz auf MAGNETIC_FIELD_REVERSAL_LOW.
   let fieldStrength = 1;
+  let reversalThisTick = false;
 
   // Spielergesteuerte Achsneigung + Mond-/Planetenmasse (siehe
   // TILT_REFERENCE_DEGREES-Kommentar in data.js): axialTilt ist wie die
@@ -194,6 +196,7 @@ const Climate = (() => {
     waterVolume = 0;
     solarLuminosityFactor = SOLAR_LUMINOSITY_START;
     fieldStrength = 1;
+    reversalThisTick = false;
     axialTilt = TILT_REFERENCE_DEGREES;
     moonMass = MOON_MASS_DEFAULT;
     planetMass = PLANET_MASS_DEFAULT;
@@ -210,7 +213,19 @@ const Climate = (() => {
     primordialHeat -= primordialHeat * PRIMORDIAL_HEAT_RELAXATION_RATE;
     if (primordialHeat < 0.5) primordialHeat = 0;
     solarLuminosityFactor += (1 - solarLuminosityFactor) * SOLAR_LUMINOSITY_RAMP_RATE;
-    fieldStrength -= fieldStrength * MAGNETIC_FIELD_DECAY_RATE;
+    // Magnetfeld: naehert sich dem masseabhaengigen Dynamo-Gleichgewicht an.
+    // Gleichgewicht steigt linear mit Planetenmasse; unter ~0.4 M⊕ reicht der
+    // Kern nicht mehr fuer ein stabiles Feld (Mars-Analogie).
+    const fieldEquilibrium = clamp(1.07 * planetMass - 0.22, 0.02, 1.0);
+    fieldStrength += (fieldEquilibrium - fieldStrength) * MAGNETIC_FIELD_DRIFT_RATE;
+    fieldStrength += (Math.random() - 0.5) * MAGNETIC_FIELD_FLUCTUATION;
+    reversalThisTick = false;
+    if (Math.random() < MAGNETIC_FIELD_REVERSAL_CHANCE) {
+      // Polumkehrung: Feld bricht auf Nadir ein, erholt sich dann selbst via Drift.
+      reversalThisTick = true;
+      fieldStrength = Math.min(fieldStrength, MAGNETIC_FIELD_REVERSAL_LOW);
+    }
+    fieldStrength = clamp(fieldStrength, 0, 1);
     // Chaotischer Achsneigungs-Drift (siehe tiltInstability()-Kommentar oben) —
     // der Regler bleibt jederzeit bedienbar, aber ohne ausreichende Mondmasse
     // "laeuft" der Wert danach von selbst weiter weg.
@@ -248,6 +263,12 @@ const Climate = (() => {
 
   function magneticFieldStrength() {
     return fieldStrength;
+  }
+
+  // Gibt true zurueck wenn in diesem Tick eine Polumkehrung ausgeloest wurde —
+  // wird von planet.js scanForDiscoveries() abgefragt um ein Ereignis zu erzeugen.
+  function wasReversal() {
+    return reversalThisTick;
   }
 
   function meltedIcePercent() {
@@ -314,7 +335,7 @@ const Climate = (() => {
 
   return {
     init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage,
-    vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength,
+    vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength, wasReversal,
     setAxialTilt, setMoonMass, setPlanetMass, axialTiltDegrees, moonMassValue, planetMassValue,
     tiltGradientFactor, obliquityWobbleDegrees, precessionAngleRadians, serialize, restore,
   };

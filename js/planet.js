@@ -161,7 +161,17 @@ const Planet = (() => {
       events.push({
         category: "climate",
         popup: true,
-        message: `🧲 Das Magnetfeld ist unter 30 % gefallen — der Sonnenwind erodiert jetzt aktiv die Atmosphäre. Das Feld erholt sich nicht von selbst. Gegenmaßnahmen: Planetenmasse im Tab „Orbit & Masse" erhöhen (schwerere Planeten halten ihre Atmosphäre besser). Oder: verlorene Gase mit Sauerstoffgeneratoren im Tab „Terraforming" aktiv ersetzen.`,
+        message: `🧲 Das Magnetfeld ist unter 30 % gefallen — der Sonnenwind erodiert jetzt aktiv die Atmosphäre. Bei ausreichender Planetenmasse erholt sich das Feld von selbst. Gegenmaßnahme: Planetenmasse im Tab „Orbit & Masse" erhöhen (stärkerer Kern = stärkerer Dynamo). Oder: verlorene Gase mit Sauerstoffgeneratoren im Tab „Terraforming" aktiv ersetzen.`,
+      });
+    }
+    if (Climate.wasReversal()) {
+      // Warnung zuruecksetzen damit das naechste Unterschreiten nach der Erholung
+      // wieder gemeldet wird — Umpolungen koennen mehrfach auftreten.
+      magnetFieldWarned = false;
+      events.push({
+        category: "climate",
+        popup: true,
+        message: `🧲 Magnetfeldumpolung: Das Feld ist auf ${Math.round(Climate.magneticFieldStrength() * 100)} % gesunken. Eine Polumkehrung ist normal — das Feld erholt sich in einigen zehntausend Jahren von selbst, sofern die Planetenmasse ausreichend ist.`,
       });
     }
     return events;
