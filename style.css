@@ -47,10 +47,15 @@ body {
   border-bottom: 1px solid #223047;
 }
 
+/* Jetzt unterhalb der Karte (in #map-wrap, nach #veg-legend) statt als
+   eigene Leiste ueber dem gesamten Spielbereich — line-height:normal noetig,
+   da #map-wrap (Kartenkachel-Technik) line-height:0 setzt, was sonst auch
+   auf Ueberschrift/Buttons hier durchschlagen wuerde. */
 #quickstart {
-  padding: 10px 20px;
+  padding: 10px 12px;
   background: #0d1420;
-  border-bottom: 2px solid #2e6f4e;
+  border-top: 1px solid #223047;
+  line-height: normal;
 }
 #quickstart h2 { margin: 0 0 8px; font-size: 14px; color: #7fd6a3; }
 .quickstart-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
