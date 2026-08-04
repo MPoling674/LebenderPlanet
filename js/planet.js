@@ -850,6 +850,7 @@ const Planet = (() => {
       x: i % GRID_WIDTH,
       y: Math.floor(i / GRID_WIDTH),
       terrain: currentTerrain(cell),
+      latitude: cell.latitude,
       vegetation: cell.vegetation,
       vegetationType: cell.vegetationType,
       elevation: cell.elevation,

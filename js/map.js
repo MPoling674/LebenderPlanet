@@ -95,6 +95,12 @@ const PlanetMap = (() => {
   const LAND_BARE = [168, 144, 108];
   const LAND_FOREST = [52, 108, 66];
   const ICE_COLOR = [206, 218, 226];
+  // Heißes, vegetationsarmes Äquatorialband — Stärke skaliert mit Globaltemperatur
+  // und Vegetationslosigkeit, damit Regenwald-Zellen am Äquator nicht wüstenfarbig sind.
+  const LAND_DESERT = [200, 165, 80];
+  // Polare Tundra-Zone zwischen offener Landschaft und Eiskappe — kühles Graugrün,
+  // deutlich kälter als LAND_BARE, damit man den Übergang Tundra→Eis ablesen kann.
+  const LAND_TUNDRA = [138, 145, 138];
 
   // Salzgehalt-Tint: niedriger Salzgehalt (Suesswassereinfluss, z.B. durch das
   // Salz-Werkzeug entnommen) faerbt leicht gruenlich, hoher Salzgehalt leicht
@@ -123,14 +129,33 @@ const PlanetMap = (() => {
     return lerpColor(withSalinity, currentTint, currentFraction * 0.4);
   }
 
-  function landColor(cell) {
-    // Farbe nach angesiedelter Vegetationsstufe (siehe VEGETATION_TYPES in
-    // data.js) — macht die unterschiedlichen Vegetationszonen auf der Karte
-    // sichtbar, statt nur "mehr/weniger Gruen" ohne Artunterschied zu zeigen.
+  // globalTemp (°C) und iceLat (Breitengrad der Eisgrenze 0..1) werden einmal
+  // pro render() aus buildColorGrids() übergeben — so werden sie nicht 1800×
+  // (GRID_WIDTH×GRID_HEIGHT) neu abgerufen.
+  function landColor(cell, globalTemp, iceLat) {
     const type = cell.vegetationType ? getVegType(cell.vegetationType) : null;
     const vegColor = type ? type.color : LAND_FOREST;
-    const base = lerpColor(LAND_BARE, vegColor, cell.vegetation / 100);
-    // Leichte Aufhellung in größerer Höhe — deutet Gebirge an.
+
+    // Tundra: Breite zwischen offener Landschaft und Eisrand — je näher an der
+    // Eiskappe, desto stärker die kühle Grautönung (Permafrost/Moos-Optik).
+    const tundraWidth = 0.22;
+    const tundraStart = Math.max(0, iceLat - tundraWidth);
+    const tundraFraction = (tundraStart > 0 && cell.latitude > tundraStart)
+      ? clamp((cell.latitude - tundraStart) / tundraWidth, 0, 1) : 0;
+
+    // Wüste: äquatornahes Band, dessen Breite mit der Globaltemperatur wächst
+    // (kühle Welt → kaum Wüste, heiße Welt → breites Sand-Band); Vegetation
+    // unterdrückt den Effekt vollständig (Regenwald soll nicht sandgelb wirken).
+    const desertLatLimit = clamp(0.10 + (globalTemp - 15) * 0.012, 0.02, 0.38);
+    const desertFraction = cell.latitude < desertLatLimit
+      ? clamp(1 - cell.latitude / desertLatLimit, 0, 1) * clamp(1 - cell.vegetation / 30, 0, 1)
+      : 0;
+
+    let bareLand = LAND_BARE;
+    if (tundraFraction > 0) bareLand = lerpColor(LAND_BARE, LAND_TUNDRA, tundraFraction);
+    else if (desertFraction > 0) bareLand = lerpColor(LAND_BARE, LAND_DESERT, desertFraction);
+
+    const base = lerpColor(bareLand, vegColor, cell.vegetation / 100);
     const brighten = clamp((cell.elevation - SEA_LEVEL_THRESHOLD) * 0.7, 0, 0.3);
     return base.map((c) => c + (255 - c) * brighten);
   }
@@ -142,12 +167,16 @@ const PlanetMap = (() => {
   // nicht das Terrain hier — so bleiben die Farbverlaeufe ueber Zellgrenzen hinweg
   // glatt, auch dort wo der Clip sie kurz danach wieder abschneidet.
   function buildColorGrids() {
+    // Einmal pro render() berechnet, nicht 1800× pro Zelle — landColor() braucht
+    // beide Werte für die Klimazonen-Faerbung (Wüste/Tundra).
+    const globalTemp = Climate.globalTemperature();
+    const iceLat = iceLatitudeThreshold();
     oceanColorGrid = Array.from({ length: GRID_HEIGHT }, () => new Array(GRID_WIDTH));
     landColorGrid = Array.from({ length: GRID_HEIGHT }, () => new Array(GRID_WIDTH));
     elevationGrid = Array.from({ length: GRID_HEIGHT }, () => new Array(GRID_WIDTH));
     Planet.allCells().forEach((cell) => {
       oceanColorGrid[cell.y][cell.x] = oceanColor(cell);
-      landColorGrid[cell.y][cell.x] = landColor(cell);
+      landColorGrid[cell.y][cell.x] = landColor(cell, globalTemp, iceLat);
       elevationGrid[cell.y][cell.x] = cell.elevation;
     });
   }
@@ -294,17 +323,47 @@ const PlanetMap = (() => {
 
   function drawIceLayer() {
     const threshold = iceLatitudeThreshold();
+    if (threshold <= 0) return;
     const cellH = canvas.height / GRID_HEIGHT;
     // Umkehrung von latitude(y) = |y/(GRID_HEIGHT-1) - 0.5| * 2 (siehe
     // Planet.generateTerrain) nach der Zeilenposition, an der die Schwelle
-    // ueberschritten wird — ergibt eine fraktionale, nicht nur zeilengenaue Grenze.
+    // überschritten wird — ergibt eine fraktionale, nicht nur zeilengenaue Grenze.
     const yNorth = clamp((GRID_HEIGHT - 1) * (0.5 - threshold / 2), 0, GRID_HEIGHT - 1);
     const ySouth = clamp((GRID_HEIGHT - 1) * (0.5 + threshold / 2), 0, GRID_HEIGHT - 1);
     const pixelYNorth = clamp((yNorth + 0.5) * cellH, 0, canvas.height);
     const pixelYSouth = clamp((ySouth + 0.5) * cellH, 0, canvas.height);
-    ctx.fillStyle = `rgb(${ICE_COLOR[0]}, ${ICE_COLOR[1]}, ${ICE_COLOR[2]})`;
-    ctx.fillRect(0, 0, canvas.width, pixelYNorth);
-    ctx.fillRect(0, pixelYSouth, canvas.width, canvas.height - pixelYSouth);
+    const iceStr = `${ICE_COLOR[0]},${ICE_COLOR[1]},${ICE_COLOR[2]}`;
+    // Gradient-Breite: ~2 Zellhöhen, mindestens 4px — macht den Übergang
+    // von Tundra zu Eiskappe weich statt hart abgeschnitten.
+    const fadeH = Math.max(4, cellH * 2);
+
+    // Nördliche Eiskappe: solider Kern + weicher Gradient am Südrand
+    const solidNorthEnd = Math.max(0, pixelYNorth - fadeH);
+    if (solidNorthEnd > 0) {
+      ctx.fillStyle = `rgb(${iceStr})`;
+      ctx.fillRect(0, 0, canvas.width, solidNorthEnd);
+    }
+    if (pixelYNorth > 0) {
+      const gradN = ctx.createLinearGradient(0, solidNorthEnd, 0, pixelYNorth);
+      gradN.addColorStop(0, `rgba(${iceStr},1)`);
+      gradN.addColorStop(1, `rgba(${iceStr},0)`);
+      ctx.fillStyle = gradN;
+      ctx.fillRect(0, solidNorthEnd, canvas.width, pixelYNorth - solidNorthEnd);
+    }
+
+    // Südliche Eiskappe: weicher Gradient am Nordrand + solider Kern
+    const solidSouthStart = Math.min(canvas.height, pixelYSouth + fadeH);
+    if (pixelYSouth < canvas.height) {
+      const gradS = ctx.createLinearGradient(0, pixelYSouth, 0, solidSouthStart);
+      gradS.addColorStop(0, `rgba(${iceStr},0)`);
+      gradS.addColorStop(1, `rgba(${iceStr},1)`);
+      ctx.fillStyle = gradS;
+      ctx.fillRect(0, pixelYSouth, canvas.width, solidSouthStart - pixelYSouth);
+    }
+    if (solidSouthStart < canvas.height) {
+      ctx.fillStyle = `rgb(${iceStr})`;
+      ctx.fillRect(0, solidSouthStart, canvas.width, canvas.height - solidSouthStart);
+    }
   }
 
   // Drei duenne Overlays direkt auf dem Haupt-Canvas, kein Vektor-Clip noetig
