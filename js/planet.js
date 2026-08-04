@@ -161,7 +161,7 @@ const Planet = (() => {
       events.push({
         category: "climate",
         popup: true,
-        message: "🧲 Das Magnetfeld ist unter 30 % gefallen — der Sonnenwind erodiert jetzt aktiv die Atmosphäre. Das Feld erholt sich nicht von selbst. Gegenmaßnahmen: Planetenmasse im Tab „Orbit & Masse" erhöhen (schwerere Planeten halten ihre Atmosphäre besser). Oder: verlorene Gase mit Sauerstoffgeneratoren im Tab „Terraforming" aktiv ersetzen.",
+        message: `🧲 Das Magnetfeld ist unter 30 % gefallen — der Sonnenwind erodiert jetzt aktiv die Atmosphäre. Das Feld erholt sich nicht von selbst. Gegenmaßnahmen: Planetenmasse im Tab „Orbit & Masse" erhöhen (schwerere Planeten halten ihre Atmosphäre besser). Oder: verlorene Gase mit Sauerstoffgeneratoren im Tab „Terraforming" aktiv ersetzen.`,
       });
     }
     return events;
