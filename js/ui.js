@@ -827,6 +827,7 @@ const UI = (() => {
     climate: "Klima",
     civilization: "Zivilisation",
     system: "System",
+    error: "Hinweis",
   };
   const EVENT_CATEGORY_ICONS = {
     evolution: "🧬",
@@ -834,6 +835,7 @@ const UI = (() => {
     climate: "🌍",
     civilization: "🏙️",
     system: "ℹ️",
+    error: "🚫",
   };
 
   const EVENT_POPUP_DURATION_MS = 8000;
@@ -900,7 +902,12 @@ const UI = (() => {
     while (el.eventLog.children.length > 60) el.eventLog.removeChild(el.eventLog.lastChild);
 
     if (el.eventsOverviewModal && !el.eventsOverviewModal.classList.contains("hidden")) renderEventsOverview();
-    if (entry.milestone) showEventPopup(entry);
+    if (entry.milestone || entry.category === "disaster") showEventPopup(entry);
+  }
+
+  function showError(message) {
+    log(message, "system");
+    showEventPopup({ year: Game.currentYear(), category: "error", message });
   }
 
   function activeEventCategories() {
@@ -954,5 +961,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip, showCellDebugData, showGoalResult };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, showError, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip, showCellDebugData, showGoalResult };
 })();

@@ -297,6 +297,7 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
 .event-popup-civilization { border-left-color: #e0a03a; }
 .event-popup-disaster { border-left-color: #a04a4a; }
 .event-popup-climate { border-left-color: #4a90c4; }
+.event-popup-error { border-left-color: #c05030; }
 .event-popup-header {
   font-size: 11px;
   text-transform: uppercase;

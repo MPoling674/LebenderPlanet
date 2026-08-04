@@ -179,7 +179,7 @@ const Game = (() => {
     else if (tool === "remove_emitter") res = Planet.toggleEmitter(x, y, false);
     else res = Planet.terraform(x, y, tool);
     if (!res.ok) {
-      UI.log(res.reason);
+      UI.showError(res.reason);
       return;
     }
     if (tool === "detonate") UI.log("Eine Atombombe hat eine Hochtechnologie-Stadt zerstört — Nanotech-Roboter entstehen aus den Trümmern.", "civilization", { x, y });
