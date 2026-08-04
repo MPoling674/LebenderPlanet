@@ -24,20 +24,22 @@ const Currents = (() => {
   // +1 = Westrandstrom (Land liegt naeher im Westen als im Osten, warmer
   // polwaertiger Bias), -1 = Ostrandstrom (kuehler aequatorwaertiger Bias),
   // 0 = offener Ozean (keine Kueste innerhalb BOUNDARY_CURRENT_SCAN_RADIUS).
-  // Rand des Gitters wird geklemmt (kein Umlaufen), gleiche Konvention wie
-  // PlanetMap.sampleColor — an einer geklemmten Position wird einfach dieselbe
-  // (reale) Randzelle mehrfach erneut geprueft, das ist fuer die Distanz-
-  // suche unschaedlich.
+  // Ost/West wraparound statt Klemmen am Gitterrand (x=0 und x=GRID_WIDTH-1
+  // sind geografisch derselbe Meridian) — sonst wirkte eine Kueste nahe am
+  // Kartenrand faelschlich wie offener Ozean, weil die Suche in Richtung des
+  // Randes einfach immer wieder dieselbe Randzelle traf statt zur
+  // gegenueberliegenden Kartenseite weiterzusuchen (gemeldeter Fehler:
+  // Stroemungen hoeren an der Kueste am Kartenrand einfach auf).
   function boundaryCurrentBias(getCell, isOcean, x, y) {
     let nearestWest = Infinity;
     let nearestEast = Infinity;
     for (let d = 1; d <= BOUNDARY_CURRENT_SCAN_RADIUS; d++) {
       if (nearestWest === Infinity) {
-        const west = getCell(clamp(x - d, 0, GRID_WIDTH - 1), y);
+        const west = getCell((x - d + GRID_WIDTH) % GRID_WIDTH, y);
         if (west && !isOcean(west)) nearestWest = d;
       }
       if (nearestEast === Infinity) {
-        const east = getCell(clamp(x + d, 0, GRID_WIDTH - 1), y);
+        const east = getCell((x + d) % GRID_WIDTH, y);
         if (east && !isOcean(east)) nearestEast = d;
       }
     }
@@ -63,13 +65,14 @@ const Currents = (() => {
         const cell = getCell(x, y);
         if (!isOcean(cell)) continue;
         const direction = currentDirectionFor(cell.latitude);
-        const upstreamX = clamp(x - direction, 0, GRID_WIDTH - 1);
+        // Wraparound statt Klemmen: x=0 und x=GRID_WIDTH-1 sind geografisch
+        // benachbart (derselbe Meridian), sonst brach die zonale Advektion an
+        // den Kartenraendern einfach ab (gemeldeter Fehler). direction ist
+        // laut CURRENT_BANDS nie 0, daher liefert dies immer eine ECHTE
+        // Nachbarzelle — die upstream!==cell-Pruefung unten bleibt trotzdem
+        // als Absicherung stehen.
+        const upstreamX = ((x - direction) % GRID_WIDTH + GRID_WIDTH) % GRID_WIDTH;
         const upstream = getCell(upstreamX, y);
-        // Zonale Advektion nur, wenn ein gueltiger stromaufwaertiger Nachbar
-        // existiert (z.B. nicht am Gitterrand geklemmt auf sich selbst) — der
-        // Randstrom-Bias unten gilt aber IMMER, auch fuer Randspalten, die
-        // dadurch (Nebeneffekt, bewusst mitbehoben) nun nicht mehr komplett
-        // uebersprungen werden wie zuvor.
         let tempAnomaly = cell.tempAnomaly;
         let salinity = cell.salinity;
         if (upstream !== cell && isOcean(upstream)) {

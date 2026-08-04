@@ -27,8 +27,17 @@ const Planet = (() => {
       for (let x = 0; x < GRID_WIDTH; x++) {
         const nx = x / GRID_WIDTH;
         const ny = y / GRID_HEIGHT;
+        // Alle nx-abhaengigen Terme muessen bei nx=0 und nx->1 (die beiden
+        // Kartenraender, geografisch der gleiche Meridian) denselben Wert
+        // liefern, sonst entsteht am Rand ein Hoehensprung, der Kuesten wie
+        // hart abgeschnitten wirken laesst statt natuerlich auslaufend
+        // (gemeldeter Fehler). Bei sin/cos((nx+phase) * PI * k) ist das nur
+        // fuer GERADE k gewaehrleistet (ganzzahlige Anzahl 2π-Perioden ueber
+        // nx 0..1) — der erste Term stand vorher auf *3 (1,5 Perioden, NICHT
+        // nahtlos); jetzt auf *4 (2 Perioden). Der dritte Term war mit
+        // effektiv 2 Perioden (nx*2 * PI*2) bereits nahtlos.
         let elevation =
-          Math.sin((nx + seedX) * Math.PI * 3) * 0.3 +
+          Math.sin((nx + seedX) * Math.PI * 4) * 0.3 +
           Math.cos((ny + seedY) * Math.PI * 2.5) * 0.3 +
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
@@ -57,9 +66,12 @@ const Planet = (() => {
       const i = queue[head++];
       const x = i % GRID_WIDTH;
       const y = Math.floor(i / GRID_WIDTH);
-      const neighbors = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+      // Ost/West wraparound (siehe generateTerrain()-Kommentar oben) statt
+      // Abschneiden am Gitterrand — sonst bliebe die Kuestenentfernung genau
+      // an der Kartennaht unnoetig hoch (spuerbar am Niederschlag dort).
+      const neighbors = [[(x + 1) % GRID_WIDTH, y], [(x - 1 + GRID_WIDTH) % GRID_WIDTH, y], [x, y + 1], [x, y - 1]];
       for (const [nx, ny] of neighbors) {
-        if (nx < 0 || nx >= GRID_WIDTH || ny < 0 || ny >= GRID_HEIGHT) continue;
+        if (ny < 0 || ny >= GRID_HEIGHT) continue;
         const ni = index(nx, ny);
         if (cells[ni].coastDistance === -1) {
           cells[ni].coastDistance = cells[i].coastDistance + 1;
