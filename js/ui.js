@@ -569,10 +569,17 @@ const UI = (() => {
   // (auf Land) die angesiedelte Vegetationsstufe. Sobald es ein Tier-/Fauna-
   // Modell gibt, kann hier einfach eine weitere Zeile ergaenzt werden — info
   // liefert bereits die rohen Zelldaten dafuer.
+  // Quadratische Skalierung: 0–100 → 0–2500 mm/Jahr. Die Potenz streckt den
+  // unteren Bereich, sodass aride Zellen (5–20) realistisch unter 250 mm/Jahr
+  // fallen, waehrend Kuesten und Ozean plausibel hoch bleiben.
+  function precipToMm(pct) {
+    return Math.round((pct / 100) ** 2 * 2500);
+  }
+
   function showTooltip(info, clientX, clientY) {
     if (!el.mapTooltip) return;
     let html = `<strong>${terrainLabel(info.terrain)}</strong><br>Temperatur: ${info.temperature.toFixed(1)} °C`;
-    html += `<br>Niederschlag: ${info.precipitation.toFixed(0)} %`;
+    html += `<br>Niederschlag: ~${precipToMm(info.precipitation)} mm/Jahr`;
     if (info.terrain === "land") {
       const type = info.vegetationType ? getVegType(info.vegetationType) : null;
       html += type
@@ -818,10 +825,29 @@ const UI = (() => {
       <div class="event-popup-header">${icon} ${label}</div>
       <div class="event-popup-body"></div>
     `;
-    // textContent statt innerHTML fuer die Meldung: entry.message stammt zwar
-    // aus dem eigenen Code (kein XSS-Risiko hier), aber so bleibt die Stelle
-    // robust, falls kuenftig mal Artennamen mit Sonderzeichen durchgereicht werden.
     div.querySelector(".event-popup-body").textContent = entry.message;
+
+    if (entry.milestone && entry.typeId && SPECIES_WIKI[entry.typeId]) {
+      const img = document.createElement("img");
+      img.className = "event-popup-img hidden";
+      img.alt = "";
+      div.appendChild(img);
+      if (wikiImageCache[entry.typeId]) {
+        img.src = wikiImageCache[entry.typeId];
+        img.classList.remove("hidden");
+      } else {
+        fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(SPECIES_WIKI[entry.typeId])}`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.thumbnail?.source) {
+              wikiImageCache[entry.typeId] = data.thumbnail.source;
+              img.src = data.thumbnail.source;
+              img.classList.remove("hidden");
+            }
+          })
+          .catch(() => {});
+      }
+    }
     let dismissTimer = null;
     const remove = () => {
       if (dismissTimer) clearTimeout(dismissTimer);

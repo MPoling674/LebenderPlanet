@@ -415,6 +415,8 @@ const PRECIPITATION_COAST_FALLOFF_PER_CELL = 4;
 const PRECIPITATION_MIN = 5;
 const PRECIPITATION_COLD_THRESHOLD = 0; // °C, darunter sinkt die Luftfeuchte-Kapazitaet
 const PRECIPITATION_COLD_PENALTY_PER_DEGREE = 1.5;
+const PRECIPITATION_HOT_THRESHOLD = 28; // °C, darueber steigt die Verdunstung (Wuesteneffekt)
+const PRECIPITATION_HOT_PENALTY_PER_DEGREE = 3.5; // Wert ergibt mit quadratischer mm-Skalierung realistische Wuesten
 const PRECIPITATION_VEGETATION_BONUS_MAX = 15; // bei 100% Vegetationsbedeckung
 
 const VEG_MIN_TEMP = 2; // °C, unterhalb stirbt Vegetation ab (Dauerfrost)

@@ -219,6 +219,9 @@ const Planet = (() => {
     if (temp < PRECIPITATION_COLD_THRESHOLD) {
       value -= (PRECIPITATION_COLD_THRESHOLD - temp) * PRECIPITATION_COLD_PENALTY_PER_DEGREE;
     }
+    if (temp > PRECIPITATION_HOT_THRESHOLD) {
+      value -= (temp - PRECIPITATION_HOT_THRESHOLD) * PRECIPITATION_HOT_PENALTY_PER_DEGREE;
+    }
     return clamp(value, PRECIPITATION_MIN, 100);
   }
 

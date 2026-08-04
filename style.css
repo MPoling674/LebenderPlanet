@@ -711,3 +711,14 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
   display: block;
 }
 .species-modal-img.hidden { display: none; }
+
+/* ── Bild im Evolutions-Popup ────────────────────────────── */
+.event-popup-img {
+  display: block;
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+.event-popup-img.hidden { display: none; }
