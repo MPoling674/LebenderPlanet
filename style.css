@@ -218,7 +218,14 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
 
 .chart-title { font-size: 12px; color: #93a3b8; margin: 4px 0; }
 #panel-charts canvas { display: block; background: #05070d; border: 1px solid #223047; border-radius: 4px; }
-#temp-chart, #co2-chart, #population-chart, #correlation-chart { width: 100%; height: auto; margin-bottom: 4px; }
+/* width:100%/height:auto skaliert diese Canvases auf die verfuegbare Breite,
+   height:auto haelt dabei automatisch das feste Seitenverhaeltnis der
+   Canvas-Aufloesung ein (gleiches Muster wie #planet-canvas) — ohne das
+   ueberragten diese festen Pixelbreiten (bis 480px) auf schmalen
+   Bildschirmen (ab ~375px) seitlich den Viewport. */
+#temp-chart, #co2-chart, #population-chart, #correlation-chart,
+#size-comparison-chart, #orbit-view, #ocean-ph-chart, #ocean-o2-chart,
+#solar-chart, #tilt-chart { width: 100%; height: auto; margin-bottom: 4px; }
 .composition-chart-wrap { display: flex; align-items: center; gap: 12px; }
 .composition-chart-wrap canvas { flex: 0 0 auto; width: 110px; height: 110px; }
 .chart-legend { list-style: none; padding: 0; margin: 0; font-size: 11px; flex: 1 1 auto; }
