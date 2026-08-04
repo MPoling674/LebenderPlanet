@@ -432,6 +432,7 @@ const Game = (() => {
     PlanetMap.init(document.getElementById("planet-canvas"));
     Planet3D.init(document.getElementById("planet-3d-widget"));
     UI.init();
+    Tutorial.init();
     OrbitView.init(document.getElementById("orbit-view"));
 
     PlanetMap.onCellClick(handleCellClick);

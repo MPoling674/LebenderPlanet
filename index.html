@@ -75,6 +75,7 @@
         <button data-preset="ice" title="Schneeball-Szenario: sehr kalt, hohe Eisbedeckung, gedämpfte Sonnenleuchtkraft — taue den Planeten auf.">❄️ Eisplanet erschaffen</button>
         <button data-preset="superEarth" title="Dreifache Erdmasse, gemäßigtes Klima, freundliche Startbedingungen für die Evolution.">🪐 Supererde erschaffen</button>
       </div>
+      <button id="tutorial-start-btn" class="tutorial-relaunch-btn" title="Geführte Einführung neu starten">❓ Tutorial starten</button>
     </section>
   </div>
   <div id="map-tooltip" class="hidden"></div>
@@ -196,6 +197,21 @@
 
 <div id="event-popups" aria-live="polite"></div>
 
+<!-- Tutorial-Spotlight + Karte (js/tutorial.js) -->
+<div id="tutorial-spot"></div>
+<div id="tutorial-card" class="hidden">
+  <div class="tutorial-header">
+    <span id="tutorial-counter"></span>
+    <button id="tutorial-skip" title="Tutorial überspringen" aria-label="Tutorial schließen">✕</button>
+  </div>
+  <h3 id="tutorial-step-title"></h3>
+  <p id="tutorial-step-text"></p>
+  <div class="tutorial-nav">
+    <button id="tutorial-prev">← Zurück</button>
+    <button id="tutorial-next">Weiter →</button>
+  </div>
+</div>
+
 <div id="events-overview-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -237,6 +253,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="js/planet3d.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/tutorial.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

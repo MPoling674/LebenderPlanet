@@ -327,6 +327,66 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
   to { transform: translateX(24px); opacity: 0; }
 }
 
+/* Tutorial-Spotlight: positioniert auf das Ziel-Element, box-shadow verdunkelt
+   den Rest der Seite — kein separates Overlay-DOM-Element nötig, pointer-events
+   passieren durch (der Schatten ist ein CSS-Effekt, kein klickbarer Knoten). */
+#tutorial-spot {
+  position: fixed;
+  z-index: 198;
+  border-radius: 6px;
+  border: 2px solid rgba(127, 214, 163, 0.85);
+  box-shadow: 0 0 0 9999px rgba(5, 7, 13, 0.78);
+  pointer-events: none;
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  display: none;
+}
+
+/* Tutorial-Karte: immer am unteren Bildrand zentriert, über dem Spotlight (z 201). */
+#tutorial-card {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 201;
+  width: min(440px, calc(100vw - 32px));
+  background: #10182a;
+  border: 1px solid #2e6f4e;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+#tutorial-card.hidden { display: none; }
+
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+#tutorial-counter { font-size: 11px; color: #6b7a8f; }
+#tutorial-skip {
+  background: none; border: none; color: #6b7a8f;
+  font-size: 15px; padding: 2px 5px; line-height: 1;
+}
+#tutorial-skip:hover { color: #93a3b8; background: none; }
+#tutorial-step-title { margin: 0 0 8px; color: #7fd6a3; font-size: 15px; }
+#tutorial-step-text { font-size: 13px; line-height: 1.55; color: #e6e8ec; margin: 0 0 14px; }
+.tutorial-nav { display: flex; gap: 8px; }
+.tutorial-nav button { flex: 1; }
+#tutorial-prev:disabled { opacity: 0.35; cursor: default; }
+#tutorial-prev:disabled:hover { background: #1f3a2e; }
+
+/* "Tutorial starten"-Button unterhalb der Schnellstart-Presets */
+.tutorial-relaunch-btn {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: #6b7a8f;
+  background: transparent;
+  border-color: #223047;
+}
+.tutorial-relaunch-btn:hover { color: #93a3b8; background: #10182a; border-color: #2e6f4e; }
+
 .modal {
   position: fixed;
   inset: 0;
