@@ -57,6 +57,8 @@ const UI = (() => {
     el.orbitControls = document.getElementById("orbit-controls");
     el.vegLegend = document.getElementById("veg-legend");
     el.speciesList = document.getElementById("species-list");
+    el.speciesModal = document.getElementById("species-modal");
+    el.speciesModalImg = document.getElementById("species-modal-img");
     el.speciesDetail = document.getElementById("species-detail");
     el.mapTooltip = document.getElementById("map-tooltip");
     el.tempChart = document.getElementById("temp-chart");
@@ -134,6 +136,13 @@ const UI = (() => {
     el.newGameBtn.addEventListener("click", () => callbacks.newGame && callbacks.newGame());
     el.quickstartButtons.forEach((btn) => {
       btn.addEventListener("click", () => callbacks.startPreset && callbacks.startPreset(btn.dataset.preset));
+    });
+
+    document.getElementById("species-modal-close")?.addEventListener("click", () => {
+      el.speciesModal?.classList.add("hidden");
+    });
+    el.speciesModal?.addEventListener("click", (e) => {
+      if (e.target === el.speciesModal) el.speciesModal.classList.add("hidden");
     });
 
     document.getElementById("goal-set-btn")?.addEventListener("click", () => {
@@ -399,6 +408,44 @@ const UI = (() => {
     });
   }
 
+  const SPECIES_WIKI = {
+    moss: "Moss", grass: "Poaceae", shrub: "Shrub", forest: "Forest",
+    rainforest: "Tropical_rainforest",
+    prokaryotes: "Prokaryote", eukaryotes: "Eukaryote", radiata: "Cnidaria",
+    mollusks: "Mollusca", fish: "Fish", arthropods: "Arthropod",
+    amphibians: "Amphibian", reptiles: "Reptile", dinosaurs: "Dinosaur",
+    avians: "Bird", therapsids: "Therapsida", marsupials: "Marsupial",
+    placentals: "Placentalia", cetaceans: "Cetacea", primates: "Primate",
+  };
+  const wikiImageCache = {};
+
+  function fetchWikiImage(id) {
+    if (id in wikiImageCache) {
+      applyWikiImage(wikiImageCache[id]);
+      return;
+    }
+    const title = SPECIES_WIKI[id];
+    if (!title) { wikiImageCache[id] = null; applyWikiImage(null); return; }
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const url = data.thumbnail?.source || null;
+        wikiImageCache[id] = url;
+        applyWikiImage(url);
+      })
+      .catch(() => { wikiImageCache[id] = null; applyWikiImage(null); });
+  }
+
+  function applyWikiImage(url) {
+    if (!el.speciesModalImg) return;
+    if (url) {
+      el.speciesModalImg.src = url;
+      el.speciesModalImg.classList.remove("hidden");
+    } else {
+      el.speciesModalImg.classList.add("hidden");
+    }
+  }
+
   function showSpeciesDetail(id, kind) {
     if (!el.speciesDetail) return;
     const stats = Planet.stats();
@@ -503,7 +550,9 @@ const UI = (() => {
       </div>
       ${civBadge ? `<div class="sd-section">${civBadge}</div>` : ""}
     `;
-    el.speciesDetail.classList.remove("hidden");
+    applyWikiImage(null);
+    fetchWikiImage(id);
+    if (el.speciesModal) el.speciesModal.classList.remove("hidden");
   }
 
   function getActiveTool() {
