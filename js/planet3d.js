@@ -88,10 +88,13 @@ const Planet3D = (() => {
     // "Sonne" — Farbe/Intensitaet an Climate.solarLuminosity() gekoppelt (siehe
     // SOLAR_LUMINOSITY_START-Kommentar in data.js): bei geringerer Leuchtkraft
     // etwas gedaempfter und waermer/roetlicher — rein optisch.
-    sunLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+    // Hoeher als vorher (0.35): reduziert den Helligkeitssprung zwischen Tag-
+    // und Nachtseite, damit der Uebergang als Verlauf statt als harte Kante
+    // wirkt (siehe Saettigungs-Kommentar in frame() zur Farbursache).
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
     canvas.style.touchAction = "none"; // sonst scrollt eine Touch-Drag-Geste die Seite statt die Kugel zu drehen
     canvas.style.cursor = "grab";
@@ -154,8 +157,14 @@ const Planet3D = (() => {
     camera.lookAt(0, 0, 0);
 
     const solar = Climate.solarLuminosity();
-    sunLight.intensity = 0.6 + 0.8 * solar;
-    sunLight.color.setHSL(0.13, 0.5, 0.4 + 0.3 * solar);
+    sunLight.intensity = 0.5 + 0.7 * solar;
+    // Saettigung war vorher 0.5 (kraeftiges Orange) — multipliziert auf die
+    // Textur drehte das den blauen Ozean auf der Tagseite Richtung Gold/Braun,
+    // waehrend die Nachtseite (nur weisses Umgebungslicht) die echten Farben
+    // zeigte. Der Farbsprung genau an der Tag/Nacht-Grenze wirkte dadurch wie
+    // eine harte Kante statt eines weichen Verlaufs (gemeldeter Fehler) — mit
+    // niedriger Saettigung bleibt das Sonnenlicht nahezu neutral/leicht warm.
+    sunLight.color.setHSL(0.13, 0.15, 0.55 + 0.2 * solar);
     renderer.render(scene, camera);
     rafId = requestAnimationFrame(frame);
   }
