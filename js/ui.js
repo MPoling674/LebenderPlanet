@@ -565,20 +565,46 @@ const UI = (() => {
     return "Land";
   }
 
-  // info kommt aus Planet.cellInfoAt(x,y). Zeigt aktuell Terrain/Temperatur und
-  // (auf Land) die angesiedelte Vegetationsstufe. Sobald es ein Tier-/Fauna-
-  // Modell gibt, kann hier einfach eine weitere Zeile ergaenzt werden — info
-  // liefert bereits die rohen Zelldaten dafuer.
-  // Quadratische Skalierung: 0–100 → 0–2500 mm/Jahr. Die Potenz streckt den
-  // unteren Bereich, sodass aride Zellen (5–20) realistisch unter 250 mm/Jahr
-  // fallen, waehrend Kuesten und Ozean plausibel hoch bleiben.
   function precipToMm(pct) {
     return Math.round((pct / 100) ** 2 * 2500);
   }
 
+  function biomeLabel(info) {
+    const t = info.temperature;
+    const mm = precipToMm(info.precipitation);
+    if (info.terrain === "ice") return "Eisschild";
+    if (info.terrain === "ocean") {
+      if (t < -2)  return "Polarmeer";
+      if (t < 5)   return "Subpolares Meer";
+      if (t < 15)  return info.boundaryCurrent ? "Schelf / Küstengewässer" : "Gemäßigtes Meer";
+      if (t < 25)  return info.boundaryCurrent ? "Schelf / Küstengewässer" : "Subtropisches Meer";
+      return "Tropisches Meer";
+    }
+    // Land
+    if (t < -15) return "Polartundra";
+    if (t < -2)  return "Tundra";
+    if (t < 3)   return mm < 250 ? "Kältesteppe" : "Taiga";
+    if (t < 10) {
+      if (mm < 300) return "Steppe";
+      if (mm < 900) return "Gemäßigtes Grasland";
+      return "Gemäßigter Wald";
+    }
+    if (t < 18) {
+      if (mm < 250) return "Halbwüste";
+      if (mm < 700) return "Mediterran";
+      return "Feuchtgemäßigt";
+    }
+    // t ≥ 18 °C
+    if (mm < 150)  return "Wüste";
+    if (mm < 400)  return "Dornsavanne";
+    if (mm < 900)  return "Savanne";
+    if (mm < 1600) return "Tropen";
+    return "Tropischer Regenwald";
+  }
+
   function showTooltip(info, clientX, clientY) {
     if (!el.mapTooltip) return;
-    let html = `<strong>${terrainLabel(info.terrain)}</strong><br>Temperatur: ${info.temperature.toFixed(1)} °C`;
+    let html = `<strong>${biomeLabel(info)}</strong><br>Temperatur: ${info.temperature.toFixed(1)} °C`;
     html += `<br>Niederschlag: ~${precipToMm(info.precipitation)} mm/Jahr`;
     if (info.terrain === "land") {
       const type = info.vegetationType ? getVegType(info.vegetationType) : null;
