@@ -57,6 +57,7 @@ const UI = (() => {
     el.orbitControls = document.getElementById("orbit-controls");
     el.vegLegend = document.getElementById("veg-legend");
     el.speciesList = document.getElementById("species-list");
+    el.speciesDetail = document.getElementById("species-detail");
     el.mapTooltip = document.getElementById("map-tooltip");
     el.tempChart = document.getElementById("temp-chart");
     el.co2Chart = document.getElementById("co2-chart");
@@ -343,11 +344,166 @@ const UI = (() => {
     return `<strong>${type.name}</strong> (${habitatLabel}): ${climateLabel}, ${need}.${prereq}${evolvesFrom}${extra}`;
   }
 
+  const SPECIES_LORE = {
+    moss: "Moose und Flechten sind die Pioniere des Lebens an Land. Sie besiedeln nackte Felsen und nährstoffarme Böden und bereiten so den Weg für komplexere Pflanzen. Ihre extreme Toleranz gegenüber Kälte und Trockenheit macht sie zur ersten Stufe der Landvegetation.",
+    grass: "Gräser entwickeln dichte Wurzelnetzwerke, die den Boden stabilisieren und Humus aufbauen. Sie tolerieren saisonale Kälte und Trockenheit besser als Büsche oder Wälder. Ihre schnelle Ausbreitung verwandelt karge Böden in produktive Savannen und Steppen.",
+    shrub: "Büsche bilden den Übergang zwischen Gras- und Waldvegetation. Ihre holzige Substanz speichert mehr Kohlenstoff als Gräser und bietet Tieren Deckung und Nahrung. Sie bevorzugen gemäßigtes Klima mit ausreichender Feuchtigkeit.",
+    forest: "Wälder sind die produktivsten Landökosysteme und produzieren große Mengen Sauerstoff. Das Kronendach reguliert das lokale Mikroklima und hält Feuchtigkeit im Boden. Sie benötigen warmes, stabiles Klima und einen etablierten O₂-Gehalt.",
+    rainforest: "Der tropische Regenwald beheimatet die größte Artenvielfalt des Planeten. Er speichert enorme Kohlenstoffmengen und treibt den globalen Wasserkreislauf an. Nur in dauerhaft feuchtwarmem Klima mit hohem Sauerstoffanteil kann er gedeihen.",
+    mutant: "Mutantenpflanzen entstehen durch ionisierende Strahlung nach nuklearen Ereignissen. Ihre violette Färbung rührt von Photosynthesepigmenten her, die auch unter erhöhter UV-Strahlung funktionieren. Sie sind äußerst robust, aber auf verstrahlte Gebiete beschränkt und nicht aussäbar.",
+    prokaryotes: "Prokaryoten sind die älteste Lebensform — einzellige Organismen ohne Zellkern. Sie sind extrem widerstandsfähig und kolonisieren nahezu jeden Ozean. Über Millionen Jahre reichern sie die Atmosphäre durch Photosynthese langsam mit Sauerstoff an.",
+    eukaryotes: "Eukaryoten besitzen einen echten Zellkern und bilden die Grundlage aller komplexeren Lebewesen. Sie entstehen erst, wenn die Atmosphäre genug Sauerstoff enthält und das Klima gemäßigt ist. Im Ozean formen sie Plankton-Schwärme, die die Basis der Nahrungskette darstellen.",
+    radiata: "Radiata (Strahltiere) wie Quallen und Korallen sind radialsymmetrische Meerestiere. Sie bewegen sich passiv mit den Strömungen und ernähren sich von Plankton. Ihre gelatinösen Körper bevölkern schon früh die Küstengewässer junger Ozeane.",
+    mollusks: "Mollusken (Weichtiere) umfassen Tintenfische, Muscheln und Schnecken. Viele bilden Kalkschalen, die bei saurem Meerwasser aufgelöst werden — sie sind pH-sensitiv. Ihre hochentwickelten Nervensysteme machen sie zu frühen Vorzeige-Tieren der Evolution.",
+    trichordates: "Trichordaten sind bilateral-symmetrische Meerestiere mit einem primitiven Rückenstrang. Als Vorläufer echter Chordaten füllen sie die ökologische Nische zwischen Weichtieren und Fischen. Sie bevorzugen sauberes, sauerstoffreiches Meerwasser.",
+    fish: "Fische sind die ersten Wirbeltiere — gekennzeichnet durch Kiemen, Flossen und ein Knochenskelett. Sie dominieren marine Ökosysteme und erschließen als erste Lebewesen größere Wassertiefen. Aus ihren Flossensäumen entwickeln sich die ersten Landextremitäten.",
+    arthropods: "Arthropoden (Gliederfüßer) sind die artenreichste Tiergruppe überhaupt. Auf dem Land besiedeln sie Böden, Vegetation und Gewässerränder. Ihr chitinöses Außenskelett und segmentierte Gliedmaßen erlauben extreme ökologische Anpassungsvielfalt.",
+    amphibians: "Amphibien sind die ersten Wirbeltiere auf dem Land — ein Bindeglied zwischen Wasser und Festland. Sie müssen zur Fortpflanzung ins Wasser zurückkehren und benötigen feuchtes Klima. Aus ihnen entwickeln sich alle höheren Landwirbeltiere.",
+    reptiles: "Reptilien sind die ersten vollständig landunabhängigen Wirbeltiere. Das wasserundurchlässige Amnionei macht sie unabhängig von Gewässern. Ihr effizienter Stoffwechsel erlaubt Überleben auch in trockenen und heißen Klimazonen.",
+    dinosaurs: "Dinosphen sind eine mächtige Reptiliengruppe, die in dieser Simulation den alternativen Weg von Reptilien zu Avialae darstellt. Als Großtiere besetzen sie ökologische Schlüsselpositionen in Nahrungsnetzen. Unter bestimmten Bedingungen können aus ihnen vogelartige Lebewesen entstehen.",
+    avians: "Avialae (Vogelartige) kombinieren Flugreisen mit endothermer Körpertemperatur. Sie verbreiten Samen über weite Distanzen und schließen wichtige ökologische Kreisläufe. Ihre Vorfahren sind entweder Reptilien oder Dinosphen.",
+    therapsids: "Therapsiden sind säugetierähnliche Reptilien und direkte Vorläufer der Säugetiere. Ihr frühes Fell und die gleichwarme Körpertemperatur erlauben Aktivität auch bei niedrigen Temperaturen. Aus ihnen entstehen sowohl Beuteltiere als auch Plazentatiere.",
+    marsupials: "Marsupilier (Beuteltiere) tragen ihren Nachwuchs in einem Körperbeutel und sind extrem anpassungsfähig. Sie gedeihen besonders auf isolierten Kontinenten ohne Konkurrenz durch Plazentatiere. Ihre einfachere Fortpflanzung ermöglicht schnelle Evolution unter Extrembedingungen.",
+    placentals: "Plazentatiere nähren ihren Nachwuchs über eine komplexe Plazenta und dominieren die meisten Ökosysteme. Aus ihnen entwickeln sich sowohl Meeressäuger als auch Primaten. Sie benötigen dichte Vegetation als Lebensraum und Nahrungsquelle.",
+    ceti: "Ceti sind hochintelligente Landsäugetiere mit ausgeprägten sozialen Strukturen und Kommunikationsfähigkeiten. Als alternativer Entwicklungszweig zu Primaten können sie unter den richtigen Bedingungen den Weg ins Meer einschlagen. Ihre soziale Organisation bildet eine Grundlage für potenzielle Zivilisationen.",
+    cetaceans: "Cetaceen (Wale und Delfine) sind ins Meer zurückgekehrte Säugetiere mit großem Gehirn. Sie kommunizieren über komplexe Lautsprachen und zeigen kooperatives Sozialverhalten. In dieser Simulation entstehen sie aus den Ceti-Vorfahren, die den Übergang von Land zu Wasser vollziehen.",
+    primates: "Primaten sind hochentwickelte Säugetiere mit Greifhänden, Stereosehen und großem Gehirn. Ihre Fähigkeit zur Werkzeugnutzung und sozialen Organisation bildet die Grundlage für mögliche Zivilisationen. Sie benötigen ausgedehnte Vegetation und stabiles, warmes Klima.",
+    nanobots: "Nanotech-Roboter entstehen aus den Trümmern einer Hochtechnologie-Zivilisation nach einem nuklearen Ereignis. Sie sind selbstreplizierende Maschinen, die biologische Ökosysteme ergänzen oder ersetzen können. Trotz ihres künstlichen Ursprungs verhalten sie sich wie ein eigenständiger Organismus im Planeten-Ökosystem.",
+  };
+
   function renderSpeciesList() {
     if (!el.speciesList) return;
-    const vegEntries = VEGETATION_TYPES.map((t) => `<li>${describeVegType(t)}</li>`);
-    const faunaEntries = FAUNA_TYPES.map((t) => `<li>${describeFaunaType(t)}</li>`);
-    el.speciesList.innerHTML = vegEntries.join("") + faunaEntries.join("");
+    let html = `<li class="species-group-label">Vegetation</li>`;
+    VEGETATION_TYPES.forEach((t) => {
+      const rgb = `rgb(${t.color[0]}, ${t.color[1]}, ${t.color[2]})`;
+      html += `<li class="species-entry" data-id="${t.id}" data-kind="veg">
+        <span class="species-dot" style="background:${rgb}"></span>
+        <span class="species-name">${t.name}</span>
+      </li>`;
+    });
+    html += `<li class="species-group-label">Fauna</li>`;
+    FAUNA_TYPES.forEach((t) => {
+      const rgb = `rgb(${t.color[0]}, ${t.color[1]}, ${t.color[2]})`;
+      html += `<li class="species-entry" data-id="${t.id}" data-kind="fauna">
+        <span class="species-dot" style="background:${rgb}"></span>
+        <span class="species-name">${t.name}</span>
+      </li>`;
+    });
+    el.speciesList.innerHTML = html;
+    el.speciesList.querySelectorAll(".species-entry").forEach((item) => {
+      item.addEventListener("click", () => {
+        el.speciesList.querySelectorAll(".species-entry.active").forEach((a) => a.classList.remove("active"));
+        item.classList.add("active");
+        showSpeciesDetail(item.dataset.id, item.dataset.kind);
+      });
+    });
+  }
+
+  function showSpeciesDetail(id, kind) {
+    if (!el.speciesDetail) return;
+    const stats = Planet.stats();
+    let type, rgb, habitatLabel, isActive, reqs, evo, civBadge;
+
+    if (kind === "veg") {
+      type = getVegType(id);
+      if (!type) return;
+      rgb = `rgb(${type.color[0]}, ${type.color[1]}, ${type.color[2]})`;
+      habitatLabel = "Land";
+      isActive = (stats.vegetationByType[id] || 0) >= 0.1;
+      const reqLines = [];
+      if (type.radiationOnly) {
+        reqLines.push("Entsteht nur auf verstrahlten Zellen (nach Atombombe)");
+        reqLines.push("Kann nicht manuell ausgesät werden");
+      } else {
+        const [tMin, tMax] = vegTypeRange(type);
+        reqLines.push(`Temperatur: ${tMin.toFixed(0)} – ${tMax.toFixed(0)} °C`);
+        if (type.complexity > 0) reqLines.push("Voraussetzung: Eukaryoten etabliert (O₂ ≥ " + EUKARYOTE_O2_THRESHOLD + " %)");
+        if (type.complexity > 1) reqLines.push("Voraussetzung: einfachere Vegetationsstufen aktiv");
+      }
+      reqs = reqLines;
+      const idx = VEGETATION_TYPES.findIndex((t) => t.id === id);
+      const pred = idx > 0 && !type.radiationOnly ? VEGETATION_TYPES[idx - 1] : null;
+      const succ = idx >= 0 && idx < VEGETATION_TYPES.length - 1 && !type.radiationOnly ? VEGETATION_TYPES[idx + 1] : null;
+      const predHtml = pred ? `<span class="sd-evo-pred">${pred.name}</span> → ` : "";
+      const succHtml = succ ? ` → <span class="sd-evo-succ">${succ.name}</span>` : "";
+      evo = `${predHtml}<strong>${type.name}</strong>${succHtml}`;
+      civBadge = null;
+    } else {
+      type = getFaunaType(id);
+      if (!type) return;
+      rgb = `rgb(${type.color[0]}, ${type.color[1]}, ${type.color[2]})`;
+      habitatLabel = type.habitat === "land" ? "Land" : type.habitat === "ocean" ? "Ozean" : "Künstlich";
+      isActive = (stats.faunaByType[id] || 0) >= 0.1;
+      const reqLines = [];
+      if (id === "nanobots") {
+        reqLines.push("Entsteht nur durch Atomexplosion in einer Hochtechnologie-Stadt");
+        reqLines.push("Kann nicht manuell ausgesetzt werden");
+      } else if (id === "prokaryotes") {
+        reqLines.push("Temperatur: beliebig");
+        reqLines.push("Salzgehalt: beliebig");
+        reqLines.push("Keine weiteren Voraussetzungen — erste mögliche Lebensform");
+      } else {
+        const [tMin, tMax] = faunaTempRange(type);
+        reqLines.push(`Temperatur: ${tMin.toFixed(0)} – ${tMax.toFixed(0)} °C`);
+        if (type.habitat === "ocean") {
+          const [sMin, sMax] = faunaSalinityRange(type);
+          reqLines.push(`Salzgehalt: ${sMin.toFixed(0)} – ${sMax.toFixed(0)} ‰`);
+        } else {
+          reqLines.push(`Vegetation: ≥ ${type.minVegetation} %`);
+        }
+        if (id === "eukaryotes") {
+          reqLines.push(`O₂: ≥ ${EUKARYOTE_O2_THRESHOLD} %, globale Temperatur ${EUKARYOTE_MIN_GLOBAL_TEMP} – ${EUKARYOTE_MAX_GLOBAL_TEMP} °C`);
+        } else {
+          reqLines.push("Voraussetzung: Eukaryoten + Vegetation etabliert");
+        }
+        if (type.successorOnly) reqLines.push("Nur durch Evolution aus einer Vorläufer-Art");
+      }
+      reqs = reqLines;
+      const predecessors = FAUNA_TYPES.filter((t) => t.successors.some((s) => s.id === id));
+      const predHtml = predecessors.length
+        ? predecessors.map((p) => `<span class="sd-evo-pred">${p.name}</span>`).join(", ") + " → "
+        : "";
+      const succHtml = type.successors.length
+        ? " → " + type.successors.map((s) => {
+            const st = getFaunaType(s.id);
+            return `<span class="sd-evo-succ">${st ? st.name : s.id}</span>`;
+          }).join(", ")
+        : "";
+      evo = `${predHtml}<strong>${type.name}</strong>${succHtml}`;
+      civBadge = type.civilizationCapable
+        ? `<span class="sd-civ-badge sd-civ-yes">Zivilisationsfähig</span>`
+        : `<span class="sd-civ-badge sd-civ-no">Kein Zivilisationspotenzial</span>`;
+    }
+
+    const lore = SPECIES_LORE[id] || "";
+    const activeHtml = isActive
+      ? `<span class="sd-badge sd-badge-active">Aktiv auf dem Planeten</span>`
+      : `<span class="sd-badge sd-badge-inactive">Nicht etabliert</span>`;
+    const reqHtml = reqs.map((r) => `<li>${r}</li>`).join("");
+
+    el.speciesDetail.innerHTML = `
+      <div class="sd-header">
+        <span class="sd-dot" style="background:${rgb}"></span>
+        <div>
+          <div class="sd-name">${type.name}</div>
+          <div class="sd-badges">
+            <span class="sd-badge sd-badge-habitat">${habitatLabel}</span>
+            ${activeHtml}
+          </div>
+        </div>
+      </div>
+      <p class="sd-lore">${lore}</p>
+      <div class="sd-section">
+        <div class="sd-section-title">Entstehungsbedingungen</div>
+        <ul class="sd-reqs">${reqHtml}</ul>
+      </div>
+      <div class="sd-section">
+        <div class="sd-section-title">Entwicklungsbaum</div>
+        <div class="sd-evo">${evo}</div>
+      </div>
+      ${civBadge ? `<div class="sd-section">${civBadge}</div>` : ""}
+    `;
+    el.speciesDetail.classList.remove("hidden");
   }
 
   function getActiveTool() {
