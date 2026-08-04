@@ -42,7 +42,7 @@ const Planet = (() => {
           Math.sin((nx * 2 + ny * 1.7 + seedX) * Math.PI * 2) * 0.2 +
           (Math.random() - 0.5) * 0.2;
         elevation = clamp((elevation + 1) / 2, 0, 1);
-        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false, co2Scrubber: false, methaneScrubber: false, emitter: false, coastDistance: 0 });
+        cells.push({ elevation, latitude, vegetation: 0, vegetationType: null, salinity: salinityForLatitude(latitude), fauna: 0, faunaType: null, tempAnomaly: 0, techLevel: 0, radiation: 0, oxygenGenerator: false, co2Scrubber: false, methaneScrubber: false, emitter: false, coastDistance: 0, precipitationIdx: PRECIPITATION_OCEAN_BASE });
       }
     }
     computeCoastDistances();
@@ -83,6 +83,7 @@ const Planet = (() => {
 
   function init() {
     generateTerrain();
+    computeAtmosphericPrecipitation();
     lastTotalVegetation = 0;
     rebuildDiscoveries();
   }
@@ -204,25 +205,77 @@ const Planet = (() => {
     return globalTemp + EQUATOR_TEMP_BONUS * factor - cell.latitude * ((EQUATOR_TEMP_BONUS + POLE_TEMP_RANGE) * factor) + cell.tempAnomaly;
   }
 
-  // Lokaler Niederschlag (0-100) — siehe PRECIPITATION_*-Kommentar in data.js.
-  function localPrecipitation(cell, terrain, temp) {
-    let value;
-    if (terrain === "ocean") {
-      value = PRECIPITATION_OCEAN_BASE;
-    } else if (terrain === "ice") {
-      value = PRECIPITATION_ICE_BASE;
-    } else {
-      const distance = cell.coastDistance >= 0 ? cell.coastDistance : GRID_WIDTH + GRID_HEIGHT;
-      value = PRECIPITATION_OCEAN_BASE - distance * PRECIPITATION_COAST_FALLOFF_PER_CELL;
-      value += (cell.vegetation / 100) * PRECIPITATION_VEGETATION_BONUS_MAX;
+  // Windrichtung je Breitenband (vereinfacht auf 5 Zonen):
+  //   Polarbereich: Polare Ostwinde (O→W, dx=−1)
+  //   Mittelbreiten: Westwinde (W→O, dx=+1)
+  //   Tropen: Passatwinde (O→W, dx=−1)
+  function windDirectionForRow(y) {
+    const rel = y / GRID_HEIGHT;
+    if (rel < 0.17) return -1; // Polar N
+    if (rel < 0.37) return +1; // Westerlies N
+    if (rel < 0.63) return -1; // Trades
+    if (rel < 0.83) return +1; // Westerlies S
+    return -1;                  // Polar S
+  }
+
+  // Atmosphärisches Feuchtetransport-Modell: ersetzt den einfachen Küstenabstand-
+  // Ansatz. Pro Breitenzeile wird eine Luftmasse in Windrichtung über die Karte
+  // geführt. Ozeanzellen füllen die Feuchte auf; Landzellen verbrauchen einen
+  // Basisanteil; hohe Zellen (große relative Elevation) verbrauchen zusätzlich
+  // (orographischer Lift → Regenschatten hinter dem Gebirge). Zwei Durchläufe
+  // kompensieren die toroidale Karte (Ost-/Westrand verbunden).
+  function computeAtmosphericPrecipitation() {
+    const iceCovThresh = clamp(POLAR_LATITUDE_THRESHOLD - (Climate.iceCoverage() - BASE_ICE_COVERAGE) * 2, 0, 1);
+    const waterThresh  = Climate.waterCoverage() * SEA_LEVEL_THRESHOLD;
+    const seaOffset    = Climate.seaLevelRise() / MAX_ELEVATION_METERS;
+
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+      const dx     = windDirectionForRow(y);
+      const startX = dx > 0 ? 0 : GRID_WIDTH - 1;
+      let moisture  = MOISTURE_OCEAN_BASE;
+
+      for (let pass = 0; pass < 2; pass++) {
+        for (let step = 0; step < GRID_WIDTH; step++) {
+          const x    = ((startX + dx * step) + GRID_WIDTH) % GRID_WIDTH;
+          const cell = cells[index(x, y)];
+          const isIce   = cell.latitude > iceCovThresh;
+          const isOcean = !isIce && (cell.elevation - seaOffset <= waterThresh);
+
+          if (isOcean) {
+            moisture = Math.min(MOISTURE_MAX, moisture + MOISTURE_OCEAN_GAIN);
+            if (pass === 1) cell.precipitationIdx = PRECIPITATION_OCEAN_BASE;
+          } else if (isIce) {
+            moisture = Math.max(0, moisture - moisture * MOISTURE_ICE_LOSS);
+            if (pass === 1) cell.precipitationIdx = PRECIPITATION_ICE_BASE;
+          } else {
+            // Relative Höhe der Landzelle über der aktuellen Meeresschwelle (0–1)
+            const relElev = waterThresh < 1
+              ? Math.max(0, (cell.elevation - seaOffset - waterThresh) / (1 - waterThresh))
+              : 0;
+            const lossFraction = Math.min(0.95, MOISTURE_BASE_LOSS + relElev * OROGRAPHIC_LIFT);
+            const precipitated  = moisture * lossFraction;
+            moisture -= precipitated;
+            // Evapotranspiration: Wald gibt Feuchtigkeit zurück → Regenwald-Feedback
+            moisture = Math.min(MOISTURE_MAX, moisture + (cell.vegetation / 100) * MOISTURE_VEG_FEED);
+
+            if (pass === 1) {
+              const temp       = localTemperature(cell);
+              const hotPenalty = temp > PRECIPITATION_HOT_THRESHOLD
+                ? (temp - PRECIPITATION_HOT_THRESHOLD) * PRECIPITATION_HOT_PENALTY_PER_DEGREE
+                : 0;
+              cell.precipitationIdx = clamp(precipitated - hotPenalty, PRECIPITATION_MIN, 100);
+            }
+          }
+        }
+      }
     }
-    if (temp < PRECIPITATION_COLD_THRESHOLD) {
-      value -= (PRECIPITATION_COLD_THRESHOLD - temp) * PRECIPITATION_COLD_PENALTY_PER_DEGREE;
-    }
-    if (temp > PRECIPITATION_HOT_THRESHOLD) {
-      value -= (temp - PRECIPITATION_HOT_THRESHOLD) * PRECIPITATION_HOT_PENALTY_PER_DEGREE;
-    }
-    return clamp(value, PRECIPITATION_MIN, 100);
+  }
+
+  // Lokaler Niederschlag — liest den von computeAtmosphericPrecipitation() berechneten
+  // Wert direkt aus der Zelle. Fallback auf OCEAN_BASE/ICE_BASE falls noch kein
+  // Durchlauf erfolgt ist (sollte nach init() nie eintreten).
+  function localPrecipitation(cell) {
+    return cell.precipitationIdx ?? PRECIPITATION_OCEAN_BASE;
   }
 
   // Komplexeste Vegetationsstufe, deren Toleranzband die gegebene Temperatur
@@ -732,6 +785,7 @@ const Planet = (() => {
     // erscheint oben — ein Vulkanausbruch soll auffaelliger stehen als "X sind
     // entstanden").
     const disasterEvents = Events.tick(cellAt, currentTerrain);
+    computeAtmosphericPrecipitation();
     return { vegetationFraction, co2Absorbed, o2Released, events: [...scanForDiscoveries(), ...disasterEvents] };
   }
 
@@ -827,7 +881,8 @@ const Planet = (() => {
       vegetation: cell.vegetation,
       vegetationType: cell.vegetationType,
       temperature: localTemperature(cell),
-      precipitation: localPrecipitation(cell, currentTerrain(cell), localTemperature(cell)),
+      precipitation: localPrecipitation(cell),
+      elevation: cell.elevation,
       salinity: cell.salinity,
       fauna: cell.fauna,
       faunaType: cell.faunaType,
@@ -940,6 +995,9 @@ const Planet = (() => {
       generateTerrain();
       lastTotalVegetation = 0;
     }
+    // precipitationIdx wird nie serialisiert (komplett aus Gelaende + Klima ableitbar)
+    // — nach jedem Laden oder neu generierten Terrain sofort neu berechnen.
+    computeAtmosphericPrecipitation();
     rebuildDiscoveries();
   }
 

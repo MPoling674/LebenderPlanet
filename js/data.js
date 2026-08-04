@@ -419,6 +419,23 @@ const PRECIPITATION_HOT_THRESHOLD = 28; // °C, darueber steigt die Verdunstung 
 const PRECIPITATION_HOT_PENALTY_PER_DEGREE = 3.5; // Wert ergibt mit quadratischer mm-Skalierung realistische Wuesten
 const PRECIPITATION_VEGETATION_BONUS_MAX = 15; // bei 100% Vegetationsbedeckung
 
+// Atmosphärisches Feuchtetransport-Modell (ersetzt einfachen Küstenabstand-Ansatz):
+// Luftmassen nehmen über dem Ozean Feuchtigkeit auf und verlieren sie beim Überqueren
+// von Land (Kontinentalisierung) und Gebirge (orographischer Lift → Regenschatteneffekt).
+// MOISTURE_OCEAN_BASE: Feuchte, mit der eine Luftmasse frisch vom Ozean auf Land trifft.
+// MOISTURE_OCEAN_GAIN:  Feuchtegewinn pro Ozeanzelle im Windstrom.
+// MOISTURE_BASE_LOSS:   Feuchteanteil, der auf flachem Küstenland als Regen fällt (0–1).
+// OROGRAPHIC_LIFT:      Zusätzlicher Feuchteanteil pro Einheit relativer Gebirgshöhe.
+// MOISTURE_VEG_FEED:    Wald/Vegetation gibt Feuchtigkeit durch Evapotranspiration zurück.
+// MOISTURE_ICE_LOSS:    Eis entzieht der Luft kaum Feuchtigkeit (Kaltluft hält wenig).
+const MOISTURE_OCEAN_BASE = 85;
+const MOISTURE_OCEAN_GAIN = 20;
+const MOISTURE_MAX = 100;
+const MOISTURE_BASE_LOSS = 0.50;
+const OROGRAPHIC_LIFT = 0.45;
+const MOISTURE_VEG_FEED = 2.5;
+const MOISTURE_ICE_LOSS = 0.06;
+
 const VEG_MIN_TEMP = 2; // °C, unterhalb stirbt Vegetation ab (Dauerfrost)
 const VEG_MAX_TEMP = 32; // °C, oberhalb stirbt Vegetation ab (Hitzestress)
 const VEG_OPTIMAL_TEMP = 17; // °C, beste Wachstumsbedingungen

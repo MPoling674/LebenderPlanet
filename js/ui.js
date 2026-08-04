@@ -606,6 +606,10 @@ const UI = (() => {
     if (!el.mapTooltip) return;
     let html = `<strong>${biomeLabel(info)}</strong><br>Temperatur: ${info.temperature.toFixed(1)} °C`;
     html += `<br>Niederschlag: ~${precipToMm(info.precipitation)} mm/Jahr`;
+    if (info.terrain === "land" || info.terrain === "ice") {
+      const elevM = Math.max(0, Math.round((info.elevation - 0.58) / (1 - 0.58) * 4000));
+      html += `<br>Höhe: ~${elevM} m ü.NN`;
+    }
     if (info.terrain === "land") {
       const type = info.vegetationType ? getVegType(info.vegetationType) : null;
       html += type
