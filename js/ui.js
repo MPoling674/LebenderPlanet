@@ -902,7 +902,7 @@ const UI = (() => {
     while (el.eventLog.children.length > 60) el.eventLog.removeChild(el.eventLog.lastChild);
 
     if (el.eventsOverviewModal && !el.eventsOverviewModal.classList.contains("hidden")) renderEventsOverview();
-    if (entry.milestone || (entry.category === "disaster" && entry.popup)) showEventPopup(entry);
+    if (entry.milestone || entry.popup) showEventPopup(entry);
   }
 
   function showError(message) {

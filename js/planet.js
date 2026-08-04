@@ -101,6 +101,7 @@ const Planet = (() => {
   let cityFounded = false;
   let highTechReached = false;
   let oceansFormed = false;
+  let magnetFieldWarned = false;
 
   function rebuildDiscoveries() {
     discoveredVeg = new Set();
@@ -108,6 +109,9 @@ const Planet = (() => {
     cityFounded = false;
     highTechReached = false;
     oceansFormed = cells.some((cell) => currentTerrain(cell) === "ocean");
+    // Warnung gilt als bereits gezeigt wenn Feld beim Laden schon unter der Schwelle liegt —
+    // verhindert Flut alter Warnungen beim Laden eines weit fortgeschrittenen Spielstands.
+    magnetFieldWarned = Climate.magneticFieldStrength() < MAGNETIC_FIELD_EROSION_THRESHOLD;
     cells.forEach((cell) => {
       if (cell.vegetationType) discoveredVeg.add(cell.vegetationType);
       if (cell.faunaType) discoveredFauna.add(cell.faunaType);
@@ -151,6 +155,14 @@ const Planet = (() => {
     if (!highTechReached && cells.some((c) => Civilization.isHighTech(c))) {
       highTechReached = true;
       events.push({ category: "civilization", message: "Eine Stadt hat Hochtechnologie erreicht.", milestone: true });
+    }
+    if (!magnetFieldWarned && Climate.magneticFieldStrength() < MAGNETIC_FIELD_EROSION_THRESHOLD) {
+      magnetFieldWarned = true;
+      events.push({
+        category: "climate",
+        popup: true,
+        message: "🧲 Das Magnetfeld ist unter 30 % gefallen — der Sonnenwind erodiert jetzt aktiv die Atmosphäre. Das Feld erholt sich nicht von selbst. Gegenmaßnahmen: Planetenmasse im Tab „Orbit & Masse" erhöhen (schwerere Planeten halten ihre Atmosphäre besser). Oder: verlorene Gase mit Sauerstoffgeneratoren im Tab „Terraforming" aktiv ersetzen.",
+      });
     }
     return events;
   }
