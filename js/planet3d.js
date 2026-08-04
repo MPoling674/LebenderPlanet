@@ -14,6 +14,8 @@
 // precessionGroup (rotiert langsam um die Vertikale = Praezession)
 //   -> tiltGroup (geneigt um axialTilt + Obliquitaets-Wobble)
 //     -> sphere (spinnt um ihre eigene, jetzt geneigte Achse)
+//     -> fieldLinesGroup (dreht NICHT mit — Magnetfeld ist raumfest)
+//     -> haloMesh (leuchtet um den Planeten, Staerke = fieldStrength)
 
 const Planet3D = (() => {
   let canvas = null;
@@ -31,6 +33,8 @@ const Planet3D = (() => {
   let dragging = false;
   let lastPointerX = 0;
   let lastPointerY = 0;
+  let fieldLineMaterial = null;
+  let haloMaterial = null;
   // Vertikaler Kamera-Blickwinkel (Bogenmass, 0 = Aequatorhoehe) — steuert NUR
   // die Kamera, keine Simulationsgroesse.
   let cameraTilt = 0;
@@ -47,6 +51,56 @@ const Planet3D = (() => {
   // (dort waere "oben" nicht mehr eindeutig definiert — ein ploetzliches
   // Umklappen der Ansicht).
   const CAMERA_TILT_MAX = 1.4;
+  const SPHERE_RADIUS = 2.2;
+
+  // Baut Feldlinien-Geometrien fuer ein magnetisches Dipolfeld.
+  // Jede Feldlinie folgt r = L * R * cos²(λ), wobei λ die magnetische
+  // Breite (−lambdaMax bis +lambdaMax) und L die Shell-Nummer ist
+  // (maximale Ausbuchtung in Vielfachen des Planetenradius). Die Linien
+  // beginnen und enden an der Planetoberflaeche.
+  function buildMagneticFieldLines() {
+    fieldLineMaterial = new THREE.LineBasicMaterial({
+      color: 0x44aaff,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+    });
+
+    const group = new THREE.Group();
+    // Drei Shell-Ebenen: niedrige (~32°), mittlere (~42°), hohe (~48°) Breite
+    const L_SHELLS = [1.4, 1.8, 2.2];
+    const N_LONGITUDES = 8;
+    const STEPS = 60;
+
+    L_SHELLS.forEach((L) => {
+      // Breite, bei der die Feldlinie die Planetoberflaeche trifft: cos²(lM) = 1/L
+      const lambdaMax = Math.acos(1 / Math.sqrt(L));
+
+      for (let i = 0; i < N_LONGITUDES; i++) {
+        const phi = (i / N_LONGITUDES) * Math.PI * 2;
+        const points = [];
+        for (let j = 0; j <= STEPS; j++) {
+          const lambda = (j / STEPS - 0.5) * 2 * lambdaMax;
+          const r = L * SPHERE_RADIUS * Math.cos(lambda) ** 2;
+          points.push(
+            new THREE.Vector3(
+              r * Math.cos(lambda) * Math.cos(phi),
+              r * Math.sin(lambda),
+              r * Math.cos(lambda) * Math.sin(phi)
+            )
+          );
+        }
+        group.add(
+          new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(points),
+            fieldLineMaterial
+          )
+        );
+      }
+    });
+
+    return group;
+  }
 
   function init(canvasEl) {
     canvas = canvasEl;
@@ -70,7 +124,7 @@ const Planet3D = (() => {
     precessionGroup.add(tiltGroup);
     scene.add(precessionGroup);
 
-    const geometry = new THREE.SphereGeometry(2.2, 48, 48);
+    const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, 48, 48);
     texture = new THREE.CanvasTexture(document.getElementById("planet-canvas"));
     // Muss zur renderer.outputEncoding-Einstellung oben passen, sonst wird die
     // Kartenfarbe falsch interpretiert.
@@ -84,6 +138,22 @@ const Planet3D = (() => {
     const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0 });
     sphere = new THREE.Mesh(geometry, material);
     tiltGroup.add(sphere);
+
+    // Magnetfeld-Visualisierung: Feldlinien + Halo-Kugel.
+    // Beide Objekte sind Kinder von tiltGroup — sie kippen mit der
+    // Polachse, drehen sich aber NICHT mit dem Planeten (sphere.rotation.y).
+    tiltGroup.add(buildMagneticFieldLines());
+
+    // Halo: leicht groessere Kugel, nur Innenflaeche (BackSide) sichtbar —
+    // erzeugt einen weichen Leuchtrand um den Planeten.
+    haloMaterial = new THREE.MeshBasicMaterial({
+      color: 0x3377ff,
+      transparent: true,
+      opacity: 0.06,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    tiltGroup.add(new THREE.Mesh(new THREE.SphereGeometry(SPHERE_RADIUS + 0.4, 32, 32), haloMaterial));
 
     // "Sonne" — Farbe/Intensitaet an Climate.solarLuminosity() gekoppelt (siehe
     // SOLAR_LUMINOSITY_START-Kommentar in data.js): bei geringerer Leuchtkraft
@@ -165,6 +235,21 @@ const Planet3D = (() => {
     // eine harte Kante statt eines weichen Verlaufs (gemeldeter Fehler) — mit
     // niedriger Saettigung bleibt das Sonnenlicht nahezu neutral/leicht warm.
     sunLight.color.setHSL(0.13, 0.15, 0.55 + 0.2 * solar);
+
+    // Magnetfeld: Staerke (0..1) steuert Sichtbarkeit und Farbe der Feldlinien
+    // sowie des Halo-Leuchtring.
+    // Volles Feld: helles Cyanblau, gut sichtbar.
+    // Schwaches Feld (<30%): verblasst und verdunkelt sich — Warnsignal.
+    const field = Climate.magneticFieldStrength();
+    if (fieldLineMaterial) {
+      // Hue 0.58 (Cyan-Blau) bleibt; Helligkeit und Deckkraft sinken mit dem Feld.
+      fieldLineMaterial.color.setHSL(0.58, 0.7 + field * 0.3, 0.2 + field * 0.5);
+      fieldLineMaterial.opacity = 0.08 + field * 0.72;
+    }
+    if (haloMaterial) {
+      haloMaterial.opacity = field * 0.09;
+    }
+
     renderer.render(scene, camera);
     rafId = requestAnimationFrame(frame);
   }
