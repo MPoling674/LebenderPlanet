@@ -120,6 +120,7 @@ const Game = (() => {
       // normalen Spielbetrieb, da Debug.runChecks() bei jedem Aufruf einen
       // vollen Planet.stats()-Scan macht.
       Debug.runChecks();
+      Goals.tick(year);
     }
     UI.setYear(year);
     renderAll();
@@ -299,6 +300,7 @@ const Game = (() => {
     }
     Civilization.init();
     Charts.resetHistory();
+    Goals.setGoal(preset.defaultGoal || "free", year);
     UI.setYear(year);
     renderAll();
     saveGame();
@@ -323,6 +325,7 @@ const Game = (() => {
         planetMass: PLANET_MASS_DEFAULT,
       },
       seedLife: true,
+      defaultGoal: "green",
       statusMessage: "Simulation mit heutiger Erde gestartet.",
       logMessage: "Eine neue Simulation beginnt — mit dem heutigen Zustand der Erde.",
     },
@@ -351,6 +354,7 @@ const Game = (() => {
         planetMass: PLANET_MASS_MIN,
       },
       seedLife: false,
+      defaultGoal: "mars",
       statusMessage: "Mars-Terraforming gestartet.",
       logMessage: "Eine neue Simulation beginnt — ein kalter, leblose Planet mit schwachem Magnetfeld wartet auf Terraforming.",
     },
@@ -372,6 +376,7 @@ const Game = (() => {
         planetMass: PLANET_MASS_DEFAULT,
       },
       seedLife: false,
+      defaultGoal: "ice",
       statusMessage: "Eisplanet gestartet.",
       logMessage: "Eine neue Simulation beginnt — ein gefrorener Planet wartet darauf, aufgetaut zu werden.",
     },
@@ -392,6 +397,7 @@ const Game = (() => {
         planetMass: PLANET_MASS_MAX,
       },
       seedLife: false,
+      defaultGoal: "green",
       statusMessage: "Supererde gestartet.",
       logMessage: "Eine neue Simulation beginnt — eine grosse, gastfreundliche Welt wartet auf ihre Evolution.",
     },
@@ -445,6 +451,10 @@ const Game = (() => {
     UI.on("importSave", handleImportSave);
     UI.on("newGame", handleNewGame);
     UI.on("startPreset", handleStartPreset);
+    UI.on("setGoal", (id) => Goals.setGoal(id, year));
+
+    Goals.on("complete", (goal) => UI.showGoalResult(goal, true));
+    Goals.on("fail",     (goal) => UI.showGoalResult(goal, false));
 
     UI.setYear(year);
     UI.setSpeedLabel(simSpeed);

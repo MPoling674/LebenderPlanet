@@ -19,6 +19,7 @@
     <button class="tab-btn" data-tab="hud-atmosphere">Atmosphäre</button>
     <button class="tab-btn" data-tab="hud-ocean">Ozean</button>
     <button class="tab-btn" data-tab="hud-orbit">Orbit</button>
+    <button class="tab-btn" data-tab="hud-goals">Ziele</button>
   </div>
 
   <div id="tab-hud-overview" class="tab-panel active">
@@ -55,6 +56,19 @@
     <div class="hud-item" title="Neigung der Rotationsachse — beeinflusst das Breitengefälle und die Jahreszeiten-Stärke"><span class="label">Achsneigung</span><span id="hud-tilt">0 °</span></div>
     <div class="hud-item" title="Mondmasse relativ zum heutigen Erdmond — stabilisiert die Achsneigung"><span class="label">Mondmasse</span><span id="hud-moonmass">0×</span></div>
     <div class="hud-item" title="Planetenmasse relativ zur Erde — schützt zusammen mit dem Magnetfeld vor Atmosphärenerosion"><span class="label">Planetenmasse</span><span id="hud-planetmass">0×</span></div>
+  </div>
+
+  <div id="tab-hud-goals" class="tab-panel">
+    <div class="goal-selector">
+      <select id="goal-select">
+        <option value="free">Freies Spiel</option>
+        <option value="mars">Mars terraformen</option>
+        <option value="ice">Schneeball-Erde auftauen</option>
+        <option value="green">Grüne Zivilisation</option>
+      </select>
+      <button id="goal-set-btn">Ziel setzen</button>
+    </div>
+    <div id="goal-status"></div>
   </div>
 </header>
 
@@ -254,6 +268,16 @@
 <script src="js/planet3d.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/goals.js"></script>
 <script src="js/main.js"></script>
+
+<div id="goal-result" class="hidden">
+  <div id="goal-result-card">
+    <div id="goal-result-icon"></div>
+    <h2 id="goal-result-title"></h2>
+    <p id="goal-result-text"></p>
+    <button id="goal-result-continue">Weiter spielen</button>
+  </div>
+</div>
 </body>
 </html>

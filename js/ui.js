@@ -89,6 +89,13 @@ const UI = (() => {
     el.newGameBtn = document.getElementById("new-game-btn");
     el.quickstartButtons = document.querySelectorAll(".quickstart-buttons button[data-preset]");
 
+    el.goalSelect = document.getElementById("goal-select");
+    el.goalStatus = document.getElementById("goal-status");
+    el.goalResult = document.getElementById("goal-result");
+    el.goalResultIcon = document.getElementById("goal-result-icon");
+    el.goalResultTitle = document.getElementById("goal-result-title");
+    el.goalResultText = document.getElementById("goal-result-text");
+
     el.eventsOverviewBtn = document.getElementById("events-overview-btn");
     el.eventsOverviewModal = document.getElementById("events-overview-modal");
     el.eventsOverviewClose = document.getElementById("events-overview-close");
@@ -126,6 +133,14 @@ const UI = (() => {
     el.newGameBtn.addEventListener("click", () => callbacks.newGame && callbacks.newGame());
     el.quickstartButtons.forEach((btn) => {
       btn.addEventListener("click", () => callbacks.startPreset && callbacks.startPreset(btn.dataset.preset));
+    });
+
+    document.getElementById("goal-set-btn")?.addEventListener("click", () => {
+      const id = el.goalSelect?.value || "free";
+      callbacks.setGoal && callbacks.setGoal(id);
+    });
+    document.getElementById("goal-result-continue")?.addEventListener("click", () => {
+      el.goalResult?.classList.add("hidden");
     });
 
     el.eventsOverviewBtn.addEventListener("click", () => {
@@ -474,6 +489,7 @@ const UI = (() => {
     Charts.renderTiltChart(el.tiltChart);
     Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
     renderDebugWarnings();
+    renderGoal();
   }
 
   // Zeigt die aktuellen Konsistenzpruefungs-Ergebnisse (siehe Debug.runChecks(),
@@ -500,7 +516,50 @@ const UI = (() => {
     el.debugCellDump.textContent = info ? JSON.stringify(info, null, 1) : "Keine Zelle unter dem Mauszeiger.";
   }
 
+  let currentYear = 0;
+
+  function renderGoal() {
+    if (!el.goalStatus) return;
+    const s = Goals.status(currentYear);
+    if (!s || s.goal.id === "free") {
+      el.goalStatus.innerHTML = '<p class="goal-none">Kein aktives Ziel — wähle oben ein Ziel aus.</p>';
+      return;
+    }
+    const { goal, state, elapsed, conditions } = s;
+    const stateClass = state === "won" ? "goal-won" : state === "lost" ? "goal-lost" : "";
+    let timeHtml = "";
+    if (goal.timeLimit) {
+      const pct = Math.min(100, (elapsed / goal.timeLimit) * 100);
+      const remaining = Math.max(0, goal.timeLimit - elapsed);
+      timeHtml = `<div class="goal-time">
+        <span>Verstrichene Zeit: ${formatSimTime(elapsed)}</span>
+        <div class="goal-time-bar"><div class="goal-time-fill" style="width:${pct.toFixed(1)}%"></div></div>
+        <span class="goal-time-remaining">${formatSimTime(remaining)} verbleibend</span>
+      </div>`;
+    }
+    const condHtml = conditions.map(c =>
+      `<li class="${c.met ? "goal-cond-met" : ""}">${c.met ? "✓" : "○"} ${c.label}</li>`
+    ).join("");
+    el.goalStatus.innerHTML = `<div class="goal-active ${stateClass}">
+      <div class="goal-active-title">${goal.title}</div>
+      <div class="goal-active-desc">${goal.description}</div>
+      ${timeHtml}
+      <ul class="goal-conditions">${condHtml}</ul>
+    </div>`;
+  }
+
+  function showGoalResult(goal, success) {
+    if (!el.goalResult) return;
+    el.goalResultIcon.textContent = success ? "🏆" : "⏱";
+    el.goalResultTitle.textContent = success ? "Ziel erreicht!" : "Zeit abgelaufen";
+    el.goalResultText.textContent = success
+      ? `"${goal.title}" erfolgreich abgeschlossen. Die Simulation läuft im freien Modus weiter.`
+      : `Die Zeitgrenze für "${goal.title}" wurde überschritten. Du kannst weiter experimentieren.`;
+    el.goalResult.classList.remove("hidden");
+  }
+
   function setYear(year) {
+    currentYear = year;
     el.hudYear.textContent = formatSimTime(year);
   }
 
@@ -634,5 +693,5 @@ const UI = (() => {
     el.saveStatus.textContent = message;
   }
 
-  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip, showCellDebugData };
+  return { init, on, renderAll, setYear, setSpeedLabel, log, setSaveStatus, getActiveTool, getSelectedVegType, getSelectedFaunaType, showTooltip, hideTooltip, showCellDebugData, showGoalResult };
 })();
