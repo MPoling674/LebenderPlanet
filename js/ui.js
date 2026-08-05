@@ -61,6 +61,7 @@ const UI = (() => {
     el.speciesModalImg = document.getElementById("species-modal-img");
     el.speciesDetail = document.getElementById("species-detail");
     el.mapTooltip = document.getElementById("map-tooltip");
+    el.tempBreakdown = document.getElementById("temp-breakdown-table");
     el.tempChart = document.getElementById("temp-chart");
     el.co2Chart = document.getElementById("co2-chart");
     el.populationChart = document.getElementById("population-chart");
@@ -691,6 +692,44 @@ const UI = (() => {
     return parts.length ? parts.join(" · ") : "keine";
   }
 
+  // Temperatur-Analyse-Tabelle im Grafiken-Tab: zeigt, welche Faktoren wie viel
+  // zur Gleichgewichtstemperatur beitragen (Deltas relativ zur 14-°C-Baseline).
+  // Einschlagswinter und primordiale Waerme erscheinen nur wenn aktiv (> 0).
+  function renderTempBreakdown() {
+    if (!el.tempBreakdown) return;
+    const bd = Climate.temperatureBreakdown();
+    const rows = [
+      { icon: "🌞", label: "Sonnenstrahlung", value: bd.solar },
+      { icon: "🌫️", label: "Treibhausgase (CO₂/CH₄)", value: bd.ghg },
+      { icon: "💧", label: "Wasserdampf-Rückkopplung", value: bd.waterVapor },
+      { icon: "🧊", label: "Eis-Albedo", value: bd.albedo },
+      { icon: "🌍", label: "Milanković-Zyklen", value: bd.milankovitch },
+    ];
+    if (bd.impactWinter < -0.1)
+      rows.push({ icon: "☄️", label: "Einschlagswinter", value: bd.impactWinter });
+    if (bd.primordialHeat > 0.5)
+      rows.push({ icon: "🌋", label: "Primordiale Wärme", value: bd.primordialHeat });
+
+    const sign = (v) => (v >= 0 ? "+" : "");
+    const fmt = (v) => v.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const rows_html = rows
+      .map((r) => {
+        const cls = r.value >= 0 ? "temp-delta-pos" : "temp-delta-neg";
+        return `<tr>
+          <td class="temp-breakdown-label">${r.icon} ${r.label}</td>
+          <td class="temp-breakdown-value ${cls}">${sign(r.value)}${fmt(r.value)} °C</td>
+        </tr>`;
+      })
+      .join("");
+    const eqCls = bd.equilibrium > Climate.globalTemperature() ? "temp-delta-pos" : "temp-delta-neg";
+    el.tempBreakdown.innerHTML = `
+      ${rows_html}
+      <tr class="temp-breakdown-total">
+        <td class="temp-breakdown-label">→ Gleichgewicht</td>
+        <td class="temp-breakdown-value ${eqCls}">${fmt(bd.equilibrium)} °C</td>
+      </tr>`;
+  }
+
   function renderAll() {
     const temp = Climate.globalTemperature();
     const seaLevel = Climate.seaLevelRise();
@@ -730,6 +769,7 @@ const UI = (() => {
     Charts.renderSolarChart(el.solarChart);
     Charts.renderTiltChart(el.tiltChart);
     Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
+    renderTempBreakdown();
     renderDebugWarnings();
     renderGoal();
   }

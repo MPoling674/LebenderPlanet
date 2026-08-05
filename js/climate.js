@@ -247,6 +247,33 @@ const Climate = (() => {
     return currentTemp;
   }
 
+  // Aufschluesselung der Beitraege zur Gleichgewichtstemperatur — fuer die
+  // Temperatur-Analyse-Tabelle in ui.js. Gibt alle Einzel-Deltas (in °C,
+  // relativ zur vorindustriellen Baseline BASE_GLOBAL_TEMP) zurueck sowie
+  // die daraus resultierende Gleichgewichts-Zieltemperatur.
+  // Hinweis: currentTemp ist die traegeitsgedaempfte Realtemperatur; sie
+  // naehert sich dem hier berechneten equilibrium langsam an.
+  function temperatureBreakdown() {
+    const forcing = Atmosphere.radiativeForcing();
+    const deltaGhg = CLIMATE_SENSITIVITY * forcing;
+    const wva = waterVaporAmplification();
+    const deltaWaterVapor = deltaGhg * wva;
+    const deltaAlbedo = CLIMATE_SENSITIVITY * albedoForcing();
+    const deltaSolar = CLIMATE_SENSITIVITY * solarForcing();
+    const deltaMilankovitch = orbitalForcing();
+    return {
+      ghg: deltaGhg,
+      waterVapor: deltaWaterVapor,
+      albedo: deltaAlbedo,
+      solar: deltaSolar,
+      milankovitch: deltaMilankovitch,
+      impactWinter: -impactWinterIntensity,
+      primordialHeat: primordialHeat,
+      equilibrium: BASE_GLOBAL_TEMP + deltaGhg + deltaWaterVapor + deltaAlbedo
+                   + deltaSolar + deltaMilankovitch - impactWinterIntensity + primordialHeat,
+    };
+  }
+
   function iceCoverage() {
     return currentIce;
   }
@@ -337,6 +364,6 @@ const Climate = (() => {
     init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage,
     vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength, wasReversal,
     setAxialTilt, setMoonMass, setPlanetMass, axialTiltDegrees, moonMassValue, planetMassValue,
-    tiltGradientFactor, obliquityWobbleDegrees, precessionAngleRadians, serialize, restore,
+    tiltGradientFactor, obliquityWobbleDegrees, precessionAngleRadians, temperatureBreakdown, serialize, restore,
   };
 })();

@@ -233,6 +233,15 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
 .chart-legend-item strong { color: #e6e8ec; }
 .chart-swatch { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
 
+/* Temperatur-Analyse-Tabelle im Grafiken-Tab */
+.temp-breakdown { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+.temp-breakdown-label { padding: 3px 4px 3px 0; color: #93a3b8; }
+.temp-breakdown-value { padding: 3px 0 3px 6px; text-align: right; font-family: monospace; font-weight: bold; }
+.temp-delta-pos { color: #f87060; }
+.temp-delta-neg { color: #60a8f8; }
+.temp-breakdown-total td { border-top: 1px solid #223047; padding-top: 5px; color: #e6e8ec; }
+.temp-breakdown-total .temp-breakdown-value { font-size: 13px; }
+
 .debug-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 8px; cursor: pointer; }
 #debug-warnings { list-style: none; padding: 0; margin: 0 0 10px; font-size: 12px; max-height: 160px; overflow-y: auto; }
 #debug-warnings li { padding: 4px 0; border-bottom: 1px solid #223047; line-height: 1.4; }
