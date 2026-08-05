@@ -44,16 +44,16 @@ function formatSimTime(rawYear) {
 // min/max — jeder Planet beginnt dadurch mit einem spürbar anderen Klima/Zeitverlauf
 // statt immer exakt demselben Ausgangspunkt.
 const GASES = [
-  { id: "co2", name: "Kohlendioxid", symbol: "CO₂", unit: "ppm", min: 150, max: 2000, start: 400, startVariation: 120, potency: 1 },
-  { id: "ch4", name: "Methan", symbol: "CH₄", unit: "ppm", min: 0, max: 50, start: 1.8, startVariation: 1.2, potency: 25 },
-  { id: "o2", name: "Sauerstoff", symbol: "O₂", unit: "%", min: 0, max: 35, start: 21, startVariation: 2, potency: 0 },
+  { id: "co2", name: "Kohlendioxid", symbol: "CO₂", unit: "ppm", min: 150, max: 2000, start: 400, startVariation: 120, potency: 1, minLevel: "einsteiger" },
+  { id: "ch4", name: "Methan", symbol: "CH₄", unit: "ppm", min: 0, max: 50, start: 1.8, startVariation: 1.2, potency: 25, minLevel: "fortgeschritten" },
+  { id: "o2", name: "Sauerstoff", symbol: "O₂", unit: "%", min: 0, max: 35, start: 21, startVariation: 2, potency: 0, minLevel: "einsteiger" },
   // Haeufigstes Gas der realen Erdatmosphaere (~78%), aber weitgehend inert: kein
   // Treibhausgas (potency 0) und wird von Biologie in diesem Modell nicht
   // umgesetzt — dient der Vollstaendigkeit/Realitaetsnaehe der Atmosphaeren-
   // Zusammensetzung. KEIN eigener start/startVariation: N2 ist mit O2 gekoppelt
   // (siehe ATMOSPHERE_MAJOR_GAS_TOTAL/Atmosphere.set()) und wird immer aus dem
   // aktuellen O2-Wert abgeleitet, nie unabhaengig gewuerfelt oder veraendert.
-  { id: "n2", name: "Stickstoff", symbol: "N₂", unit: "%", min: 0, max: 95, potency: 0 },
+  { id: "n2", name: "Stickstoff", symbol: "N₂", unit: "%", min: 0, max: 95, potency: 0, minLevel: "wissenschaftler" },
 ];
 
 // O2 und N2 sind beide Volumenanteile DERSELBEN Atmosphaere, keine unabhaengigen

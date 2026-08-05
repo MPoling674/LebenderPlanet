@@ -233,6 +233,20 @@ button.tool-active { background: #2e6f4e; border-color: #7fd6a3; }
 .chart-legend-item strong { color: #e6e8ec; }
 .chart-swatch { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
 
+/* Schwierigkeitsgrad-Selektor im HUD */
+.hud-difficulty { display: flex; align-items: center; gap: 4px; }
+.hud-difficulty select { background: #0d1520; color: #93a3b8; border: 1px solid #2a3f55; border-radius: 4px; font-size: 11px; padding: 2px 4px; cursor: pointer; }
+
+/* Schwierigkeitsgrad-Sichtbarkeit:
+   data-minlevel="fortgeschritten" → sichtbar ab Fortgeschritten
+   data-minlevel="wissenschaftler" → sichtbar nur im Wissenschaftler-Modus
+   Kein data-minlevel → immer sichtbar */
+body.level-einsteiger [data-minlevel="fortgeschritten"],
+body.level-einsteiger [data-minlevel="wissenschaftler"],
+body.level-fortgeschritten [data-minlevel="wissenschaftler"] {
+  display: none !important;
+}
+
 /* Temperatur-Analyse-Tabelle im Grafiken-Tab */
 .temp-breakdown { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
 .temp-breakdown-label { padding: 3px 4px 3px 0; color: #93a3b8; }

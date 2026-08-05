@@ -115,6 +115,31 @@ const UI = (() => {
     initTabs(document.getElementById("sidebar-tabs"));
     initTabs(document.getElementById("hud-tabs"));
 
+    // Schwierigkeitsgrad: setzt eine CSS-Klasse auf <body>, die per
+    // style.css alle Elemente mit passendem data-minlevel ein- bzw. ausblendet.
+    // Startet mit "fortgeschritten" (dem Select-Default), damit erfahrene
+    // Nutzer alle sinnvollen Regler sofort sehen.
+    const applyDifficulty = (level) => {
+      document.body.classList.remove("level-einsteiger", "level-fortgeschritten", "level-wissenschaftler");
+      document.body.classList.add("level-" + level);
+      // Tab-Buttons koennen nach dem Ausblenden als aktiv markiert sein —
+      // in diesem Fall den ersten sichtbaren Tab derselben Gruppe aktivieren.
+      ["sidebar-tabs", "hud-tabs"].forEach((tabsId) => {
+        const tabsEl = document.getElementById(tabsId);
+        if (!tabsEl) return;
+        const active = tabsEl.querySelector(".tab-btn.active");
+        if (active && getComputedStyle(active).display === "none") {
+          const first = tabsEl.querySelector(".tab-btn:not([style*='display: none'])");
+          if (first) first.click();
+        }
+      });
+    };
+    const diffSel = document.getElementById("difficulty-select");
+    if (diffSel) {
+      diffSel.addEventListener("change", () => applyDifficulty(diffSel.value));
+      applyDifficulty(diffSel.value); // Initialzustand setzen
+    }
+
     el.speedSlider.addEventListener("input", () => {
       const idx = parseInt(el.speedSlider.value, 10);
       callbacks.setSpeed && callbacks.setSpeed(SPEED_STEPS[idx]);
@@ -219,7 +244,8 @@ const UI = (() => {
     let html = "";
     GASES.forEach((g) => {
       const value = Atmosphere.get(g.id);
-      html += `<div class="gas-control">
+      const levelAttr = g.minLevel ? ` data-minlevel="${g.minLevel}"` : "";
+      html += `<div class="gas-control"${levelAttr}>
         <label>${g.name} (${g.symbol})</label>
         <input type="range" min="${g.min}" max="${g.max}" step="${(g.max - g.min) / 200}" value="${value}" data-gas="${g.id}">
         <span class="gas-value" data-gas-value="${g.id}">${value.toFixed(decimalsFor(g))} ${g.unit}</span>
@@ -250,28 +276,29 @@ const UI = (() => {
     const faunaOptions = FAUNA_TYPES.filter((t) => t.manualPlacement !== false).map(
       (t) => `<option value="${t.id}" ${t.id === selectedFaunaType ? "selected" : ""}>${t.name} (${t.habitat === "land" ? "Land" : "Ozean"})</option>`
     ).join("");
+    const a = (tool) => activeTool === tool ? "tool-active" : "";
     el.toolButtons.innerHTML = `
       <select id="veg-type-select">${vegOptions}</select>
-      <button data-tool="plant" class="${activeTool === "plant" ? "tool-active" : ""}">🌱 Vegetation pflanzen</button>
-      <button data-tool="clear" class="${activeTool === "clear" ? "tool-active" : ""}">🪓 Vegetation entfernen</button>
+      <button data-tool="plant" class="${a("plant")}">🌱 Vegetation pflanzen</button>
+      <button data-tool="clear" class="${a("clear")}">🪓 Vegetation entfernen</button>
       <select id="fauna-type-select">${faunaOptions}</select>
-      <button data-tool="release_fauna" class="${activeTool === "release_fauna" ? "tool-active" : ""}">🐾 Tier aussetzen</button>
-      <button data-tool="remove_fauna" class="${activeTool === "remove_fauna" ? "tool-active" : ""}">🪤 Tier entfernen</button>
-      <button data-tool="salt_add" class="${activeTool === "salt_add" ? "tool-active" : ""}">🧂 Salz zuführen</button>
-      <button data-tool="salt_remove" class="${activeTool === "salt_remove" ? "tool-active" : ""}">🧂 Salz entnehmen</button>
-      <button data-tool="build_oxygen" class="${activeTool === "build_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator bauen</button>
-      <button data-tool="remove_oxygen" class="${activeTool === "remove_oxygen" ? "tool-active" : ""}">🏭 Sauerstoffgenerator entfernen</button>
-      <button data-tool="build_scrubber" class="${activeTool === "build_scrubber" ? "tool-active" : ""}">🏭 CO2-Scrubber bauen</button>
-      <button data-tool="remove_scrubber" class="${activeTool === "remove_scrubber" ? "tool-active" : ""}">🏭 CO2-Scrubber entfernen</button>
-      <button data-tool="build_methane_scrubber" class="${activeTool === "build_methane_scrubber" ? "tool-active" : ""}">🏭 Methanfilter bauen</button>
-      <button data-tool="remove_methane_scrubber" class="${activeTool === "remove_methane_scrubber" ? "tool-active" : ""}">🏭 Methanfilter entfernen</button>
-      <button data-tool="build_emitter" class="${activeTool === "build_emitter" ? "tool-active" : ""}">🌋 Emitter bauen</button>
-      <button data-tool="remove_emitter" class="${activeTool === "remove_emitter" ? "tool-active" : ""}">🌋 Emitter entfernen</button>
-      <button data-tool="detonate" class="${activeTool === "detonate" ? "tool-active" : ""}">💣 Atombombe</button>
-      <button data-tool="trigger_volcano" class="${activeTool === "trigger_volcano" ? "tool-active" : ""}">🌋 Vulkanausbruch auslösen</button>
-      <button data-tool="trigger_earthquake" class="${activeTool === "trigger_earthquake" ? "tool-active" : ""}">🌍 Erdbeben auslösen</button>
-      <button data-tool="trigger_tsunami" class="${activeTool === "trigger_tsunami" ? "tool-active" : ""}">🌊 Tsunami auslösen</button>
-      <button data-tool="trigger_plague" class="${activeTool === "trigger_plague" ? "tool-active" : ""}">☣️ Seuche auslösen</button>
+      <button data-tool="release_fauna" class="${a("release_fauna")}">🐾 Tier aussetzen</button>
+      <button data-tool="remove_fauna" class="${a("remove_fauna")}">🪤 Tier entfernen</button>
+      <button data-tool="salt_add" class="${a("salt_add")}" data-minlevel="fortgeschritten">🧂 Salz zuführen</button>
+      <button data-tool="salt_remove" class="${a("salt_remove")}" data-minlevel="fortgeschritten">🧂 Salz entnehmen</button>
+      <button data-tool="build_oxygen" class="${a("build_oxygen")}" data-minlevel="fortgeschritten">🏭 Sauerstoffgenerator bauen</button>
+      <button data-tool="remove_oxygen" class="${a("remove_oxygen")}" data-minlevel="fortgeschritten">🏭 Sauerstoffgenerator entfernen</button>
+      <button data-tool="build_scrubber" class="${a("build_scrubber")}" data-minlevel="fortgeschritten">🏭 CO2-Scrubber bauen</button>
+      <button data-tool="remove_scrubber" class="${a("remove_scrubber")}" data-minlevel="fortgeschritten">🏭 CO2-Scrubber entfernen</button>
+      <button data-tool="build_methane_scrubber" class="${a("build_methane_scrubber")}" data-minlevel="fortgeschritten">🏭 Methanfilter bauen</button>
+      <button data-tool="remove_methane_scrubber" class="${a("remove_methane_scrubber")}" data-minlevel="fortgeschritten">🏭 Methanfilter entfernen</button>
+      <button data-tool="build_emitter" class="${a("build_emitter")}" data-minlevel="fortgeschritten">🌋 Emitter bauen</button>
+      <button data-tool="remove_emitter" class="${a("remove_emitter")}" data-minlevel="fortgeschritten">🌋 Emitter entfernen</button>
+      <button data-tool="detonate" class="${a("detonate")}" data-minlevel="fortgeschritten">💣 Atombombe</button>
+      <button data-tool="trigger_volcano" class="${a("trigger_volcano")}" data-minlevel="fortgeschritten">🌋 Vulkanausbruch auslösen</button>
+      <button data-tool="trigger_earthquake" class="${a("trigger_earthquake")}" data-minlevel="fortgeschritten">🌍 Erdbeben auslösen</button>
+      <button data-tool="trigger_tsunami" class="${a("trigger_tsunami")}" data-minlevel="fortgeschritten">🌊 Tsunami auslösen</button>
+      <button data-tool="trigger_plague" class="${a("trigger_plague")}" data-minlevel="fortgeschritten">☣️ Seuche auslösen</button>
       <button data-tool="none" class="${activeTool === null ? "tool-active" : ""}">Werkzeug abwählen</button>
     `;
     el.toolButtons.querySelectorAll("button").forEach((btn) => {

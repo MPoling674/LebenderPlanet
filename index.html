@@ -11,14 +11,22 @@
   <div id="hud-pinned">
     <div class="hud-item"><span class="label">Zeit</span><span id="hud-year">Jahrtausend 0</span></div>
     <div class="hud-item"><span class="label">Ø-Temperatur</span><span id="hud-temp">0 °C</span></div>
+    <div class="hud-item hud-difficulty">
+      <label class="label" for="difficulty-select">Modus</label>
+      <select id="difficulty-select">
+        <option value="einsteiger">🌱 Einsteiger</option>
+        <option value="fortgeschritten" selected>🔬 Fortgeschritten</option>
+        <option value="wissenschaftler">🧪 Wissenschaftler</option>
+      </select>
+    </div>
   </div>
 
   <div class="tabs" id="hud-tabs">
     <button class="tab-btn active" data-tab="hud-overview">Übersicht</button>
-    <button class="tab-btn" data-tab="hud-civilization">Zivilisation</button>
-    <button class="tab-btn" data-tab="hud-atmosphere">Atmosphäre</button>
-    <button class="tab-btn" data-tab="hud-ocean">Ozean</button>
-    <button class="tab-btn" data-tab="hud-orbit">Orbit</button>
+    <button class="tab-btn" data-tab="hud-civilization" data-minlevel="fortgeschritten">Zivilisation</button>
+    <button class="tab-btn" data-tab="hud-atmosphere" data-minlevel="fortgeschritten">Atmosphäre</button>
+    <button class="tab-btn" data-tab="hud-ocean" data-minlevel="wissenschaftler">Ozean</button>
+    <button class="tab-btn" data-tab="hud-orbit" data-minlevel="fortgeschritten">Orbit</button>
     <button class="tab-btn" data-tab="hud-goals">Ziele</button>
   </div>
 
@@ -106,12 +114,12 @@
 
     <div class="tabs" id="sidebar-tabs">
       <button class="tab-btn active" data-tab="atmosphere">Atmosphäre</button>
-      <button class="tab-btn" data-tab="orbit">Orbit &amp; Masse</button>
-      <button class="tab-btn" data-tab="charts">Grafiken</button>
+      <button class="tab-btn" data-tab="orbit" data-minlevel="fortgeschritten">Orbit &amp; Masse</button>
+      <button class="tab-btn" data-tab="charts" data-minlevel="fortgeschritten">Grafiken</button>
       <button class="tab-btn" data-tab="tools">Terraforming</button>
       <button class="tab-btn" data-tab="species">Artenlexikon</button>
       <button class="tab-btn" data-tab="log">Ereignisse</button>
-      <button class="tab-btn" data-tab="debug">Debug</button>
+      <button class="tab-btn" data-tab="debug" data-minlevel="wissenschaftler">Debug</button>
       <button class="tab-btn" data-tab="save">Spielstand</button>
     </div>
 
