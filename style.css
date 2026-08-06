@@ -296,10 +296,13 @@ body.level-fortgeschritten [data-minlevel="wissenschaftler"] {
 .hab-bar-mid  { background: #d4a84b; }
 .hab-bar-bad  { background: #e05050; }
 
-/* Planet-Profil — visuelle Alleinstellungsmerkmale im Übersicht-Tab.
+/* Planet-Profil — visuelle Alleinstellungsmerkmale im Orbit-Tab.
+   flex-basis:100% + order:999 → eigene Zeile unter den numerischen hud-items.
    Zweizeiliges Layout: Label + Wert oben, Balken darunter volle Breite. */
 .planet-profile {
-  margin-top: 10px;
+  flex-basis: 100%;
+  order: 999;
+  margin-top: 8px;
   border-top: 1px solid #1e3048;
   padding-top: 8px;
 }
@@ -366,8 +369,9 @@ body.level-fortgeschritten [data-minlevel="wissenschaftler"] {
   transform: translateX(-50%);
 }
 
-/* Fauna-Stressanalyse im Übersicht-Tab */
-#fauna-stress { margin: 8px 0 4px; }
+/* Fauna-Stressanalyse im Übersicht-Tab — flex-basis:100% erzwingt eigene
+   Zeile unter den hud-items (das Tab-Panel hat flex-wrap:wrap). */
+#fauna-stress { flex-basis: 100%; order: 999; margin: 4px 0 2px; }
 .fauna-stress-heading {
   font-size: 10px;
   color: #e0a03a;
