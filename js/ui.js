@@ -62,6 +62,8 @@ const UI = (() => {
     el.speciesDetail = document.getElementById("species-detail");
     el.mapTooltip = document.getElementById("map-tooltip");
     el.tempBreakdown = document.getElementById("temp-breakdown-table");
+    el.habBreakdown = document.getElementById("hab-breakdown-table");
+    el.habScore = document.getElementById("hab-score-bar");
     el.tempChart = document.getElementById("temp-chart");
     el.co2Chart = document.getElementById("co2-chart");
     el.populationChart = document.getElementById("population-chart");
@@ -719,6 +721,47 @@ const UI = (() => {
     return parts.length ? parts.join(" · ") : "keine";
   }
 
+  // Bewohnbarkeits-Aufschluesselung im Grafiken-Tab: zeigt den Beitrag jedes
+  // Faktors zum Gesamtscore (0..100 %) mit Fortschrittsbalken und Farb-Klassen.
+  function renderHabitabilityBreakdown() {
+    if (!el.habBreakdown) return;
+    const bd = Climate.habitabilityBreakdown();
+    const rows = [
+      { icon: "🌡️", label: "Temperatur",         value: bd.temperature    },
+      { icon: "💨", label: "Sauerstoff",          value: bd.oxygen         },
+      { icon: "💧", label: "Wasser (flüssig)",    value: bd.water          },
+      { icon: "🛡️", label: "Magnetfeld",           value: bd.magneticField  },
+      { icon: "☢️", label: "Strahlung / UV",       value: bd.radiation      },
+      { icon: "🌀", label: "Klimastabilität",      value: bd.extremeWeather },
+    ];
+    if (bd.impactWinter < -0.1)
+      rows.push({ icon: "☄️", label: "Einschlagswinter", value: bd.impactWinter });
+
+    const fmtPct = (v) => {
+      if (Math.abs(v) < 0.05) return "0,0 %";
+      return (v > 0 ? "+" : "") + v.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %";
+    };
+
+    const rows_html = rows.map((r) => {
+      const cls = r.value >= 0 ? "temp-delta-pos" : "temp-delta-neg";
+      return `<tr>
+        <td class="temp-breakdown-label">${r.icon} ${r.label}</td>
+        <td class="temp-breakdown-value ${cls}">${fmtPct(r.value)}</td>
+      </tr>`;
+    }).join("");
+
+    el.habBreakdown.innerHTML = rows_html;
+
+    // Fortschrittsbalken fuer den Gesamtscore
+    if (el.habScore) {
+      const pct = bd.total.toFixed(0);
+      const barCls = bd.total >= 60 ? "hab-bar-good" : bd.total >= 30 ? "hab-bar-mid" : "hab-bar-bad";
+      el.habScore.innerHTML = `
+        <div class="hab-score-label">Bewohnbarkeit gesamt: <strong>${pct} %</strong></div>
+        <div class="hab-bar-track"><div class="hab-bar-fill ${barCls}" style="width:${pct}%"></div></div>`;
+    }
+  }
+
   // Temperatur-Analyse-Tabelle im Grafiken-Tab: zeigt, welche Faktoren wie viel
   // zur Gleichgewichtstemperatur beitragen (Deltas relativ zur 14-°C-Baseline).
   // Einschlagswinter und primordiale Waerme erscheinen nur wenn aktiv (> 0).
@@ -796,6 +839,7 @@ const UI = (() => {
     Charts.renderSolarChart(el.solarChart);
     Charts.renderTiltChart(el.tiltChart);
     Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
+    renderHabitabilityBreakdown();
     renderTempBreakdown();
     renderDebugWarnings();
     renderGoal();

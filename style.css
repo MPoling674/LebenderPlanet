@@ -256,6 +256,16 @@ body.level-fortgeschritten [data-minlevel="wissenschaftler"] {
 .temp-breakdown-total td { border-top: 1px solid #223047; padding-top: 5px; color: #e6e8ec; }
 .temp-breakdown-total .temp-breakdown-value { font-size: 13px; }
 
+/* Bewohnbarkeits-Score-Balken */
+.hab-score-wrap { margin-bottom: 8px; }
+.hab-score-label { font-size: 12px; color: #93a3b8; margin-bottom: 4px; }
+.hab-score-label strong { color: #e6e8ec; }
+.hab-bar-track { height: 8px; background: #0d1520; border-radius: 4px; overflow: hidden; border: 1px solid #2a3f55; }
+.hab-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.hab-bar-good { background: #4caf82; }
+.hab-bar-mid  { background: #d4a84b; }
+.hab-bar-bad  { background: #e05050; }
+
 .debug-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 8px; cursor: pointer; }
 #debug-warnings { list-style: none; padding: 0; margin: 0 0 10px; font-size: 12px; max-height: 160px; overflow-y: auto; }
 #debug-warnings li { padding: 4px 0; border-bottom: 1px solid #223047; line-height: 1.4; }

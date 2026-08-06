@@ -320,6 +320,77 @@ const Climate = (() => {
     return (maxTemp - temp) / (maxTemp - VEG_OPTIMAL_TEMP);
   }
 
+  // Bewohnbarkeits-Aufschluesselung fuer die Habitability-Tabelle in ui.js.
+  // Gibt den Beitrag jedes Faktors in Prozentpunkten zurueck (positiv = foerderlich,
+  // negativ = Malus) sowie den Gesamtwert (0..100 %).
+  // Kalibrierung: Heutige Erde (Preset) erreicht ~75 %, Mars ~0 %, Supererde ~80 %.
+  // Wasserfaktor: waterVolume*clamp(1-ice*2,0,1) — vereiste Ozeane (ice>0.5) zählen
+  // als lebensfeindlich analog zur Eisplaneten-Simulation.
+  function habitabilityBreakdown() {
+    // ---- Temperatur (0..+25 %) ----
+    // Gausssche Glocke um BASE_GLOBAL_TEMP (14 °C), Halbwertsbreite ~30 °C;
+    // bei -20 °C oder +60 °C nähert sich der Beitrag 0 an.
+    const tempScore = Math.exp(-0.5 * Math.pow((currentTemp - BASE_GLOBAL_TEMP) / 30, 2));
+    const tempContrib = 25 * tempScore;
+
+    // ---- Sauerstoff (0..+20 %) ----
+    // Linear ansteigend bis 21 % O2 (optimal), danach abfallend (Brandgefahr
+    // bei sehr hohem O2); unterhalb 5 % kein komplexes Leben moeglich.
+    const o2 = Atmosphere.get("o2");
+    const o2Score = o2 < 5 ? 0
+      : o2 <= 21 ? (o2 - 5) / 16
+      : o2 <= 35 ? 1 - (o2 - 21) / 14
+      : 0;
+    const o2Contrib = 20 * clamp(o2Score, 0, 1);
+
+    // ---- Wasser (0..+20 %) ----
+    // Fluessiges Wasser: waterVolume (Kondensationsgrad 0..1) multipliziert mit
+    // dem nicht-vereisten Anteil. Sehr hohe Eisbedeckung (>50 %) stark bestraft.
+    const liquidFraction = waterVolume * clamp(1 - currentIce * 2, 0, 1);
+    const waterContrib = 20 * clamp(liquidFraction, 0, 1);
+
+    // ---- Magnetfeld (0..+15 %) ----
+    // Direkter Schild gegen kosmische Strahlung und Atmosphaerenverlust.
+    const fieldContrib = 15 * clamp(fieldStrength, 0, 1);
+
+    // ---- Strahlung / UV (0..-15 %) ----
+    // UV-Schutz setzt sich zusammen aus: Magnetfeldschild (70 %) + Ozonschicht,
+    // die sich ab ~1 % O2 aufbaut (30 %). Niedriges Feld UND niedriger O2-Wert
+    // ergibt hohe UV-Exposition und damit einen Malus.
+    const ozoneProtection = clamp(o2 / 10, 0, 1);
+    const uvExposure = clamp(1 - fieldStrength * 0.7 - ozoneProtection * 0.3, 0, 1);
+    const radiationPenalty = -15 * uvExposure;
+
+    // ---- Extremwetter (0..-10 %) ----
+    // Instabile Achsneigung (kleiner Mond im Vergleich zur Planetenmasse) erzeugt
+    // chaotische Jahreszeiten und Klimaextreme — abgebildet durch tiltInstability().
+    const instability = clamp(1 - moonMass / planetMass, 0, 1);
+    const extremePenalty = -10 * instability;
+
+    // ---- Einschlagswinter (0..-10 %) ----
+    // Nur sichtbar wenn aktiv; Intensitaet 20 entspricht ~10 % Malus.
+    const impactPenalty = impactWinterIntensity > 0
+      ? -clamp(impactWinterIntensity / 20, 0, 1) * 10
+      : 0;
+
+    const total = clamp(
+      tempContrib + o2Contrib + waterContrib + fieldContrib
+      + radiationPenalty + extremePenalty + impactPenalty,
+      0, 100
+    );
+
+    return {
+      temperature: tempContrib,
+      oxygen: o2Contrib,
+      water: waterContrib,
+      magneticField: fieldContrib,
+      radiation: radiationPenalty,
+      extremeWeather: extremePenalty,
+      impactWinter: impactPenalty,
+      total,
+    };
+  }
+
   function serialize() {
     return { temp: currentTemp, ice: currentIce, orbitalYear, orbitalPhase, impactWinterIntensity, primordialHeat, outgassedWaterReserve, waterVolume, solarLuminosityFactor, fieldStrength, axialTilt, moonMass, planetMass };
   }
@@ -364,6 +435,6 @@ const Climate = (() => {
     init, tick, globalTemperature, iceCoverage, meltedIcePercent, seaLevelRise, waterCoverage,
     vegetationSuitability, triggerImpactWinter, weatheringFactor, solarLuminosity, magneticFieldStrength, wasReversal,
     setAxialTilt, setMoonMass, setPlanetMass, axialTiltDegrees, moonMassValue, planetMassValue,
-    tiltGradientFactor, obliquityWobbleDegrees, precessionAngleRadians, temperatureBreakdown, serialize, restore,
+    tiltGradientFactor, obliquityWobbleDegrees, precessionAngleRadians, temperatureBreakdown, habitabilityBreakdown, serialize, restore,
   };
 })();
