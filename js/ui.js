@@ -721,21 +721,66 @@ const UI = (() => {
     return parts.length ? parts.join(" · ") : "keine";
   }
 
+  // Kontextabhaengige Handlungsempfehlung fuer jeden Bewohnbarkeitsfaktor.
+  // Gibt entweder "Optimal ✓ …" oder eine konkrete Massnahme zurueck.
+  function habTip(key, bd) {
+    const temp = Climate.globalTemperature();
+    const o2   = Atmosphere.get("o2");
+    const ice  = Climate.iceCoverage();
+    const water = Climate.waterCoverage();
+    switch (key) {
+      case "temperature":
+        if (bd.temperature >= 23) return "Optimal ✓ — Temperatur liegt im idealen Bereich für komplexes Leben.";
+        if (temp > 60)  return "Viel zu heiß — CO₂ stark reduzieren (CO₂-Scrubber) oder Eis-Albedo erhöhen.";
+        if (temp > 30)  return "Zu warm — CO₂ reduzieren oder auf niedrigere Treibhausgaswerte regulieren.";
+        if (temp < -20) return "Viel zu kalt — CO₂ oder CH₄ stark erhöhen, um den Treibhauseffekt zu stärken.";
+        if (temp < 5)   return "Zu kalt — CO₂ oder CH₄ erhöhen. Sonnenleuchtkraft steigt mit der Zeit von selbst.";
+        return "Fast optimal — Temperatur leicht anpassen (Ziel: ~14 °C).";
+      case "oxygen":
+        if (bd.oxygen >= 18) return "Optimal ✓ — O₂-Gehalt im idealen Bereich (15–25 %).";
+        if (o2 > 30) return "Zu viel O₂ (Brandgefahr) — weniger Vegetation oder CO₂-Wert erhöhen.";
+        if (o2 < 5)  return "Kaum Sauerstoff — Vegetation ausbreiten oder Sauerstoffgenerator einsetzen.";
+        return "Zu wenig O₂ — mehr Vegetation pflanzen oder Sauerstoffgenerator nutzen (Ziel: ~21 %).";
+      case "water":
+        if (bd.water >= 18) return "Optimal ✓ — ausreichend flüssiges Wasser für komplexes Leben vorhanden.";
+        if (water < 0.05) return "Noch kein flüssiges Wasser — Planet muss sich erst abkühlen. Zeit läuft.";
+        if (ice > 0.6)  return "Planet fast vollständig vereist — Temperatur erhöhen (mehr CO₂/CH₄), um Eis zu schmelzen.";
+        if (ice > 0.3)  return "Starke Eisbedeckung — Temperatur leicht erhöhen, um mehr flüssige Ozeane freizulegen.";
+        return "Zu wenig flüssiges Wasser — Temperatur und Eisbedeckung anpassen.";
+      case "magneticField":
+        if (bd.magneticField >= 13) return "Optimal ✓ — Magnetfeld schützt Atmosphäre und Oberfläche vor kosmischer Strahlung.";
+        if (bd.magneticField >= 7)  return "Schwaches Feld — Planetenmasse erhöhen (Regler 'Orbit & Masse'). Größerer Kern → stärkeres Dynamo.";
+        return "Sehr schwaches Magnetfeld — Atmosphäre wird erodiert, UV-Schutz fehlt. Planetenmasse erhöhen.";
+      case "radiation":
+        if (bd.radiation > -2)  return "Gut geschützt ✓ — Magnetfeld und Ozonschicht bieten ausreichend UV-Schutz.";
+        if (bd.radiation > -8)  return "Erhöhte UV-Strahlung — O₂ erhöhen (Ozonschicht) und/oder Planetenmasse vergrößern.";
+        return "Starke UV-Strahlung — Magnetfeld viel zu schwach oder O₂ zu gering für Ozonaufbau.";
+      case "extremeWeather":
+        if (bd.extremeWeather > -1) return "Optimal ✓ — Mondmasse stabilisiert die Achsneigung zuverlässig.";
+        if (bd.extremeWeather > -5) return "Mäßige Klimainstabilität — Mondmasse erhöhen (Regler 'Orbit & Masse').";
+        return "Starke Klimaextreme — Mondmasse zu gering, Achsneigung schwankt chaotisch. Mondmasse erhöhen.";
+      case "impactWinter":
+        return "Einschlagswinter aktiv — Sonnenlicht blockiert. Klingt automatisch ab; nichts zu tun außer warten.";
+      default:
+        return "";
+    }
+  }
+
   // Bewohnbarkeits-Aufschluesselung im Grafiken-Tab: zeigt den Beitrag jedes
-  // Faktors zum Gesamtscore (0..100 %) mit Fortschrittsbalken und Farb-Klassen.
+  // Faktors zum Gesamtscore (0..100 %) mit Fortschrittsbalken und Tooltip-Tipps.
   function renderHabitabilityBreakdown() {
     if (!el.habBreakdown) return;
     const bd = Climate.habitabilityBreakdown();
     const rows = [
-      { icon: "🌡️", label: "Temperatur",         value: bd.temperature    },
-      { icon: "💨", label: "Sauerstoff",          value: bd.oxygen         },
-      { icon: "💧", label: "Wasser (flüssig)",    value: bd.water          },
-      { icon: "🛡️", label: "Magnetfeld",           value: bd.magneticField  },
-      { icon: "☢️", label: "Strahlung / UV",       value: bd.radiation      },
-      { icon: "🌀", label: "Klimastabilität",      value: bd.extremeWeather },
+      { icon: "🌡️", label: "Temperatur",         value: bd.temperature,    key: "temperature"    },
+      { icon: "💨", label: "Sauerstoff",          value: bd.oxygen,         key: "oxygen"         },
+      { icon: "💧", label: "Wasser (flüssig)",    value: bd.water,          key: "water"          },
+      { icon: "🛡️", label: "Magnetfeld",           value: bd.magneticField,  key: "magneticField"  },
+      { icon: "☢️", label: "Strahlung / UV",       value: bd.radiation,      key: "radiation"      },
+      { icon: "🌀", label: "Klimastabilität",      value: bd.extremeWeather, key: "extremeWeather" },
     ];
     if (bd.impactWinter < -0.1)
-      rows.push({ icon: "☄️", label: "Einschlagswinter", value: bd.impactWinter });
+      rows.push({ icon: "☄️", label: "Einschlagswinter", value: bd.impactWinter, key: "impactWinter" });
 
     const fmtPct = (v) => {
       if (Math.abs(v) < 0.05) return "0,0 %";
@@ -744,8 +789,12 @@ const UI = (() => {
 
     const rows_html = rows.map((r) => {
       const cls = r.value >= 0 ? "temp-delta-pos" : "temp-delta-neg";
+      const tip = habTip(r.key, bd).replace(/"/g, "&quot;");
+      const isOk = tip.startsWith("Optimal");
       return `<tr>
-        <td class="temp-breakdown-label">${r.icon} ${r.label}</td>
+        <td class="temp-breakdown-label hab-tip-cell" data-tip="${tip}">
+          ${r.icon} ${r.label}<span class="hab-tip-icon">${isOk ? "✓" : "?"}</span>
+        </td>
         <td class="temp-breakdown-value ${cls}">${fmtPct(r.value)}</td>
       </tr>`;
     }).join("");
