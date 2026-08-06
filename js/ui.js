@@ -737,10 +737,12 @@ const UI = (() => {
         if (temp < 5)   return "Zu kalt — CO₂ oder CH₄ erhöhen. Sonnenleuchtkraft steigt mit der Zeit von selbst.";
         return "Fast optimal — Temperatur leicht anpassen (Ziel: ~14 °C).";
       case "oxygen":
-        if (bd.oxygen >= 18) return "Optimal ✓ — O₂-Gehalt im idealen Bereich (15–25 %).";
-        if (o2 > 30) return "Zu viel O₂ (Brandgefahr) — weniger Vegetation oder CO₂-Wert erhöhen.";
-        if (o2 < 5)  return "Kaum Sauerstoff — Vegetation ausbreiten oder Sauerstoffgenerator einsetzen.";
-        return "Zu wenig O₂ — mehr Vegetation pflanzen oder Sauerstoffgenerator nutzen (Ziel: ~21 %).";
+        if (o2 > 30)  return "Zu viel O₂ — Brandgefahr. Vegetation reduzieren oder CO₂-Wert erhöhen.";
+        if (o2 >= EUKARYOTE_O2_THRESHOLD)
+          return "Optimal ✓ — O₂-Gehalt ideal. Alle Gattungen einschließlich Eukaryoten und komplexem Leben können entstehen.";
+        if (o2 >= 15) return `Ausreichend für einfache Arten (Prokaryoten), aber Eukaryoten und alle höheren Gattungen brauchen ≥ ${EUKARYOTE_O2_THRESHOLD} % O₂ (aktuell: ${o2.toFixed(1)} %). Mehr Vegetation pflanzen oder Sauerstoffgenerator einsetzen.`;
+        if (o2 >= 5)  return `Zu wenig O₂ — nur Mikroorganismen möglich. Für komplexes Leben ≥ ${EUKARYOTE_O2_THRESHOLD} % nötig. Vegetation ausbreiten oder Sauerstoffgenerator nutzen.`;
+        return "Kaum Sauerstoff — kein tierisches Leben möglich. Vegetation ausbreiten oder Sauerstoffgenerator einsetzen.";
       case "water":
         if (bd.water >= 18) return "Optimal ✓ — ausreichend flüssiges Wasser für komplexes Leben vorhanden.";
         if (water < 0.05) return "Noch kein flüssiges Wasser — Planet muss sich erst abkühlen. Zeit läuft.";
