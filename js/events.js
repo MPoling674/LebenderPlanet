@@ -59,7 +59,21 @@ const Events = (() => {
     cell.fauna = clamp(cell.fauna * (1 - severity), 0, 100);
   }
 
-  // Wirkung eines Vulkanausbruchs auf eine bereits validierte Landzelle (x,y) —
+  // Supervulkan-Ausbruch: staerkere Version des normalen Vulkans — groesserer
+  // Verwuestungsradius, massiver CO2/CH4-Stoss und kurzfristiger Klimawinter
+  // durch Asche-/Schwefelaerosol (wie beim Yellowstone-Szenario). Wird nur
+  // von tick() ausgeloest (kein spielergesteuerter Trigger).
+  function applySupervulkan(x, y, getCell) {
+    devastate(getCell(x, y), 1);
+    neighborsWithin(x, y, getCell, SUPERVOLCANO_DEVASTATION_RADIUS).forEach((c) =>
+      devastate(c, SUPERVOLCANO_NEIGHBOR_DAMAGE)
+    );
+    Atmosphere.adjust("co2", SUPERVOLCANO_CO2_BURST_PPM);
+    Atmosphere.adjust("ch4", SUPERVOLCANO_CH4_BURST_PPM);
+    Climate.triggerImpactWinter(SUPERVOLCANO_IMPACT_WINTER);
+  }
+
+  // Wirkung eines normalen Vulkanausbruchs auf eine validierte Landzelle (x,y) —
   // gemeinsam genutzt vom jaehrlichen Zufalls-Wuerfeln (tick() unten) UND von
   // Planet.triggerVolcano() (spielergesteuerte Ausloesung).
   function applyVolcano(x, y, getCell) {
@@ -107,6 +121,14 @@ const Events = (() => {
   function tick(getCell, currentTerrainFn) {
     const events = [];
 
+    if (Math.random() < SUPERVOLCANO_CHANCE_PER_YEAR) {
+      const target = findRandomCell(getCell, currentTerrainFn, ["land"]);
+      if (target) {
+        applySupervulkan(target.x, target.y, getCell);
+        events.push({ category: "disaster", popup: true, message: "🌋 Ein Supervulkan ist ausgebrochen! Massive Aschewolken verdunkeln die Sonne — ein vulkanischer Winter setzt ein.", x: target.x, y: target.y });
+      }
+    }
+
     if (Math.random() < VOLCANO_ERUPTION_CHANCE_PER_YEAR) {
       const target = findRandomCell(getCell, currentTerrainFn, ["land"]);
       if (target) {
@@ -149,5 +171,5 @@ const Events = (() => {
     return events;
   }
 
-  return { tick, applyVolcano, applyEarthquake, applyTsunami, applyPlague };
+  return { tick, applySupervulkan, applyVolcano, applyEarthquake, applyTsunami, applyPlague };
 })();

@@ -770,6 +770,34 @@ const UI = (() => {
 
   // Bewohnbarkeits-Aufschluesselung im Grafiken-Tab: zeigt den Beitrag jedes
   // Faktors zum Gesamtscore (0..100 %) mit Fortschrittsbalken und Tooltip-Tipps.
+  // Planet-Profil: Magnetfeld, Achsneigung, Mondmasse und Planetenmasse als
+  // farbige Balken mit Erde-Referenzlinie. Wird im Uebersicht-Tab angezeigt —
+  // gibt dem Spieler einen schnellen Eindruck des eigenen Planeten-Fingerabdrucks.
+  function renderPlanetProfile() {
+    const magnet = Climate.magneticFieldStrength();       // 0–1
+    const tilt   = Climate.axialTiltDegrees();            // 0–90
+    const moon   = Climate.moonMassValue();               // 0–2
+    const pmass  = Climate.planetMassValue();             // 0.3–3
+
+    const magnetPct = clamp(magnet * 100, 0, 100);
+    const tiltPct   = clamp((tilt / AXIAL_TILT_MAX) * 100, 0, 100);
+    const moonPct   = clamp((moon / MOON_MASS_MAX) * 100, 0, 100);
+    const pmassPct  = clamp(((pmass - PLANET_MASS_MIN) / (PLANET_MASS_MAX - PLANET_MASS_MIN)) * 100, 0, 100);
+
+    const bar = (id, pct) => { const e = document.getElementById(id); if (e) e.style.width = pct.toFixed(1) + "%"; };
+    const val = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+
+    bar("profile-bar-magnet", magnetPct);
+    bar("profile-bar-tilt",   tiltPct);
+    bar("profile-bar-moon",   moonPct);
+    bar("profile-bar-pmass",  pmassPct);
+
+    val("profile-val-magnet", Math.round(magnet * 100) + " %");
+    val("profile-val-tilt",   tilt.toFixed(1) + " °");
+    val("profile-val-moon",   moon.toFixed(2) + " ×");
+    val("profile-val-pmass",  pmass.toFixed(2) + " ×");
+  }
+
   function renderHabitabilityBreakdown() {
     if (!el.habBreakdown) return;
     const bd = Climate.habitabilityBreakdown();
@@ -890,6 +918,7 @@ const UI = (() => {
     Charts.renderSolarChart(el.solarChart);
     Charts.renderTiltChart(el.tiltChart);
     Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
+    renderPlanetProfile();
     renderHabitabilityBreakdown();
     renderTempBreakdown();
     renderDebugWarnings();

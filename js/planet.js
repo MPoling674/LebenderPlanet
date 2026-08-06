@@ -102,6 +102,18 @@ const Planet = (() => {
   let highTechReached = false;
   let oceansFormed = false;
   let magnetFieldWarned = false;
+  // Schneeball-Erde: true SOLANGE Eisbedeckung >= SNOWBALL_EARTH_ICE_THRESHOLD;
+  // wird zurueckgesetzt wenn der Planet wieder auftaut — so kann ein zweiter
+  // Schneeball-Erde-Zyklus erneut gemeldet werden.
+  let snowballEarthActive = false;
+  // Sauerstoff-Revolution: einmalig, sobald O2 erstmals >= EUKARYOTE_O2_THRESHOLD.
+  // Nach dem Laden eines Spielstands gilt sie als bereits eingetreten wenn O2
+  // die Schwelle schon ueberschritten hat.
+  let o2CatastropheTriggered = false;
+  // Zivilisationskollaps: wird gemeldet sobald alle Staedte verschwunden sind
+  // (nach cityFounded=true). Wird zurueckgesetzt wenn neue Staedte entstehen,
+  // damit ein ZWEITER Kollaps erneut gemeldet werden kann.
+  let civilizationCollapseReported = false;
 
   function rebuildDiscoveries() {
     discoveredVeg = new Set();
@@ -112,6 +124,9 @@ const Planet = (() => {
     // Warnung gilt als bereits gezeigt wenn Feld beim Laden schon unter der Schwelle liegt —
     // verhindert Flut alter Warnungen beim Laden eines weit fortgeschrittenen Spielstands.
     magnetFieldWarned = Climate.magneticFieldStrength() < MAGNETIC_FIELD_EROSION_THRESHOLD;
+    snowballEarthActive = Climate.iceCoverage() >= SNOWBALL_EARTH_ICE_THRESHOLD;
+    o2CatastropheTriggered = Atmosphere.get("o2") >= EUKARYOTE_O2_THRESHOLD;
+    civilizationCollapseReported = false;
     cells.forEach((cell) => {
       if (cell.vegetationType) discoveredVeg.add(cell.vegetationType);
       if (cell.faunaType) discoveredFauna.add(cell.faunaType);
@@ -174,6 +189,47 @@ const Planet = (() => {
         message: `🧲 Magnetfeldumpolung: Das Feld ist auf ${Math.round(Climate.magneticFieldStrength() * 100)} % gesunken. Eine Polumkehrung ist normal — das Feld erholt sich in einigen zehntausend Jahren von selbst, sofern die Planetenmasse ausreichend ist.`,
       });
     }
+
+    // Schneeball-Erde: Eisbedeckung ueberschreitet 90 % — selbstverstaerkender
+    // Albedo-Rueckkopplungseffekt. Wird als Popup gezeigt; resets wenn aufgetaut,
+    // damit ein zweiter Schneeball-Erde-Zyklus erneut gemeldet werden kann.
+    const currentIceCoverage = Climate.iceCoverage();
+    if (!snowballEarthActive && currentIceCoverage >= SNOWBALL_EARTH_ICE_THRESHOLD) {
+      snowballEarthActive = true;
+      events.push({
+        category: "climate",
+        popup: true,
+        message: "❄️ Schneeball-Erde! Die Eisbedeckung übersteigt 90 % — ein sich selbst verstärkender Rückkopplungseffekt: Eis reflektiert Sonnenlicht → Planet kühlt weiter → noch mehr Eis. Einziger Ausweg: massiv CO₂ erhöhen (Vulkanismus oder CO₂-Injektoren), um den Treibhauseffekt zu erzwingen.",
+      });
+    } else if (snowballEarthActive && currentIceCoverage < SNOWBALL_EARTH_ICE_THRESHOLD) {
+      snowballEarthActive = false; // Auftau: naechster Zyklus kann erneut gemeldet werden
+    }
+
+    // Sauerstoff-Revolution (einmalig): O2 erreicht erstmals EUKARYOTE_O2_THRESHOLD.
+    // In der Erdgeschichte: Grosse Sauerstoffkatastrophe (~2,4 Mrd. Jahre).
+    if (!o2CatastropheTriggered && Atmosphere.get("o2") >= EUKARYOTE_O2_THRESHOLD) {
+      o2CatastropheTriggered = true;
+      events.push({
+        category: "evolution",
+        popup: true,
+        message: `🫁 Sauerstoff-Revolution! Der O₂-Gehalt hat ${EUKARYOTE_O2_THRESHOLD} % überschritten — komplexes Leben (Eukaryoten, Vielzeller, Tiere) wird erstmals möglich. In der Erdgeschichte ein Wendepunkt: Die Große Sauerstoffkatastrophe vor ~2,4 Milliarden Jahren.`,
+      });
+    }
+
+    // Zivilisationskollaps: alle Staedte untergegangen (nach cityFounded=true).
+    // Reset bei Wiederbesiedelung, damit ein zweiter Kollaps erneut gemeldet wird.
+    const currentlyHasCities = cells.some((c) => Civilization.hasCity(c));
+    if (cityFounded && !currentlyHasCities && !civilizationCollapseReported) {
+      civilizationCollapseReported = true;
+      events.push({
+        category: "civilization",
+        popup: true,
+        message: "💀 Zivilisationskollaps: Alle Städte sind untergegangen. Naturkatastrophen, Klimawandel oder Seuchen haben die Menschheit von der Planetenoberfläche getilgt — doch das Leben findet einen Weg.",
+      });
+    } else if (currentlyHasCities && civilizationCollapseReported) {
+      civilizationCollapseReported = false; // neue Staedte: naechster Kollaps kann gemeldet werden
+    }
+
     return events;
   }
 

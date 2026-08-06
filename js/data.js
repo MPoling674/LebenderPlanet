@@ -739,6 +739,24 @@ const VOLCANO_NEIGHBOR_DAMAGE = 0.6;
 const VOLCANO_CO2_BURST_PPM = 30;
 const VOLCANO_CH4_BURST_PPM = 1;
 
+// Supervulkan: deutlich seltener (~1 Ereignis alle 500 simulierte Jahre) aber
+// wesentlich staerker als ein normaler Vulkanausbruch — Radius 3 statt 1,
+// zehnmal mehr CO2/CH4, loest ausserdem einen kurzfristigen Klimawinter aus
+// (Asche-/Schwefelaerosol wie beim Yellowstone-Szenario). Gilt als Meilenstein-
+// Popup (popup:true + milestone:true) wegen seiner dramatischen Wirkung.
+const SUPERVOLCANO_CHANCE_PER_YEAR = 0.002 / EVOLUTION_TIME_FACTOR;
+const SUPERVOLCANO_DEVASTATION_RADIUS = 3;
+const SUPERVOLCANO_NEIGHBOR_DAMAGE = 0.8;
+const SUPERVOLCANO_CO2_BURST_PPM = 300;
+const SUPERVOLCANO_CH4_BURST_PPM = 10;
+const SUPERVOLCANO_IMPACT_WINTER = 3; // °C Abkuehlung, klingt wie METEOR_IMPACT_WINTER ab
+
+// Schneeball-Erde: Schwellwert fuer die Eisbedeckung, ab dem das Ereignis
+// einmalig ausgeloest wird. 0.90 = 90 % Eisbedeckung (reales Snowball-Earth-
+// Szenario gilt ab ~85-90 % — hier leicht angehoben, damit das Ereignis
+// nicht schon bei kurzfristigen Eisspitzen ausloest).
+const SNOWBALL_EARTH_ICE_THRESHOLD = 0.90;
+
 // Erdbeben: mildere, rein lokale Zerstoerung ohne Atmosphaeren-Wirkung, trifft
 // aber gezielt Infrastruktur (Tech-Level-Rueckschlag), wenn eine Stadt betroffen ist.
 const EARTHQUAKE_DAMAGE = 0.4;

@@ -38,6 +38,57 @@
     <div class="hud-item"><span class="label">Ø Salzgehalt</span><span id="hud-salinity">0 ‰</span></div>
     <div class="hud-item"><span class="label">Fauna</span><span id="hud-fauna">0 %</span></div>
     <div class="hud-item hud-item-wide"><span class="label">Fauna-Arten</span><span id="hud-faunatypes">–</span></div>
+    <!-- Planet-Profil: die vier Parameter die den Planeten einzigartig machen,
+         als visuelle Balken mit Erde-Referenzlinie (gelbe Markierung). -->
+    <div class="planet-profile">
+      <div class="profile-heading">🪐 Planet-Profil</div>
+      <!-- Zweizeiliges Layout: Label + Wert oben, Balken darunter volle Breite.
+           Gelbe Linie = Erde-Referenzwert. -->
+      <!-- Magnetfeld: 0–100 %, Erde ≈ 85 % → Referenz bei 85 % -->
+      <div class="profile-row">
+        <div class="profile-header">
+          <span class="profile-label" title="Magnetfeld schützt die Atmosphäre vor Sonnenwind-Erosion. Erde ≈ 85 %. Gelbe Linie = Erd-Referenz.">Magnetfeld</span>
+          <span class="profile-val" id="profile-val-magnet">–</span>
+        </div>
+        <div class="profile-track">
+          <div class="profile-fill profile-fill-magnet" id="profile-bar-magnet"></div>
+          <div class="profile-refline" style="left: 85%"></div>
+        </div>
+      </div>
+      <!-- Achsneigung: 0–90 °, Erde = 23,5 ° → Referenz bei 23,5/90 = 26,1 % -->
+      <div class="profile-row">
+        <div class="profile-header">
+          <span class="profile-label" title="Achsneigung: bestimmt Jahreszeitenstärke und Pol-Äquator-Gradient. Erde = 23,5 °. Gelbe Linie = Erd-Referenz.">Achsneigung</span>
+          <span class="profile-val" id="profile-val-tilt">–</span>
+        </div>
+        <div class="profile-track">
+          <div class="profile-fill profile-fill-tilt" id="profile-bar-tilt"></div>
+          <div class="profile-refline" style="left: 26.1%"></div>
+        </div>
+      </div>
+      <!-- Mondmasse: 0–2 ×, Erde = 1 × → Referenz bei 50 % -->
+      <div class="profile-row">
+        <div class="profile-header">
+          <span class="profile-label" title="Mondmasse stabilisiert die Achsneigung. Ohne Mond driftet die Achse chaotisch. Erde = 1 ×. Gelbe Linie = Erd-Referenz.">Mondmasse</span>
+          <span class="profile-val" id="profile-val-moon">–</span>
+        </div>
+        <div class="profile-track">
+          <div class="profile-fill profile-fill-moon" id="profile-bar-moon"></div>
+          <div class="profile-refline" style="left: 50%"></div>
+        </div>
+      </div>
+      <!-- Planetenmasse: 0,3–3 ×, Erde = 1 × → Referenz bei (1−0,3)/(3−0,3) = 25,9 % -->
+      <div class="profile-row">
+        <div class="profile-header">
+          <span class="profile-label" title="Planetenmasse: stärkerer Kern = stärkeres Magnetfeld; mehr Schwerkraft = dichtere Atmosphäre. Erde = 1 ×. Gelbe Linie = Erd-Referenz.">Planetenmasse</span>
+          <span class="profile-val" id="profile-val-pmass">–</span>
+        </div>
+        <div class="profile-track">
+          <div class="profile-fill profile-fill-pmass" id="profile-bar-pmass"></div>
+          <div class="profile-refline" style="left: 25.9%"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="tab-hud-civilization" class="tab-panel">
