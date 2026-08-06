@@ -38,6 +38,9 @@
     <div class="hud-item"><span class="label">Ø Salzgehalt</span><span id="hud-salinity">0 ‰</span></div>
     <div class="hud-item"><span class="label">Fauna</span><span id="hud-fauna">0 %</span></div>
     <div class="hud-item hud-item-wide"><span class="label">Fauna-Arten</span><span id="hud-faunatypes">–</span></div>
+    <!-- Fauna-Stressanalyse: welche Faktoren belasten aktuell die Fauna?
+         Bleibt leer solange noch keine komplexe Fauna existiert. -->
+    <div id="fauna-stress"></div>
     <!-- Planet-Profil: die vier Parameter die den Planeten einzigartig machen,
          als visuelle Balken mit Erde-Referenzlinie (gelbe Markierung). -->
     <div class="planet-profile">
@@ -178,12 +181,30 @@
       <h2>Atmosphäre</h2>
       <p class="hint">Verändere die Gaszusammensetzung und beobachte die Auswirkungen auf Klima und Leben.</p>
       <div id="gas-controls"></div>
+      <!-- Info-Buttons: wissenschaftliche Hintergründe zu den wichtigsten Parametern -->
+      <details class="info-expand">
+        <summary>ℹ Warum erwärmt CO₂ den Planeten?</summary>
+        <p>CO₂ ist ein Treibhausgas: Es lässt kurzwellige Sonnenstrahlung passieren, absorbiert aber die langwellige Wärmestrahlung der Planetenoberfläche und strahlt sie zurück. Je mehr CO₂, desto weniger Wärme entweicht ins All. Eine Verdopplung des CO₂-Gehalts erhöht die globale Temperatur um ca. 3 °C (Klimasensitivität). Auf der Venus (96 % CO₂) hat dieser Effekt die Temperatur auf 465 °C getrieben.</p>
+      </details>
+      <details class="info-expand">
+        <summary>ℹ Welche Rolle spielt Sauerstoff für das Leben?</summary>
+        <p>O₂ entstand auf der Erde erstmals vor ca. 2,4 Milliarden Jahren durch Photosynthese von Cyanobakterien (Große Sauerstoffkatastrophe). Erst ab ~21 % O₂ ist genug Ozon für UV-Schutz vorhanden. Ab ~23 % werden Eukaryoten (Zellen mit Zellkern) möglich — Voraussetzung für Vielzeller, Tiere und Pflanzen. Über 35 % steigt die Brandgefahr exponentiell.</p>
+      </details>
     </section>
 
     <section id="tab-orbit" class="tab-panel">
       <h2>Orbit &amp; Masse</h2>
-      <p class="hint">Achsneigung, Mondmasse und Planetenmasse einstellen. Ohne ausreichende Mondmasse im Verhältnis zur Planetenmasse driftet die Achsneigung mit der Zeit von selbst weiter (siehe Magnetfeld-Analogie im HUD).</p>
+      <p class="hint">Achsneigung, Mondmasse und Planetenmasse einstellen. Ohne ausreichende Mondmasse im Verhältnis zur Planetenmasse driftet die Achsneigung mit der Zeit von selbst weiter.</p>
       <div id="orbit-controls"></div>
+      <!-- Info-Buttons: Physik hinter den Orbit-Parametern -->
+      <details class="info-expand">
+        <summary>ℹ Warum stabilisiert ein großer Mond die Achsneigung?</summary>
+        <p>Ein massereicher Mond erzeugt starke Gezeitenkräfte auf den Äquatorwulst des Planeten. Diese Kräfte verlangsamen die Präzession der Rotationsachse so stark, dass chaotische Kippschwankungen (wie bei Mars ohne stabilen Mond) verhindert werden. Der Erdmond hält unsere Achse seit Milliarden Jahren bei ~23,5 ° — ohne ihn würde sie zwischen 0° und ~85° taumeln und das Klima destabilisieren.</p>
+      </details>
+      <details class="info-expand">
+        <summary>ℹ Warum beeinflusst Planetenmasse das Magnetfeld?</summary>
+        <p>Das Magnetfeld entsteht durch Konvektion in einem flüssigen Eisenkern (Dynamoeffekt). Mehr Planetenmasse bedeutet größerer Kern, stärkere Konvektion und stärkeres Magnetfeld. Das Magnetfeld schützt die Atmosphäre vor dem Sonnenwind — ohne es werden Gase ins All geblasen (so verlor Mars über Milliarden Jahre seinen Großteil der Atmosphäre). Stärkere Schwerkraft hält außerdem leichte Gase wie Wasserstoff besser zurück.</p>
+      </details>
       <div class="chart-title">Größenvergleich mit dem Sonnensystem</div>
       <p class="hint">Radius des eigenen Planeten grob aus der Planetenmasse geschätzt (gleichbleibende Dichte angenommen) — reale Sonnensystem-Radien zum Vergleich, eine gemeinsame Skala inklusive Gasriesen.</p>
       <canvas id="size-comparison-chart" width="480" height="150"></canvas>

@@ -64,6 +64,7 @@ const UI = (() => {
     el.tempBreakdown = document.getElementById("temp-breakdown-table");
     el.habBreakdown = document.getElementById("hab-breakdown-table");
     el.habScore = document.getElementById("hab-score-bar");
+    el.faunaStress = document.getElementById("fauna-stress");
     el.tempChart = document.getElementById("temp-chart");
     el.co2Chart = document.getElementById("co2-chart");
     el.populationChart = document.getElementById("population-chart");
@@ -770,6 +771,43 @@ const UI = (() => {
 
   // Bewohnbarkeits-Aufschluesselung im Grafiken-Tab: zeigt den Beitrag jedes
   // Faktors zum Gesamtscore (0..100 %) mit Fortschrittsbalken und Tooltip-Tipps.
+  // Fauna-Stressanalyse: zeigt im Uebersicht-Tab welche Faktoren aktuell die
+  // Fauna belasten (Hitzestress, Kaeltestress, Trockenheit, Ozean-O2, Ozean-pH).
+  // Nur sinnvoll wenn bereits komplexe Fauna existiert — bei reinen Prokaryoten/
+  // Nanobots oder fehlender Fauna wird ein kurzer Hinweistext angezeigt.
+  function renderFaunaStress() {
+    if (!el.faunaStress) return;
+    const bd = Planet.faunaStressBreakdown();
+    if (!bd) {
+      el.faunaStress.innerHTML = "";
+      return;
+    }
+
+    const stressors = [
+      { label: "Überhitzung",  pct: bd.tempHot,  icon: "🔥" },
+      { label: "Unterkühlung", pct: bd.tempCold, icon: "🧊" },
+      { label: "Trockenheit",  pct: bd.drought,  icon: "🌵" },
+      { label: "Ozean-O₂",    pct: bd.oceanO2,  icon: "💧" },
+      { label: "Ozean-pH",    pct: bd.oceanPh,  icon: "🔬" },
+    ].filter((s) => s.pct > 0).sort((a, b) => b.pct - a.pct);
+
+    if (stressors.length === 0) {
+      el.faunaStress.innerHTML = '<div class="fauna-stress-ok">✓ Alle Fauna-Arten gedeihen ungestört.</div>';
+      return;
+    }
+
+    const rows = stressors.map((s) => {
+      const cls = s.pct >= 40 ? "hab-bar-bad" : s.pct >= 20 ? "hab-bar-mid" : "hab-bar-good";
+      return `<div class="fauna-stress-row">
+        <span class="fauna-stress-label">${s.icon} ${s.label}</span>
+        <div class="fauna-stress-track"><div class="hab-bar-fill ${cls}" style="width:${s.pct}%"></div></div>
+        <span class="fauna-stress-val">${s.pct} %</span>
+      </div>`;
+    }).join("");
+
+    el.faunaStress.innerHTML = `<div class="fauna-stress-heading">⚠ Fauna-Stress</div>${rows}`;
+  }
+
   // Planet-Profil: Magnetfeld, Achsneigung, Mondmasse und Planetenmasse als
   // farbige Balken mit Erde-Referenzlinie. Wird im Uebersicht-Tab angezeigt —
   // gibt dem Spieler einen schnellen Eindruck des eigenen Planeten-Fingerabdrucks.
@@ -918,6 +956,7 @@ const UI = (() => {
     Charts.renderSolarChart(el.solarChart);
     Charts.renderTiltChart(el.tiltChart);
     Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
+    renderFaunaStress();
     renderPlanetProfile();
     renderHabitabilityBreakdown();
     renderTempBreakdown();

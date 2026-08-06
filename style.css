@@ -366,6 +366,74 @@ body.level-fortgeschritten [data-minlevel="wissenschaftler"] {
   transform: translateX(-50%);
 }
 
+/* Fauna-Stressanalyse im Übersicht-Tab */
+#fauna-stress { margin: 8px 0 4px; }
+.fauna-stress-heading {
+  font-size: 10px;
+  color: #e0a03a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.fauna-stress-ok {
+  font-size: 11px;
+  color: #4caf82;
+  margin: 4px 0;
+}
+.fauna-stress-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+}
+.fauna-stress-label {
+  font-size: 10px;
+  color: #93a3b8;
+  width: 80px;
+  flex-shrink: 0;
+}
+.fauna-stress-track {
+  flex: 1;
+  height: 5px;
+  background: #0d1520;
+  border-radius: 3px;
+  border: 1px solid #2a3f55;
+  overflow: hidden;
+}
+.fauna-stress-val {
+  font-size: 10px;
+  color: #c8d8e8;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Info-Expandables in Sidebar-Panels */
+.info-expand {
+  margin-top: 8px;
+  border: 1px solid #1e3048;
+  border-radius: 5px;
+  background: #0a1520;
+}
+.info-expand summary {
+  font-size: 11px;
+  color: #6ab0d8;
+  cursor: pointer;
+  padding: 5px 8px;
+  list-style: none;
+  user-select: none;
+}
+.info-expand summary::-webkit-details-marker { display: none; }
+.info-expand[open] summary { color: #93c8e8; border-bottom: 1px solid #1e3048; }
+.info-expand p {
+  font-size: 11px;
+  color: #93a3b8;
+  line-height: 1.5;
+  padding: 6px 8px;
+  margin: 0;
+}
+
 .debug-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 8px; cursor: pointer; }
 #debug-warnings { list-style: none; padding: 0; margin: 0 0 10px; font-size: 12px; max-height: 160px; overflow-y: auto; }
 #debug-warnings li { padding: 4px 0; border-bottom: 1px solid #223047; line-height: 1.4; }

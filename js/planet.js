@@ -1079,5 +1079,42 @@ const Planet = (() => {
     rebuildDiscoveries();
   }
 
-  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, triggerVolcano, triggerEarthquake, triggerTsunami, triggerPlague, tick, stats, allCells, cellInfoAt, currentTerrain, localTemperature, seedRealEarth, serialize, restore };
+  // Stressanalyse der Fauna: Fuer jede Zelle mit etablierter Fauna (ausser
+  // Prokaryoten/Nanobots, die klimaunabhaengig sind) wird geprueft, welche
+  // Faktoren die Suitability reduzieren. Rueckgabe sind Prozentwerte bezogen
+  // auf alle betroffenen Fauna-Zellen — mehrere Stressoren koennen gleichzeitig
+  // wirken, daher koennen die Werte zusammen > 100 % ergeben.
+  function faunaStressBreakdown() {
+    let total = 0, tempHot = 0, tempCold = 0, drought = 0, oceanO2 = 0, oceanPh = 0;
+    const globalO2Frac = Ocean.dissolvedOxygenFraction();
+    const globalPh     = Ocean.pH();
+
+    cells.forEach((cell) => {
+      const terrain = currentTerrain(cell);
+      if (terrain === "ice" || !cell.faunaType || cell.fauna <= 0) return;
+      const type = getFaunaType(cell.faunaType);
+      // Prokaryoten und Nanobots sind klimaunabhaengig — keine Stressanalyse noetig
+      if (!type || type.id === "prokaryotes" || type.id === "nanobots") return;
+      total += 1;
+
+      const temp        = localTemperature(cell);
+      const [tMin, tMax] = faunaTempRange(type);
+      if      (temp > tMax + 3) tempHot  += 1;
+      else if (temp < tMin - 3) tempCold += 1;
+
+      if (terrain === "land" && type.minVegetation > 0 && cell.vegetation < type.minVegetation) {
+        drought += 1;
+      }
+      if (terrain === "ocean") {
+        if (globalO2Frac < 0.5)                                         oceanO2 += 1;
+        if (type.phSensitive && globalPh < OCEAN_PH_PREINDUSTRIAL - 0.1) oceanPh += 1;
+      }
+    });
+
+    if (total === 0) return null;
+    const pct = (n) => Math.round((n / total) * 100);
+    return { total, tempHot: pct(tempHot), tempCold: pct(tempCold), drought: pct(drought), oceanO2: pct(oceanO2), oceanPh: pct(oceanPh) };
+  }
+
+  return { init, terraform, adjustSalinity, toggleOxygenGenerator, toggleCO2Scrubber, toggleMethaneScrubber, toggleEmitter, terraformFauna, detonate, triggerVolcano, triggerEarthquake, triggerTsunami, triggerPlague, tick, stats, faunaStressBreakdown, allCells, cellInfoAt, currentTerrain, localTemperature, seedRealEarth, serialize, restore };
 })();
