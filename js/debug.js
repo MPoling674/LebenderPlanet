@@ -32,13 +32,17 @@ const Debug = (() => {
     warnings = [];
     if (!enabled) return warnings;
 
-    // Atmosphaeren-Kopplung: O2+N2 muss konstant bleiben (siehe
-    // ATMOSPHERE_MAJOR_GAS_TOTAL-Kommentar in data.js).
+    // Atmosphaeren-Kopplung: O2+N2 darf ATMOSPHERE_MAJOR_GAS_TOTAL nie
+    // UEBERschreiten (das waere ein Bug in set()/adjust()). Unterschreitung
+    // ist jedoch legitim: Atmosphere.erode() reduziert beide Gase als echten
+    // Verlust ins All (bewusst ausserhalb der GAS_PAIRS-Kopplung, die nur
+    // Umverteilungen zwischen O2 und N2 abbildet — kein Fix-Summen-Invariant
+    // nach Erosion). Nur die Obergrenze pruefen.
     const o2 = Atmosphere.get("o2");
     const n2 = Atmosphere.get("n2");
     check(
-      Math.abs(o2 + n2 - ATMOSPHERE_MAJOR_GAS_TOTAL) < DEBUG_EPSILON,
-      `O2+N2-Summe weicht ab: ${(o2 + n2).toFixed(3)} (erwartet ${ATMOSPHERE_MAJOR_GAS_TOTAL})`
+      o2 + n2 <= ATMOSPHERE_MAJOR_GAS_TOTAL + DEBUG_EPSILON,
+      `O2+N2-Summe ueberschreitet Maximum: ${(o2 + n2).toFixed(3)} (Maximum ${ATMOSPHERE_MAJOR_GAS_TOTAL})`
     );
 
     GASES.forEach((g) => {
