@@ -42,9 +42,11 @@ const UI = (() => {
     el.hudFaunaTypes = document.getElementById("hud-faunatypes");
     el.hudCities = document.getElementById("hud-cities");
     el.hudPopulation = document.getElementById("hud-population");
+    el.hudAtmPressure = document.getElementById("hud-atm-pressure");
     el.hudO2 = document.getElementById("hud-o2");
     el.hudCo2 = document.getElementById("hud-co2");
     el.hudCh4 = document.getElementById("hud-ch4");
+    el.atmComposition = document.getElementById("atm-composition");
     el.hudCivCo2 = document.getElementById("hud-civ-co2");
     el.hudCivCh4 = document.getElementById("hud-civ-ch4");
     el.hudOceanPh = document.getElementById("hud-ocean-ph");
@@ -808,6 +810,50 @@ const UI = (() => {
     el.faunaStress.innerHTML = `<div class="fauna-stress-heading">⚠ Fauna-Stress</div>${rows}`;
   }
 
+  // Atmosphaerenzusammensetzung im Sidebar-Panel: alle Gase als % der Gesamt-
+  // atmosphaere, plus den durch Erosion ins All verlorenen Anteil. Erklaert dem
+  // Spieler, warum O2+N2 nicht 100 % ergeben koennen (CO2/CH4 in ppm, Verlust
+  // durch Sonnenwind-Erosion bei schwachem Magnetfeld).
+  function renderAtmComposition() {
+    if (!el.atmComposition) return;
+    const o2   = Atmosphere.get("o2");
+    const n2   = Atmosphere.get("n2");
+    const co2  = Atmosphere.get("co2");
+    const ch4  = Atmosphere.get("ch4");
+    const co2Pct = co2 / 10000;
+    const ch4Pct = ch4 / 10000;
+    const total  = o2 + n2 + co2Pct + ch4Pct;
+    const eroded = Math.max(0, ATMOSPHERE_MAJOR_GAS_TOTAL - total);
+
+    // Zeile erzeugen: Label, Balken, Wert
+    const row = (label, pct, colorClass, tooltip, valueStr) => {
+      const w = Math.min(100, (pct / ATMOSPHERE_MAJOR_GAS_TOTAL) * 100);
+      return `<div class="atm-comp-row" title="${tooltip}">
+        <span class="atm-comp-label">${label}</span>
+        <div class="atm-comp-track"><div class="atm-comp-fill ${colorClass}" style="width:${w.toFixed(1)}%"></div></div>
+        <span class="atm-comp-val">${valueStr}</span>
+      </div>`;
+    };
+
+    let html = `<div class="atm-comp-heading">Zusammensetzung</div>`;
+    html += row("N₂ Stickstoff",   n2,      "atm-fill-n2",  "Hauptgas — inert, kein Treibhausgas. Wird durch Sonnenwind-Erosion abgebaut.", `${n2.toFixed(1)} %`);
+    html += row("O₂ Sauerstoff",   o2,      "atm-fill-o2",  "Entsteht durch Photosynthese. Ab 21 % UV-Schutz durch Ozonschicht möglich.", `${o2.toFixed(1)} %`);
+    html += row("CO₂ Kohlendioxid",co2Pct,  "atm-fill-co2", `Treibhausgas — ${co2.toFixed(0)} ppm = ${(co2Pct * 100).toFixed(3)} % der Atmosphäre.`, `${co2.toFixed(0)} ppm`);
+    if (ch4Pct >= 0.00001) {
+      html += row("CH₄ Methan", ch4Pct, "atm-fill-ch4", `Treibhausgas (25× stärker als CO₂) — ${ch4.toFixed(1)} ppm = ${(ch4Pct * 100).toFixed(4)} % der Atmosphäre.`, `${ch4.toFixed(1)} ppm`);
+    }
+    if (eroded >= 0.05) {
+      const w = Math.min(100, (eroded / ATMOSPHERE_MAJOR_GAS_TOTAL) * 100);
+      html += `<div class="atm-comp-row atm-comp-eroded" title="Durch Sonnenwind-Erosion bei schwachem Magnetfeld ins All verlorene Gase. Steigt wenn Magnetfeld dauerhaft unter ~50 % liegt.">
+        <span class="atm-comp-label">💨 Ins All erodiert</span>
+        <div class="atm-comp-track"><div class="atm-comp-fill atm-fill-eroded" style="width:${w.toFixed(1)}%"></div></div>
+        <span class="atm-comp-val">${eroded.toFixed(1)} %</span>
+      </div>`;
+    }
+    html += `<div class="atm-comp-total">Gesamt: <b>${total.toFixed(1)} %</b> von 99 % (Erdbaseline)</div>`;
+    el.atmComposition.innerHTML = html;
+  }
+
   // Planet-Profil: Magnetfeld, Achsneigung, Mondmasse und Planetenmasse als
   // farbige Balken mit Erde-Referenzlinie. Wird im Uebersicht-Tab angezeigt —
   // gibt dem Spieler einen schnellen Eindruck des eigenen Planeten-Fingerabdrucks.
@@ -931,6 +977,7 @@ const UI = (() => {
     el.hudFaunaTypes.textContent = faunaBreakdownText(stats);
     el.hudCities.textContent = stats.cityCount;
     el.hudPopulation.textContent = stats.totalPopulation.toLocaleString("de-DE");
+    if (el.hudAtmPressure) el.hudAtmPressure.textContent = Atmosphere.atmosphericPressure().toFixed(1) + " %";
     el.hudO2.textContent = Atmosphere.get("o2").toFixed(1) + " %";
     el.hudCo2.textContent = Atmosphere.get("co2").toFixed(0) + " ppm";
     el.hudCh4.textContent = Atmosphere.get("ch4").toFixed(1) + " ppm";
@@ -957,6 +1004,7 @@ const UI = (() => {
     Charts.renderTiltChart(el.tiltChart);
     Charts.renderSizeComparisonChart(el.sizeComparisonChart, el.sizeComparisonLegend);
     renderFaunaStress();
+    renderAtmComposition();
     renderPlanetProfile();
     renderHabitabilityBreakdown();
     renderTempBreakdown();

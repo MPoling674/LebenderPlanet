@@ -413,6 +413,68 @@ body.level-fortgeschritten [data-minlevel="wissenschaftler"] {
   font-variant-numeric: tabular-nums;
 }
 
+/* Atmosphären-Zusammensetzung im Sidebar-Atmosphäre-Panel */
+#atm-composition { margin: 10px 0 6px; }
+.atm-comp-heading {
+  font-size: 10px;
+  color: #93a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+}
+.atm-comp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  cursor: help;
+}
+.atm-comp-label {
+  font-size: 10px;
+  color: #93a3b8;
+  width: 110px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.atm-comp-track {
+  flex: 1;
+  height: 6px;
+  background: #0d1520;
+  border-radius: 3px;
+  border: 1px solid #2a3f55;
+  overflow: hidden;
+}
+.atm-comp-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.atm-fill-n2   { background: #4a7fbf; }
+.atm-fill-o2   { background: #4caf82; }
+.atm-fill-co2  { background: #c07a30; }
+.atm-fill-ch4  { background: #9a5ab0; }
+.atm-fill-eroded { background: #553333; }
+.atm-comp-eroded .atm-comp-label { color: #e05050; }
+.atm-comp-val {
+  font-size: 10px;
+  color: #c8d8e8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  width: 58px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.atm-comp-total {
+  font-size: 10px;
+  color: #93a3b8;
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid #1e3048;
+}
+.atm-comp-total b { color: #c8d8e8; }
+
 /* Info-Expandables in Sidebar-Panels */
 .info-expand {
   margin-top: 8px;

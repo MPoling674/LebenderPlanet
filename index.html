@@ -52,6 +52,7 @@
   </div>
 
   <div id="tab-hud-atmosphere" class="tab-panel">
+    <div class="hud-item" title="Gesamtmenge aller Atmosphärengase — 99 % = volle Erdatmosphäre. Sinkt wenn Magnetfeldschwäche Gase durch Sonnenwind ins All verliert."><span class="label">Atmosphärendruck</span><span id="hud-atm-pressure">99 %</span></div>
     <div class="hud-item"><span class="label">Sauerstoff</span><span id="hud-o2">0 %</span></div>
     <div class="hud-item"><span class="label">Kohlendioxid</span><span id="hud-co2">0 ppm</span></div>
     <div class="hud-item"><span class="label">Methan</span><span id="hud-ch4">0 ppm</span></div>
@@ -183,6 +184,9 @@
       <h2>Atmosphäre</h2>
       <p class="hint">Verändere die Gaszusammensetzung und beobachte die Auswirkungen auf Klima und Leben.</p>
       <div id="gas-controls"></div>
+      <!-- Vollständige Zusammensetzungs-Aufschlüsselung: alle Gase als %-Anteil
+           der Gesamtatmosphäre + Erosionsverlust — erklärt warum O2+N2 < 100 % -->
+      <div id="atm-composition"></div>
       <!-- Info-Buttons: wissenschaftliche Hintergründe zu den wichtigsten Parametern -->
       <details class="info-expand">
         <summary>ℹ Warum erwärmt CO₂ den Planeten?</summary>

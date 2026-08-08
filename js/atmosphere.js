@@ -76,6 +76,16 @@ const Atmosphere = (() => {
     });
   }
 
+  // Gesamtdruck als Volumenanteil aller Gase (0–100). Startwert ~ATMOSPHERE_
+  // MAJOR_GAS_TOTAL (~99), da CO2/CH4 Spurengase sind. Sinkt durch erode().
+  // Gibt Aufschluss darueber, wie viel Atmosphaere durch Sonnenwind-Erosion
+  // bereits ins All entflossen ist (fehlende Prozentpunkte bis 99).
+  function atmosphericPressure() {
+    return (gases.o2 || 0) + (gases.n2 || 0)
+      + (gases.co2 || 0) / 10000
+      + (gases.ch4 || 0) / 10000;
+  }
+
   // CO2-Äquivalent in ppm: CO2 plus andere Treibhausgase, gewichtet mit ihrer
   // relativen Treibhauspotenz (CH4-potency=25 ⇒ 1 ppm CH4 zählt wie 25 ppm CO2).
   // O2 hat potency=0 und trägt nicht bei (real ist Sauerstoff kein Treibhausgas).
@@ -103,5 +113,5 @@ const Atmosphere = (() => {
     if (saved) Object.assign(gases, saved);
   }
 
-  return { init, get, set, adjust, erode, co2Equivalent, radiativeForcing, serialize, restore };
+  return { init, get, set, adjust, erode, atmosphericPressure, co2Equivalent, radiativeForcing, serialize, restore };
 })();
